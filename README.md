@@ -13,6 +13,17 @@ tests/                 Playwright end-to-end test (tests/test.py) + fixture gene
 
 All URLs are relative, so it runs from any path: `https://<user>.github.io/<repo>/`, a subfolder, or localhost.
 
+## What's new in 2.1.0 — Mold / Job Reference Sheet
+
+- **Print → Reference sheet** (new default): one Letter page laid out like the shop's Mold / Job Reference Sheet: branded header, a photo grid with a blue label bar on every photo, then Part info / Supplies / Carton & packaging / Packaging description / Operator work instructions / Quality checks / Notes, and a footer band.
+  - **All photos print.** 1–4 photos go in one row, 5–8 in rows of 4, 9–12 in rows of 4 with a short last row centered. Photos 13+ continue on page 2 (up to 20 per extra page). If the text columns run long, the photo band shrinks so page 1 still fits.
+  - Temps and pressures show as a compact **Process** strip, but only when they have values.
+- **Print → Process sheet**: the older layout (specs, temps, pressures, setup steps, recent runs) is still one tap away.
+- New job sections: Mold / part information (part #, description, color, part weight, machine cycle time, parts/hr, machine, work order, date, revision), Required for the job (supplies) table, Carton / packaging, Packaging description, Operator work instructions, Quality checks, Notes / comments. Older jobs get the missing sections added automatically. Nothing is deleted or overwritten.
+- Photo labels now match the template views (mold front / rear / side / top / bottom, insert detail, side profile, finished part views). To change the order photos print in, use **⇄ Reorder** in Photos, or ◀ / ▶ in the photo viewer.
+- Settings → **Company branding**: company name, tagline, slogans, footer text and an optional logo (compressed and stored on the phone).
+- Scan-to-fill also reads Part Number, Description, Color, Part/Shot Weight (lbs), Avg./Machine Cycle Time, Parts Per Hour, Machine, Work Order, Date, Revision, Carton Size, Qty per Carton, Pallet Size and Cartons per Layer.
+
 ## Run locally
 ```bash
 cd /workspace/tooling-job-log-v2

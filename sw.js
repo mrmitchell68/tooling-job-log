@@ -1,5 +1,5 @@
 /* Tooling Job Log v2 service worker — offline app shell + CDN libraries. */
-const VERSION = "tjl-v2.0.2";
+const VERSION = "tjl-v2.1.0";
 const SHELL_CACHE = VERSION + "-shell";
 const LIB_CACHE = "tjl-libs-v1";           // CDN libs are version-pinned, so this cache survives app updates
 const SHELL = [

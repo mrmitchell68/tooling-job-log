@@ -153,6 +153,24 @@ textarea.inp{resize:vertical;min-height:90px;line-height:1.4}
 .ph{position:relative;border-radius:10px;overflow:hidden;background:var(--surface-2);border:1px solid var(--border);padding:0;text-align:left}
 .ph img{width:100%;aspect-ratio:4/3;object-fit:cover;display:block}
 .ph .cap{position:absolute;left:0;right:0;bottom:0;background:linear-gradient(transparent,rgba(0,0,0,.72));color:#fff;font-size:13px;font-weight:700;padding:18px 8px 6px;letter-spacing:.02em}
+.ph .ord{position:absolute;left:6px;top:6px;background:rgba(8,20,36,.72);color:#fff;font-size:12px;font-weight:800;border-radius:99px;min-width:24px;height:24px;display:flex;align-items:center;justify-content:center;padding:0 7px}
+.ph.reorder{outline:2px dashed var(--primary);outline-offset:1px}
+.ph .mvb{position:absolute;top:calc(50% - 30px);width:46px;height:46px;border-radius:99px;border:2px solid #fff;background:rgba(13,63,122,.92);color:#fff;font-size:20px;font-weight:800;padding:0;display:flex;align-items:center;justify-content:center}
+.ph .mvb.l{left:6px} .ph .mvb.r{right:6px}
+.ph .mvb:disabled{opacity:.3}
+.trow{display:flex;align-items:center;gap:6px;padding:4px 8px;border-top:1px solid var(--border);min-height:56px}
+.trow:first-child{border-top:0}
+.trow .tn{width:22px;text-align:right;font-weight:800;color:var(--primary);font-size:14px;flex-shrink:0}
+.trow input{height:44px;border:1px solid transparent;background:var(--surface-2);border-radius:8px;padding:0 10px;font-size:16px;min-width:0}
+.trow input.td{flex:1;font-weight:600}
+.trow input.tq{width:104px;flex-shrink:0;font-weight:700;text-align:center}
+.thead{display:flex;gap:6px;padding:8px 8px 2px;font-size:11px;letter-spacing:.09em;text-transform:uppercase;color:var(--text-faint);font-weight:700}
+.thead .c1{width:22px;text-align:right}.thead .c2{flex:1;padding-left:10px}.thead .c3{width:104px;text-align:center}
+.step .bul{width:22px;flex-shrink:0;text-align:center;font-weight:900;color:var(--primary);padding-top:10px;font-size:18px}
+.logoprev{height:64px;min-width:64px;max-width:200px;border:1px dashed var(--border);border-radius:10px;display:flex;align-items:center;justify-content:center;background:#fff;padding:4px;color:#8492a0;font-size:12px}
+.logoprev img{max-height:56px;max-width:190px;object-fit:contain}
+.vmove{display:flex;align-items:center;gap:8px;padding:0 10px}
+.vmove .btn{flex:1;min-height:44px;font-size:14px}
 .btnrow{display:flex;gap:8px;flex-wrap:wrap}
 .btnrow>*{flex:1}
 .btn{min-height:var(--tap);border-radius:999px;border:1px solid transparent;padding:0 18px;font-weight:700;font-size:15.5px;display:inline-flex;align-items:center;justify-content:center;gap:8px;text-decoration:none;line-height:1.1}
@@ -301,12 +319,75 @@ pre.raw{white-space:pre-wrap;font-size:12px;background:var(--surface-2);padding:
 .ps-log td{padding:2.5px 4px;border-bottom:1px solid #e3e9ef;vertical-align:top}
 .ps-ft{display:flex;justify-content:space-between;font-size:8.5px;color:#6a7a8a;padding:4px 10px 8px;border-top:1px solid #e3e9ef}
 .ps-ex{display:inline-block;font-size:9px;font-weight:800;letter-spacing:.1em;border:1px dashed #d4b06e;color:#d4b06e;padding:0 5px;border-radius:4px;margin-left:6px;vertical-align:middle}
+/* reference sheet (Letter, template layout) */
+.sheetwrap.ref{background:none;box-shadow:none;border-radius:0;overflow:hidden}
+.rs-pages{width:7.9in;transform-origin:0 0}
+.rs-page{width:7.9in;background:#fff;color:#14233a;font-family:'Barlow',Arial,sans-serif;font-size:8.4px;line-height:1.25;display:flex;flex-direction:column;gap:.055in;box-shadow:0 2px 12px rgba(0,0,0,.22);-webkit-print-color-adjust:exact;print-color-adjust:exact}
+.rs-page *{-webkit-print-color-adjust:exact;print-color-adjust:exact}
+.rs-page.first{min-height:10.25in}
+.rs-page+.rs-page{margin-top:.25in}
+.rs-hd{display:flex;align-items:stretch;height:.92in;background:linear-gradient(180deg,#f5f8fc,#dce7f4);border-bottom:3px solid #0b3a75;flex-shrink:0}
+.rs-hd.small{height:.5in}
+.rs-brand{width:2.1in;flex-shrink:0;display:flex;flex-direction:column;justify-content:center;align-items:center;padding:3px 8px;text-align:center;min-width:0}
+.rs-brand img{max-width:100%;max-height:.6in;object-fit:contain;display:block}
+.rs-hd.small .rs-brand img{max-height:.36in}
+.rs-co1{font-family:Georgia,'Times New Roman',serif;font-weight:700;font-size:31px;line-height:.95;color:#0b3a75;white-space:nowrap}
+.rs-co2{font-family:Georgia,'Times New Roman',serif;font-size:11.5px;color:#0b3a75;line-height:1.15;white-space:nowrap}
+.rs-hd.small .rs-co1{font-size:17px}.rs-hd.small .rs-co2{font-size:8px}
+.rs-tag{font-size:8.6px;font-weight:700;color:#1d3f6e;margin-top:3px;white-space:nowrap}
+.rs-title{flex:1;min-width:0;background:linear-gradient(180deg,#0f4c93,#062b5b);color:#fff;text-align:center;display:flex;flex-direction:column;justify-content:center;padding:3px 22px;clip-path:polygon(3.5% 0,96.5% 0,100% 100%,0 100%)}
+.rs-t1{font-size:11px;font-weight:700;letter-spacing:.17em;white-space:nowrap}
+.rs-t2{font-family:'Barlow Condensed','Barlow',Arial,sans-serif;font-weight:700;line-height:1.02;letter-spacing:.03em;text-transform:uppercase;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.rs-t3{font-size:8.4px;font-weight:600;letter-spacing:.12em;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;text-transform:uppercase}
+.rs-slogan{width:1.55in;flex-shrink:0;display:flex;align-items:center;justify-content:center;text-align:center;font-family:'Barlow Condensed','Barlow',Arial,sans-serif;font-weight:700;font-size:15.5px;line-height:1.05;color:#0b3a75;letter-spacing:.05em;text-transform:uppercase;padding:3px 12px}
+.rs-hd.small .rs-slogan{font-size:10px}
+.rs-ex{display:inline-block;font-size:8px;font-weight:800;letter-spacing:.1em;border:1px dashed #f0c46c;color:#f0c46c;padding:0 4px;border-radius:3px;margin-left:6px;vertical-align:1px}
+.rs-photos{display:flex;flex-direction:column;gap:.06in;flex-shrink:0;min-height:0}
+.rs-row{display:flex;justify-content:center;gap:.06in;min-height:0;flex:1 1 0}
+.rs-cell{display:flex;flex-direction:column;min-height:0;border:1px solid #0b3a75;background:#fff;flex-shrink:0}
+.rs-lab{height:.2in;line-height:.2in;flex-shrink:0;background:linear-gradient(180deg,#1659aa,#0b3a75);color:#fff;font-weight:700;font-size:7.3px;letter-spacing:.03em;text-transform:uppercase;text-align:center;padding:0 3px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.rs-ph{flex:1 1 0;position:relative;min-height:0;background:#e3e8ee;overflow:hidden}
+.rs-ph img{position:absolute;left:0;top:0;width:100%;height:100%;object-fit:cover;object-position:center;display:block}
+.rs-proc{border:1px solid #7f9cbf;display:flex;flex-shrink:0}
+.rs-proc h5{margin:0;writing-mode:horizontal-tb;background:linear-gradient(180deg,#1659aa,#0b3a75);color:#fff;font-size:8.2px;font-weight:700;letter-spacing:.06em;padding:3px 6px;display:flex;align-items:center;white-space:nowrap}
+.rs-proc .pv{padding:2px 6px;display:flex;flex-wrap:wrap;gap:0 10px;align-items:center}
+.rs-proc .pv span{white-space:nowrap}.rs-proc .pv b{color:#0b3a75}
+.rs-bot{flex:1 0 auto;display:flex;gap:.06in;min-height:0}
+.rs-col{display:flex;flex-direction:column;gap:.06in;min-width:0}
+.rs-col.c1{width:35.5%}.rs-col.c2{width:32.5%}.rs-col.c3{flex:1}
+.rs-box{border:1px solid #7f9cbf;display:flex;flex-direction:column;min-width:0}
+.rs-box.grow{flex:1 0 auto}
+.rs-box h5{margin:0;background:linear-gradient(180deg,#1659aa,#0b3a75);color:#fff;font-size:8.6px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;padding:2.5px 6px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.rs-kv{width:100%;border-collapse:collapse;table-layout:fixed}
+.rs-kv td{padding:1.7px 5px;border-bottom:1px solid #d6dee8;vertical-align:top;overflow-wrap:anywhere}
+.rs-kv td.k{font-weight:700;width:43%}
+.rs-kv tr:nth-child(even) td{background:#f1f5fa}
+.rs-sup{width:100%;border-collapse:collapse;table-layout:fixed}
+.rs-sup th{font-size:7.8px;text-align:left;padding:2px 4px;background:#e4ecf6;color:#0b3a75;border-bottom:1px solid #b7c7da}
+.rs-sup td{padding:1.8px 4px;border-bottom:1px solid #d6dee8;vertical-align:top;overflow-wrap:anywhere}
+.rs-sup .n{width:.28in;text-align:center}.rs-sup .q{width:.62in;text-align:center}
+.rs-sup tr:nth-child(even) td{background:#f1f5fa}
+.rs-txt{padding:3px 6px;white-space:pre-wrap;overflow-wrap:anywhere}
+.rs-box.grow .rs-txt{flex:1}
+.rs-ol{margin:0;padding:3px 6px 3px 19px}
+.rs-ol li{margin:0 0 1.6px;padding-left:1px}
+.rs-ul{margin:0;padding:3px 6px 3px 15px}
+.rs-ul li{margin:0 0 1.4px}
+.rs-ft{flex-shrink:0;height:.46in;background:linear-gradient(180deg,#0f4c93,#062b5b);color:#fff;display:flex;align-items:center;justify-content:center;gap:14px;position:relative;font-family:Georgia,'Times New Roman',serif;font-style:italic;font-size:13.5px;white-space:nowrap;overflow:hidden}
+.rs-ft::before,.rs-ft::after{content:"";flex:0 1 1.05in;height:1px;background:rgba(255,255,255,.55)}
+.rs-ft .meta{position:absolute;right:8px;bottom:2px;font-family:'Barlow',Arial,sans-serif;font-style:normal;font-size:6.4px;opacity:.72}
+.rs-ft .meta.l{right:auto;left:8px}
+.rs-cont{font-size:9px;font-weight:700;color:#0b3a75;letter-spacing:.08em;text-transform:uppercase;padding:0 2px}
 @media print{
-  @page{size:letter portrait;margin:9mm}
+  @page{size:letter portrait;margin:.3in}
   html,body{background:#fff!important}
-  body *{visibility:hidden}
-  #printArea,#printArea *{visibility:visible}
-  #printArea{position:absolute;left:0;top:0;width:100%;box-shadow:none;margin:0;border-radius:0}
+  body>*:not(#app){display:none!important}
+  #app{max-width:none!important;padding:0!important;margin:0!important}
+  #app>*:not(#printArea){display:none!important}
+  #printArea{position:static!important;width:auto!important;height:auto!important;box-shadow:none!important;margin:0!important;border-radius:0!important;overflow:visible!important}
+  .rs-pages{transform:none!important}
+  .rs-page{box-shadow:none!important;margin:0!important}
+  .rs-page+.rs-page{break-before:page;page-break-before:always}
   .no-print{display:none!important}
 }
 </style>
@@ -323,11 +404,13 @@ pre.raw{white-space:pre-wrap;font-size:12px;background:var(--surface-2);padding:
   <input type="file" id="inPhotoFiles" accept="image/*,application/pdf,.jpg,.jpeg,.png,.webp,.gif" multiple>
   <input type="file" id="inScanFiles" accept="image/*,application/pdf,.pdf,.jpg,.jpeg,.png,.webp" multiple>
   <input type="file" id="inImport" accept="application/json,.json">
+  <input type="file" id="inLogo" accept="image/*">
 </div>
 <script>
 (function(){
 "use strict";
-var APP_VERSION = "2.0.2";
+var APP_VERSION = "2.1.0";
+var SCHEMA = 3; // job data schema: 3 = reference-sheet sections (part info, supplies, packaging, instructions, QC)
 var K = { jobs:"tjl2.jobs", tpl:"tjl2.templates", meta:"tjl2.meta", theme:"tjl2.theme", v1:"toolingJobLog.v1" };
 var CDN = {
   tess: "https://cdn.jsdelivr.net/npm/tesseract.js@5.1.1/dist/tesseract.min.js",
@@ -341,17 +424,18 @@ var OCR_WARM_URLS = [CDN.tess, CDN.tessWorker, CDN.tessCore+"/tesseract-core-sim
 var STATUSES = [
   {k:"active", label:"Active"}, {k:"setup", label:"Setup"}, {k:"hold", label:"On hold"}, {k:"done", label:"Done"}
 ];
-var PHOTO_PRESETS = ["Part","Mold A side","Mold B side","Gate","Runner","Ejector side","Water lines","Hot runner","Setup sheet","Press screen","Defect","Label / box","Other"];
+var PHOTO_PRESETS = ["Mold front view (A - cavity side)","Mold rear view (B - core side)","Mold side view (left)","Mold side view (right)","Mold top view","Mold bottom view","Mold insert detail","Side profile view","Finished part - top view","Finished part - bottom view","Finished part - front edge view","Part","Gate","Runner","Ejector side","Water lines","Hot runner","Setup sheet","Press screen","Defect","Label / box","Other"];
+var BRAND_DEFAULTS = {company:"Diverse Corporate Technology", tagline:"People • Process • Performance", slogan:"Building Solutions Together", subline:"Quality Products • Efficient Processes • Customer Success", footer:"Precision Molding • Reliable Results • A Stronger Tomorrow", logo:""};
 var LOG_CHIPS = ["Raised hold pressure","Lowered hold pressure","Adjusted temps","Changed cycle time","Material lot change","Mold cleaned / PM","New color","Ran as set — no changes"];
-var UNIT_OPTIONS = ["°F","°C","psi","bar","MPa","s","min","hr","rpm","g","oz","mm","in","%","in/s","mm/s","ton"];
-var NUMERIC_UNITS = {"°F":1,"°C":1,"psi":1,"bar":1,"MPa":1,"s":1,"min":1,"hr":1,"rpm":1,"g":1,"oz":1,"mm":1,"in":1,"%":1,"in/s":1,"mm/s":1,"ton":1};
+var UNIT_OPTIONS = ["°F","°C","psi","bar","MPa","s","min","hr","rpm","g","oz","lb","mm","in","%","in/s","mm/s","ton"];
+var NUMERIC_UNITS = {"°F":1,"°C":1,"psi":1,"bar":1,"MPa":1,"s":1,"min":1,"hr":1,"rpm":1,"g":1,"oz":1,"lb":1,"mm":1,"in":1,"%":1,"in/s":1,"mm/s":1,"ton":1};
 var DAY = 86400000;
 
 var state = {
   route:{view:"list"}, jobs:[], templates:[], meta:{},
   search:"", fStatus:"all", fPress:"all", sort:"recent",
   modal:null, editSec:{}, toast:null, busy:null, scanCancelled:false,
-  photoQueue:[], pendingDelete:null, swUpdate:null
+  photoQueue:[], pendingDelete:null, swUpdate:null, photoReorder:false
 };
 
 /* ---------- utils ---------- */
@@ -380,7 +464,7 @@ function lsSet(k, v){ try{ localStorage.setItem(k, JSON.stringify(v)); return tr
 function saveJobs(){ lsSet(K.jobs, state.jobs); }
 var saveJobsSoon = debounce(saveJobs, 250);
 function saveTemplates(){ lsSet(K.tpl, state.templates); }
-function saveMeta(){ lsSet(K.meta, state.meta); }
+function saveMeta(){ return lsSet(K.meta, state.meta); }
 function getJob(id){ return state.jobs.find(function(j){ return j.id===id; }) || null; }
 function curJob(){ return state.route.id ? getJob(state.route.id) : null; }
 function touch(job){ job.updatedAt = nowIso(); if(job.example===true && !job._touched){ job._touched=true; } }
@@ -425,12 +509,31 @@ var DEFAULT_STEPS = [
   "Purge, short-shot to build, set transfer & hold",
   "First article to QC — record cycle time in run log"
 ];
+var PARTINFO_DEFS = [["Part number","","part_no"],["Description","","description"],["Material","","material"],["Color","","color"],["Number of cavities","","cavities"],
+  ["Part weight","g","part_wt"],["Shot weight","g","shot_wt"],["Avg. cycle time","s","cycle"],["Machine cycle time","s","mach_cycle"],["Parts per hour","","pph"],
+  ["Machine","","machine"],["Work order","","work_order"],["Date","","date"],["Revision","","revision"]];
+var CARTON_DEFS = [["Carton size","","carton_size"],["Quantity per carton","","qty_carton"],["Pallet size","","pallet_size"],["Cartons per layer","","cartons_layer"]];
+var DEFAULT_SUPPLIES = ["Tooling","Machine","Tooling setup","Operator labor","Material blender","Material dryer","Temperature controller"];
+var DEFAULT_QC = ["Visually inspect 100% of parts","Check for shorts, sinks and proper fill","Verify part weight and dimensions","Ensure color is consistent","Confirm runner is clipped flush","Record shot count and time on inspection sheet"];
+var ROLE_TITLES = {partinfo:"Mold / part information", supplies:"Required for the job (supplies)", carton:"Carton / packaging", packaging:"Packaging description", instructions:"Operator work instructions", quality:"Quality checks", notes:"Notes / comments"};
+function roleSection(role){
+  var t = ROLE_TITLES[role];
+  if(role==="partinfo") return {id:uid(), type:"fields", role:role, title:t, fields:PARTINFO_DEFS.map(function(d){ return F(d[0],d[1],d[2]); })};
+  if(role==="carton") return {id:uid(), type:"fields", role:role, title:t, fields:CARTON_DEFS.map(function(d){ return F(d[0],d[1],d[2]); })};
+  if(role==="supplies") return {id:uid(), type:"table", role:role, title:t, rows:DEFAULT_SUPPLIES.map(function(d){ return {id:uid(), desc:d, qty:""}; })};
+  if(role==="packaging") return {id:uid(), type:"notes", role:role, title:t, text:""};
+  if(role==="instructions") return {id:uid(), type:"steps", role:role, style:"numbered", title:t, items:[{id:uid(), text:"", done:false}]};
+  if(role==="quality") return {id:uid(), type:"steps", role:role, style:"bullets", title:t, items:DEFAULT_QC.map(function(x){ return {id:uid(), text:x, done:false}; })};
+  return {id:uid(), type:"notes", role:"notes", title:t, text:""};
+}
+function secByRole(j, role){ return (j.sections||[]).find(function(s){ return s.role===role; }) || null; }
+function isPlainList(s){ return s.type==="steps" && (s.style==="numbered" || s.style==="bullets"); }
 function defaultSections(units){
   var T = units==="metric" ? "°C" : "°F", P = units==="metric" ? "bar" : "psi";
   return [
+    roleSection("partinfo"),
     {id:uid(), type:"fields", title:"Specs", fields:[
-      F("Material","", "material"), F("Material grade/color","","grade"), F("Dryer temp/time","","dryer"),
-      F("Cavities","","cavities"), F("Shot weight","g","shot_wt"), F("Cycle time","s","cycle"),
+      F("Material grade","","grade"), F("Dryer temp/time","","dryer"),
       F("Runner type","","runner"), F("Gate type","","gate"), F("Shrinkage","%","shrink")
     ]},
     {id:uid(), type:"fields", title:"Temperatures", fields:[
@@ -442,13 +545,43 @@ function defaultSections(units){
       F("Back pressure",P,"back_press"), F("Screw RPM","rpm","rpm"), F("Cooling time","s","cool_time")
     ]},
     {id:uid(), type:"steps", title:"Setup steps", items: DEFAULT_STEPS.map(function(t){ return {id:uid(), text:t, done:false}; })},
-    {id:uid(), type:"notes", title:"Notes", text:""}
+    roleSection("supplies"), roleSection("carton"), roleSection("packaging"), roleSection("instructions"), roleSection("quality"),
+    roleSection("notes")
   ];
+}
+// Non-destructive upgrade of older jobs (v1 / v2.0.x): tag existing sections, add missing
+// reference-sheet sections/fields. Never deletes or overwrites existing data.
+function migrateJob(j){
+  var secs = j.sections;
+  var notes = secByRole(j,"notes") || secs.find(function(s){ return s.type==="notes" && !s.role && /note|comment/i.test(s.title||""); }) || secs.find(function(s){ return s.type==="notes" && !s.role; });
+  if(notes) notes.role = "notes";
+  function titled(re, type){ return secs.find(function(s){ return !s.role && (!type || s.type===type) && re.test(s.title||""); }); }
+  var m;
+  if(!secByRole(j,"supplies") && (m=titled(/suppl/i,"table"))) m.role="supplies";
+  if(!secByRole(j,"instructions") && (m=titled(/instruction/i,"steps"))){ m.role="instructions"; }
+  if(!secByRole(j,"quality") && (m=titled(/quality|qc check/i,"steps"))){ m.role="quality"; }
+  if(!secByRole(j,"packaging") && (m=titled(/packaging desc/i,"notes"))) m.role="packaging";
+  // part info: add only fields not already present anywhere (by key or label)
+  if(!secByRole(j,"partinfo")){
+    var pf = PARTINFO_DEFS.filter(function(d){ return !findField(j, d[2], d[0]) && !(d[2]==="cavities" && findField(j,null,"Cavities")); }).map(function(d){ return F(d[0],d[1],d[2]); });
+    if(pf.length) secs.unshift({id:uid(), type:"fields", role:"partinfo", title:ROLE_TITLES.partinfo, fields:pf});
+  }
+  var insertAt = function(sec){ var ni = notes ? secs.indexOf(notes) : -1; if(ni>=0) secs.splice(ni,0,sec); else secs.push(sec); };
+  if(!secByRole(j,"supplies")) insertAt(roleSection("supplies"));
+  if(!secByRole(j,"carton")){
+    var cf = CARTON_DEFS.filter(function(d){ return !findField(j, d[2], d[0]); }).map(function(d){ return F(d[0],d[1],d[2]); });
+    if(cf.length) insertAt({id:uid(), type:"fields", role:"carton", title:ROLE_TITLES.carton, fields:cf});
+  }
+  if(!secByRole(j,"packaging")) insertAt(roleSection("packaging"));
+  if(!secByRole(j,"instructions")) insertAt(roleSection("instructions"));
+  if(!secByRole(j,"quality")) insertAt(roleSection("quality"));
+  if(!notes) secs.push(roleSection("notes"));
+  j.schema = SCHEMA;
 }
 function newJob(over){
   var now = nowIso();
   var j = {id:uid(), toolNumber:"", partName:"", customer:"", press:"", status:"active", pinned:false,
-    createdAt:now, updatedAt:now, sections:defaultSections(state.meta.units), photos:[], runLog:[], pendingChanges:[]};
+    createdAt:now, updatedAt:now, sections:defaultSections(state.meta.units), photos:[], runLog:[], pendingChanges:[], schema:SCHEMA};
   return Object.assign(j, over||{});
 }
 function normalizeJob(j){
@@ -459,16 +592,18 @@ function normalizeJob(j){
     if(s.type==="fields"){ s.fields=(s.fields||[]).map(function(f){ return Object.assign({id:uid(), label:"", value:"", unit:"", key:""}, f); }); }
     if(s.type==="steps"){ s.items=(s.items||[]).map(function(it){ return Object.assign({id:uid(), text:"", done:false}, it); }); }
     if(s.type==="notes" && s.text==null) s.text="";
+    if(s.type==="table"){ s.rows=(s.rows||[]).map(function(r){ return Object.assign({id:uid(), desc:"", qty:""}, r); }); }
   });
   j.photos = Array.isArray(j.photos)? j.photos : [];
   j.runLog = Array.isArray(j.runLog)? j.runLog : [];
   j.pendingChanges = Array.isArray(j.pendingChanges)? j.pendingChanges : [];
   if(!STATUSES.some(function(s){ return s.k===j.status; })) j.status = j.status==="complete" ? "done" : "active";
   ["toolNumber","partName","customer","press"].forEach(function(k){ if(j[k]==null) j[k]=""; });
+  if((j.schema||0) < SCHEMA) migrateJob(j);
   return j;
 }
 function jobTitle(j){ return j.toolNumber || j.partName || "Untitled job"; }
-function stepsOf(j){ var out=[]; (j.sections||[]).forEach(function(s){ if(s.type==="steps") out=out.concat(s.items||[]); }); return out.filter(function(it){ return String(it.text||"").trim(); }); }
+function stepsOf(j){ var out=[]; (j.sections||[]).forEach(function(s){ if(s.type==="steps" && !isPlainList(s)) out=out.concat(s.items||[]); }); return out.filter(function(it){ return String(it.text||"").trim(); }); }
 function stepProgress(j){ var st=stepsOf(j); var d=st.filter(function(x){ return x.done; }).length; return {done:d, total:st.length, pct: st.length? Math.round(d*100/st.length):0}; }
 function findField(j, key, label){
   var hit=null;
@@ -483,6 +618,7 @@ function haystack(j){
     if(s.type==="fields") (s.fields||[]).forEach(function(f){ parts.push(f.label+" "+f.value+" "+f.unit); });
     if(s.type==="steps") (s.items||[]).forEach(function(it){ parts.push(it.text); });
     if(s.type==="notes") parts.push(s.text);
+    if(s.type==="table") (s.rows||[]).forEach(function(r){ parts.push(r.desc+" "+r.qty); });
   });
   (j.photos||[]).forEach(function(p){ parts.push(p.label); });
   (j.runLog||[]).forEach(function(e){ parts.push(e.operator+" "+e.change+" "+e.issues); });
@@ -555,12 +691,59 @@ function seedExamples(){
   state.jobs.push(a, b);
   state.templates.push(makeTemplate(a, "T-1042 Cap 28mm — base process (Example)", true));
   saveJobs(); saveTemplates();
+  seedCueExample(); state.meta.cueSeeded = true;
   Promise.all([exampleImage("cap"), exampleImage("mold"), exampleImage("door")]).then(function(bl){
     var p1={id:"ex_"+uid(), label:"Part", addedAt:nowIso(), bytes:bl[0].size}, p2={id:"ex_"+uid(), label:"Mold A side", addedAt:nowIso(), bytes:bl[1].size}, p3={id:"ex_"+uid(), label:"Part", addedAt:nowIso(), bytes:bl[2].size};
     return Promise.all([putPhoto(p1.id, bl[0]), putPhoto(p2.id, bl[1]), putPhoto(p3.id, bl[2])]).then(function(){
       a.photos=[p1,p2]; b.photos=[p3]; saveJobs(); render();
     });
   }).catch(function(){});
+}
+// Placeholder images for the reference-sheet example (clearly marked; replace with real photos)
+function cueImage(label, idx){
+  var c=document.createElement("canvas"); c.width=800; c.height=600; var g=c.getContext("2d");
+  var L=label.toLowerCase();
+  var bg=g.createLinearGradient(0,0,0,600); bg.addColorStop(0,"#dfe4ea"); bg.addColorStop(1,"#9aa5b1"); g.fillStyle=bg; g.fillRect(0,0,800,600);
+  function rect(x,y,w,h,col){ g.fillStyle=col; g.fillRect(x,y,w,h); }
+  function circ(x,y,r,col){ g.fillStyle=col; g.beginPath(); g.arc(x,y,r,0,Math.PI*2); g.fill(); }
+  function grid(x,y,w,h,nx,ny,col,lw){ g.strokeStyle=col; g.lineWidth=lw; for(var i=0;i<=nx;i++){ g.beginPath(); g.moveTo(x+w*i/nx,y); g.lineTo(x+w*i/nx,y+h); g.stroke(); } for(var k=0;k<=ny;k++){ g.beginPath(); g.moveTo(x,y+h*k/ny); g.lineTo(x+w,y+h*k/ny); g.stroke(); } }
+  if(L.indexOf("finished")>=0 && L.indexOf("edge")>=0){ rect(140,250,520,110,"#1d2124"); rect(150,262,500,20,"#34393d"); }
+  else if(L.indexOf("finished")>=0){ rect(110,150,580,300,"#1b1f22"); rect(135,175,530,250,"#2b3034"); grid(150,190,500,220,20,8,"#15181a",5); rect(95,170,20,50,"#1b1f22"); rect(685,170,20,50,"#1b1f22"); rect(95,380,20,50,"#1b1f22"); rect(685,380,20,50,"#1b1f22"); }
+  else if(L.indexOf("profile")>=0){ rect(360,90,80,420,"#1b1f22"); rect(372,100,20,400,"#30363a"); }
+  else if(L.indexOf("insert")>=0 || L.indexOf("detail")>=0){ rect(130,90,540,420,"#6f7880"); rect(170,130,460,340,"#2a2f33"); grid(185,145,430,310,12,10,"#9aa4ad",4); circ(200,110,14,"#c9a24a"); circ(600,110,14,"#c9a24a"); }
+  else {
+    var side = L.indexOf("side view")>=0, top = L.indexOf("top")>=0 || L.indexOf("bottom")>=0;
+    var x0 = side? 250 : 150, w = side? 300 : 500;
+    rect(x0-30,110,w+60,380,"#7c858d"); rect(x0,90,w,420,"#9aa3ab"); rect(x0+20,110,w-40,380,"#8a939b");
+    if(!side){ rect(x0+120,190,w-240,220, top? "#7a4d2b" : "#5d666e"); grid(x0+130,200,w-260,200, top?10:6, top?6:5, top?"#4a2d18":"#454c52", 4); }
+    else { rect(x0+w/2-20,110,40,380,"#6d767e"); }
+    [[x0+10,120],[x0+w-10,120],[x0+10,480],[x0+w-10,480]].forEach(function(p){ circ(p[0],p[1],22,"#c7ced4"); circ(p[0],p[1],10,"#5b636a"); });
+    if(L.indexOf("rear")>=0 || L.indexOf("bottom")>=0 || side){ g.strokeStyle="#1f5fae"; g.lineWidth=16; g.beginPath(); g.moveTo(x0+40,90); g.bezierCurveTo(x0+60,20,x0+w-60,20,x0+w-40,90); g.stroke(); }
+    for(var q=0;q<4;q++){ circ(x0+60+q*(w-120)/3, 92, 13, "#c9a24a"); }
+  }
+  g.fillStyle="rgba(168,121,46,.93)"; g.fillRect(0,0,330,44); g.fillStyle="#fff"; g.font="bold 22px sans-serif"; g.fillText("EXAMPLE · PLACEHOLDER",14,30);
+  g.fillStyle="rgba(8,20,40,.72)"; g.fillRect(0,540,800,60); g.fillStyle="#fff"; g.font="bold 26px sans-serif"; g.textAlign="center"; g.fillText((idx+1)+". "+label.toUpperCase(),400,580); g.textAlign="left";
+  return new Promise(function(res){ c.toBlob(function(b){ res(b); }, "image/jpeg", 0.8); });
+}
+var CUE_PHOTOS = ["Mold front view (A - cavity side)","Mold rear view (B - core side)","Mold side view (left)","Mold side view (right)","Mold top view","Mold bottom view","Mold insert / CUE detail","Side profile view (panel)","Finished panel - top view","Finished panel - bottom view","Finished panel - front edge view"];
+function seedCueExample(){
+  var c = newJob({example:true, pinned:true, toolNumber:"146-6000-00", partName:"CUE .25x12 Panel", customer:"C.U.E. of WV, LLC", press:"Machine #3", status:"active"});
+  var set = function(key, v, unit){ var h=findField(c,key); if(h){ h.f.value=String(v); if(unit!=null) h.f.unit=unit; } };
+  set("part_no","IN-02512MD"); set("description","INS 1x1 Accudek Panel .25x12mm Slot w/Angle on One End"); set("material","TPU-85 Durometer"); set("color","Black");
+  set("cavities","1"); set("part_wt","3.269","lb"); set("shot_wt","3.314","lb"); set("cycle","320 (Semi)"); set("mach_cycle","297.3"); set("pph","11");
+  set("machine","3-540 (540-ton) – Machine #3"); set("work_order","WO8888"); set("date","08/24/2026"); set("revision","Rev. 2026");
+  set("carton_size","12 x 12 x 12"); set("qty_carton","9 each"); set("pallet_size","45 x 45 (White)"); set("cartons_layer","9");
+  set("grade","TPU, 85 Shore A"); set("gate","Edge gate");
+  secByRole(c,"supplies").rows = [["Tooling","1"],["3-540 (540-ton machine)","1"],["Tooling setup - 3-540","1"],["Operator labor","1"],["Material blender","1"],["Material dryer","1"],["Temperature controller","1"],["TPU-85 Durometer / CUE only","As required"]].map(function(r){ return {id:uid(), desc:r[0], qty:r[1]}; });
+  secByRole(c,"packaging").text = "12 x 12 x 12 Box (9 each)\n1/4 lb Carton Label";
+  secByRole(c,"instructions").items = ["No shorts, sinks or excess flash.","When mold opens and part ejects, place a C.U.E. metal frame into mold.","Make sure the metal frame is in proper position.","Clip runner flush and trim any flash.","Keep 4 parts cooling on table at all times with or without fan.","Put label with Date & Initial on upper right corner on non-tape side of box.","Fill out inspection sheet, including recording shot count and time.","At the end of every run, save 1 part to be kept as a sample part.","Visually inspect 100%."].map(function(t){ return {id:uid(), text:t, done:false}; });
+  secByRole(c,"quality").items = ["Visually inspect 100% of parts.","Check for shorts, sinks, and proper fill.","Verify part weight and dimensions.","Ensure color is consistent (black).","Confirm runner is clipped flush.","Record shot count and time on inspection sheet."].map(function(t){ return {id:uid(), text:t, done:false}; });
+  secByRole(c,"notes").text = "EXAMPLE JOB — values from the Mold / Job Reference Sheet template. Photos are placeholders: replace them with real mold photos (tap a photo → 🗑, then 📷 Take photo).";
+  c.createdAt = new Date(Date.now()-3*DAY).toISOString();
+  c.updatedAt = new Date(Date.now()-3600000).toISOString();
+  state.jobs.push(c); saveJobs();
+  return CUE_PHOTOS.reduce(function(p, label, i){ return p.then(function(){ return cueImage(label, i).then(function(b){ var ph={id:"ex_"+uid(), label:label, addedAt:nowIso(), bytes:b.size, w:800, h:600}; return putPhoto(ph.id, b).then(function(){ c.photos.push(ph); }); }); }); }, Promise.resolve())
+    .then(function(){ saveJobs(); render(); }).catch(function(){});
 }
 function migrateV1(){
   var old = lsGet(K.v1, null);
@@ -575,20 +758,20 @@ function migrateV1(){
 /* ---------- templates ---------- */
 function makeTemplate(job, name, example){
   var snap = clone(job);
-  snap.sections.forEach(function(s){ s.id=uid(); if(s.fields) s.fields.forEach(function(f){ f.id=uid(); }); if(s.items) s.items.forEach(function(it){ it.id=uid(); it.done=false; }); });
+  snap.sections.forEach(function(s){ s.id=uid(); if(s.fields) s.fields.forEach(function(f){ f.id=uid(); }); if(s.items) s.items.forEach(function(it){ it.id=uid(); it.done=false; }); if(s.rows) s.rows.forEach(function(r){ r.id=uid(); }); });
   return {id:uid(), name:name, example:!!example, createdAt:nowIso(), updatedAt:nowIso(),
-    data:{toolNumber:snap.toolNumber, partName:snap.partName, customer:snap.customer, press:snap.press, sections:snap.sections}};
+    data:{toolNumber:snap.toolNumber, partName:snap.partName, customer:snap.customer, press:snap.press, sections:snap.sections, schema:snap.schema||0}};
 }
 function jobFromTemplate(t){
   var d = clone(t.data);
-  d.sections.forEach(function(s){ s.id=uid(); if(s.fields) s.fields.forEach(function(f){ f.id=uid(); }); if(s.items) s.items.forEach(function(it){ it.id=uid(); it.done=false; }); });
-  return normalizeJob(newJob({toolNumber:d.toolNumber||"", partName:d.partName||"", customer:(d.customer||"").replace(/\s*\(Example\)$/,""), press:"", status:"setup", sections:d.sections, fromTemplate:t.name}));
+  d.sections.forEach(function(s){ s.id=uid(); if(s.fields) s.fields.forEach(function(f){ f.id=uid(); }); if(s.items) s.items.forEach(function(it){ it.id=uid(); it.done=false; }); if(s.rows) s.rows.forEach(function(r){ r.id=uid(); }); });
+  return normalizeJob(newJob({toolNumber:d.toolNumber||"", partName:d.partName||"", customer:(d.customer||"").replace(/\s*\(Example\)$/,""), press:"", status:"setup", sections:d.sections, fromTemplate:t.name, schema:d.schema||0}));
 }
 function duplicateJob(job){
   var c = clone(job);
   c.id = uid(); c.createdAt=c.updatedAt=nowIso(); c.pinned=false; c.example=false; c.runLog=[]; c.pendingChanges=[];
   c.partName = c.partName; c.status="setup";
-  c.sections.forEach(function(s){ s.id=uid(); if(s.fields) s.fields.forEach(function(f){ f.id=uid(); }); if(s.items) s.items.forEach(function(it){ it.id=uid(); it.done=false; }); });
+  c.sections.forEach(function(s){ s.id=uid(); if(s.fields) s.fields.forEach(function(f){ f.id=uid(); }); if(s.items) s.items.forEach(function(it){ it.id=uid(); it.done=false; }); if(s.rows) s.rows.forEach(function(r){ r.id=uid(); }); });
   var newPhotos = [];
   var jobs = (job.photos||[]).map(function(p){
     var np = Object.assign({}, p, {id:uid()}); newPhotos.push(np);
@@ -686,18 +869,31 @@ function pdfTextLines(page){
 // "~" prefix = weak/ambiguous synonym (lower confidence, unchecked by default)
 var FIELD_DEFS = [
   {key:"toolNumber", label:"Tool #", header:true, syn:["tool number","tool no","tool #","tool#","tool id","mold number","mold no","mold #","mold#","mould no","mould #","tooling #","die #","~tool","~mold"]},
-  {key:"partName", label:"Part name", header:true, syn:["part name","part description","part desc","description","~part"]},
+  {key:"partName", label:"Part name", header:true, syn:["part name","part description","part desc","~part"]},
   {key:"customer", label:"Customer", header:true, syn:["customer name","customer","cust","client","account"]},
-  {key:"press", label:"Press", header:true, syn:["press number","press no","press #","press#","machine no","machine #","machine","mach #","~press"]},
-  {key:"part_no", label:"Part number", section:"Specs", syn:["part number","part no","part #","part#","p/n","pn"]},
-  {key:"material", label:"Material", section:"Specs", syn:["material","resin","matl","mat'l","polymer","plastic"]},
-  {key:"grade", label:"Material grade/color", section:"Specs", syn:["grade/color","grade / color","material grade","grade","color","colour","colorant","masterbatch"]},
+  {key:"press", label:"Press", header:true, syn:["press number","press no","press #","press#","~press"]},
+  {key:"part_no", label:"Part number", section:"Mold / part information", syn:["part number","part no","part #","part#","p/n","pn"]},
+  {key:"description", label:"Description", section:"Mold / part information", syn:["description","desc"]},
+  {key:"color", label:"Color", section:"Mold / part information", syn:["color","colour","colorant"]},
+  {key:"part_wt", label:"Part weight", section:"Mold / part information", unitType:"weight", syn:["part weight","part wt","part wgt","piece weight"]},
+  {key:"mach_cycle", label:"Machine cycle time", section:"Mold / part information", unitType:"time", syn:["machine cycle time","machine cycle","mach cycle"]},
+  {key:"pph", label:"Parts per hour", section:"Mold / part information", numeric:true, syn:["parts per hour","parts per hr","parts/hr","parts / hr","pcs per hour","pieces per hour","pcs/hr","pph"]},
+  {key:"machine", label:"Machine", section:"Mold / part information", syn:["machine number","machine no","machine #","machine#","mach #","machine"]},
+  {key:"work_order", label:"Work order", section:"Mold / part information", syn:["work order number","work order no","work order #","work order","wo #","wo#","w/o","~wo"]},
+  {key:"date", label:"Date", section:"Mold / part information", syn:["~date"]},
+  {key:"revision", label:"Revision", section:"Mold / part information", syn:["revision","rev level","rev #","rev no","~rev"]},
+  {key:"carton_size", label:"Carton size", section:"Carton / packaging", syn:["carton size","carton dimensions","carton dims","box size"]},
+  {key:"qty_carton", label:"Quantity per carton", section:"Carton / packaging", syn:["quantity per carton","qty per carton","qty/carton","qty / carton","parts per carton","pcs per carton","pieces per carton","qty per box","parts per box","pack qty"]},
+  {key:"pallet_size", label:"Pallet size", section:"Carton / packaging", syn:["pallet size","pallet dimensions","pallet"]},
+  {key:"cartons_layer", label:"Cartons per layer", section:"Carton / packaging", syn:["cartons per layer","boxes per layer","cartons/layer","cartons / layer"]},
+  {key:"material", label:"Material", section:"Mold / part information", syn:["material","resin","matl","mat'l","polymer","plastic"]},
+  {key:"grade", label:"Material grade", section:"Specs", syn:["grade/color","grade / color","material grade","grade","masterbatch"]},
   {key:"dryer_temp", label:"Dryer temp/time", section:"Specs", unitType:"temp", syn:["dryer temp","drying temp","dry temp","drying temperature","dryer temperature"]},
   {key:"dryer_time", label:"Dryer temp/time", section:"Specs", unitType:"time", syn:["dryer time","drying time","dry time","residence time"]},
   {key:"dryer", label:"Dryer temp/time", section:"Specs", syn:["dryer temp/time","dryer","drying"]},
-  {key:"cavities", label:"Cavities", section:"Specs", numeric:true, syn:["cavities","cavity","no of cavities","# cav","# of cav","cavitation","cav"]},
-  {key:"shot_wt", label:"Shot weight", section:"Specs", unitType:"weight", syn:["shot weight","shot wt","shot wgt","part weight","~shot"]},
-  {key:"cycle", label:"Cycle time", section:"Specs", unitType:"time", syn:["cycle time","overall cycle","total cycle","~cycle"]},
+  {key:"cavities", label:"Number of cavities", section:"Mold / part information", numeric:true, syn:["number of cavities","no of cavities","# of cavities","cavities","cavity","# cav","# of cav","cavitation","cav"]},
+  {key:"shot_wt", label:"Shot weight", section:"Mold / part information", unitType:"weight", syn:["shot weight","shot wt","shot wgt","~shot"]},
+  {key:"cycle", label:"Avg. cycle time", section:"Mold / part information", unitType:"time", syn:["average cycle time","avg cycle time","avg cycle","cycle time","overall cycle","total cycle","~cycle"]},
   {key:"runner", label:"Runner type", section:"Specs", syn:["runner type","runner system","runner","hot runner","cold runner"]},
   {key:"gate", label:"Gate type", section:"Specs", syn:["gate type","gate style","gating","~gate"]},
   {key:"shrink", label:"Shrinkage", section:"Specs", unitType:"pct", syn:["shrinkage","shrink rate","shrink"]},
@@ -721,7 +917,7 @@ var FIELD_DEFS = [
   {key:"cushion", label:"Cushion", section:"Pressures & speeds", unitType:"length", syn:["cushion"]},
   {key:"clamp", label:"Clamp tonnage", section:"Specs", unitType:"ton", syn:["clamp tonnage","clamp force","tonnage","clamp"]}
 ];
-var UNIT_TYPE = {"°F":"temp","°C":"temp","psi":"press","bar":"press","MPa":"press","s":"time","min":"time","hr":"time","rpm":"rpm","g":"weight","oz":"weight","%":"pct","mm":"length","in":"length","in/s":"speed","mm/s":"speed","ton":"ton"};
+var UNIT_TYPE = {"°F":"temp","°C":"temp","psi":"press","bar":"press","MPa":"press","s":"time","min":"time","hr":"time","rpm":"rpm","g":"weight","oz":"weight","lb":"weight","%":"pct","mm":"length","in":"length","in/s":"speed","mm/s":"speed","ton":"ton"};
 var SYN_INDEX = null;
 function synPattern(s){
   var p = s.replace(/[.*+?^${}()|[\]\\]/g,"\\$&").replace(/\s+/g,"[\\s._-]*").replace(/\//g,"\\s*\\/\\s*");
@@ -793,9 +989,12 @@ function parseLines(lines, job, baseConf){
     }
     found.sort(function(a,b){ return a.st-b.st; });
     found.forEach(function(f, fi){
+      if(f.skip) return;
       var next = found[fi+1];
-      var rawSeg = text.slice(f.en, next? next.st : text.length);
       var d = f.e.def, q = f.e.weak ? 0.62 : 1;
+      // text fields: "Machine: 3-540 – Machine #3" → keep the whole value
+      if(!(d.numeric || d.unitType)){ var ni=fi+1; while(next && next.e.def===d){ next.skip=true; ni++; next=found[ni]; } }
+      var rawSeg = text.slice(f.en, next? next.st : text.length);
       var sepQ = (/^\s*[:=#-]/.test(rawSeg) || f.inheritSep) ? 1 : 0.9;
       var val = cleanVal(rawSeg), lineConf = (L.conf==null? baseConf : L.conf);
       if(!val && next && next.e.def===d && sepQ===1){ next.inheritSep=true; return; } // "Press: Press 5"
@@ -808,6 +1007,7 @@ function parseLines(lines, job, baseConf){
         var pn = parseNumber(val);
         if(!pn){ return; }
         out.value = pn.num; out.unit = pn.unit;
+        if(d.unitType==="weight" && /^\s*lbs?\b/i.test(fixOcrDigits(val).slice(pn.idx+pn.len))) out.unit = "lb";
         var uType = UNIT_TYPE[out.unit];
         if(f.e.weak && d.unitType && uType===d.unitType) q = 0.95; // e.g. "Hold 975 psi": unit confirms the weak label
         if(d.unitType && uType && uType!==d.unitType){
@@ -913,6 +1113,7 @@ function render(){
   $("app").innerHTML = html;
   $("app").querySelectorAll("textarea[data-auto]").forEach(autosize);
   hydratePhotos($("app"));
+  if(v==="print"){ fitSheet(); if(document.fonts && document.fonts.ready) document.fonts.ready.then(function(){ if(state.route.view==="print") fitSheet(); }); }
   renderOverlay();
 }
 function autosize(el){ el.style.height="auto"; el.style.height=(el.scrollHeight+2)+"px"; }
@@ -1038,7 +1239,8 @@ function sectionHtml(j, s, si){
     h += '<button class="smallbtn danger" data-act="secDelete" data-sid="'+sid+'" aria-label="Delete section">🗑</button>';
   } else {
     h += '<h2>'+esc(s.title)+'</h2>';
-    if(s.type==="steps"){ var d=(s.items||[]).filter(function(i){return i.done;}).length; h += '<span class="meta">'+d+'/'+(s.items||[]).length+'</span>'; }
+    if(s.type==="steps" && !isPlainList(s)){ var d=(s.items||[]).filter(function(i){return i.done;}).length; h += '<span class="meta">'+d+'/'+(s.items||[]).length+'</span>'; }
+    else if(s.type==="table"){ h += '<span class="meta">'+(s.rows||[]).length+'</span>'; }
   }
   h += '<button class="smallbtn" data-act="secEdit" data-sid="'+sid+'">'+(ed?'Done':'Edit')+'</button></div>';
   if(s.type==="fields"){
@@ -1055,6 +1257,25 @@ function sectionHtml(j, s, si){
       }
     });
     h += '<div class="addrow"><button class="linkbtn" data-act="fAdd" data-sid="'+sid+'">＋ Add field</button></div>';
+  } else if(s.type==="table"){
+    h += '<div class="thead"><span class="c1">No.</span><span class="c2">Description</span><span class="c3">Qty.</span></div><div>';
+    (s.rows||[]).forEach(function(r, i){
+      var rid=esc(r.id);
+      h += '<div class="trow">'+(ed? '<div class="mv"><button data-act="tMove" data-sid="'+sid+'" data-rid="'+rid+'" data-d="-1" aria-label="Up">▲</button><button data-act="tMove" data-sid="'+sid+'" data-rid="'+rid+'" data-d="1" aria-label="Down">▼</button></div>' : '<span class="tn">'+(i+1)+'</span>')+
+        '<input class="td" data-tdesc="'+rid+'" data-sid="'+sid+'" value="'+esc(r.desc)+'" placeholder="Item / supply" aria-label="Description '+(i+1)+'" autocomplete="off">'+
+        '<input class="tq" data-tqty="'+rid+'" data-sid="'+sid+'" value="'+esc(r.qty)+'" placeholder="Qty" aria-label="Quantity '+(i+1)+'" autocomplete="off">'+
+        (ed? '<button class="del" data-act="tDelete" data-sid="'+sid+'" data-rid="'+rid+'" aria-label="Delete row">✕</button>' : '')+'</div>';
+    });
+    h += '</div><div class="addrow"><button class="linkbtn" data-act="tAdd" data-sid="'+sid+'">＋ Add item</button>'+(ed?'':'<span class="faint" style="align-self:center">Edit to reorder / remove</span>')+'</div>';
+  } else if(s.type==="steps" && isPlainList(s)){
+    var bullets = s.style==="bullets";
+    (s.items||[]).forEach(function(it, i){
+      var iid=esc(it.id);
+      h += '<div class="step">'+(ed? '<div class="mv"><button data-act="iMove" data-sid="'+sid+'" data-iid="'+iid+'" data-d="-1" aria-label="Up">▲</button><button data-act="iMove" data-sid="'+sid+'" data-iid="'+iid+'" data-d="1" aria-label="Down">▼</button></div>' : '')+
+        (bullets? '<div class="bul">•</div>' : '<div class="num">'+(i+1)+'.</div>')+'<textarea rows="1" data-auto data-itext="'+iid+'" data-sid="'+sid+'" placeholder="'+(bullets?'Add a check…':'Describe the instruction…')+'">'+esc(it.text)+'</textarea>'+
+        (ed? '<button class="del" data-act="iDelete" data-sid="'+sid+'" data-iid="'+iid+'" aria-label="Delete item">✕</button>' : '')+'</div>';
+    });
+    h += '<div class="addrow"><button class="linkbtn" data-act="iAdd" data-sid="'+sid+'">＋ Add '+(bullets?'check':'instruction')+'</button></div>';
   } else if(s.type==="steps"){
     (s.items||[]).forEach(function(it, i){
       var iid=esc(it.id);
@@ -1065,14 +1286,19 @@ function sectionHtml(j, s, si){
     var p = (s.items||[]).length ? Math.round((s.items.filter(function(i){return i.done;}).length)*100/s.items.length) : 0;
     h += '<div class="addrow" style="align-items:center"><button class="linkbtn" data-act="iAdd" data-sid="'+sid+'">＋ Add step</button><div class="prog" style="flex:1;min-width:80px"><i style="width:'+p+'%"></i></div><button class="linkbtn" data-act="resetChecklist">↺ Reset</button></div>';
   } else {
-    h += '<div class="card-bd"><textarea class="notes" data-auto data-notes="'+sid+'" placeholder="Tips, known issues, quirks of this mold…">'+esc(s.text||"")+'</textarea></div>';
+    h += '<div class="card-bd"><textarea class="notes" data-auto data-notes="'+sid+'" placeholder="'+(s.role==="packaging"?'e.g. 12 x 12 x 12 box (9 each), carton label…':'Tips, known issues, quirks of this mold…')+'">'+esc(s.text||"")+'</textarea></div>';
   }
   return h + '</section>';
 }
 function photosHtml(j){
-  var h = '<section class="card"><div class="sec-hd"><h2>Photos</h2><span class="meta">'+(j.photos||[]).length+'</span></div><div class="card-bd">';
-  if((j.photos||[]).length){
-    h += '<div class="photogrid">'+j.photos.map(function(p,i){ return '<button class="ph" data-act="viewPhoto" data-i="'+i+'" aria-label="View photo '+esc(p.label)+'"><img data-pid="'+esc(p.id)+'" alt="'+esc(p.label)+'"><span class="cap">'+esc(p.label||"Photo")+'</span></button>'; }).join("")+'</div><div class="sp"></div>';
+  var n=(j.photos||[]).length, ro=state.photoReorder && n>1;
+  var h = '<section class="card" id="photosCard"><div class="sec-hd"><h2>Photos</h2><span class="meta">'+n+'</span>'+(n>1?'<button class="smallbtn" data-act="photoReorder">'+(ro?'Done':'⇄ Reorder')+'</button>':'')+'</div><div class="card-bd">';
+  if(n){
+    if(n>1) h += '<p class="faint" style="margin:0 0 8px">'+(ro? 'Tap ◀ ▶ to move photos. This order is used on the printed sheet.' : 'Printed in this order on the reference sheet (all '+n+' photos).')+'</p>';
+    h += '<div class="photogrid">'+j.photos.map(function(p,i){
+      if(ro) return '<div class="ph reorder"><img data-pid="'+esc(p.id)+'" alt="'+esc(p.label)+'"><span class="ord">'+(i+1)+'</span><button class="mvb l" data-act="photoMove" data-i="'+i+'" data-d="-1" aria-label="Move earlier"'+(i?'':' disabled')+'>◀</button><button class="mvb r" data-act="photoMove" data-i="'+i+'" data-d="1" aria-label="Move later"'+(i<n-1?'':' disabled')+'>▶</button><span class="cap">'+esc(p.label||"Photo")+'</span></div>';
+      return '<button class="ph" data-act="viewPhoto" data-i="'+i+'" aria-label="View photo '+esc(p.label)+'"><img data-pid="'+esc(p.id)+'" alt="'+esc(p.label)+'"><span class="ord">'+(i+1)+'</span><span class="cap">'+esc(p.label||"Photo")+'</span></button>';
+    }).join("")+'</div><div class="sp"></div>';
   } else h += '<p class="faint center" style="margin:6px 0 12px">No photos yet — mold halves, gate, water lines, setup sheet…</p>';
   h += '<div class="btnrow"><button class="btn primary" data-act="photoCam">📷 Take photo</button><button class="btn ghost" data-act="photoLib">🖼️ Gallery</button><button class="btn ghost" data-act="photoFiles">📁 Drive / Files</button></div>';
   return h + '</div></section>';
@@ -1095,7 +1321,7 @@ function viewSetup(){
   if(sp.total && sp.done===sp.total) h += '<div class="donecard">✅ Setup complete. Log the run, then reset for next time.</div>';
   var firstOpen = true, n=0;
   j.sections.forEach(function(s){
-    if(s.type!=="steps") return;
+    if(s.type!=="steps" || isPlainList(s)) return;
     var items=(s.items||[]).filter(function(it){ return String(it.text||"").trim(); });
     if(!items.length) return;
     h += '<div class="card"><div class="sec-hd"><h2>'+esc(s.title)+'</h2></div>';
@@ -1138,8 +1364,137 @@ function viewLog(){
 }
 
 /* ---------- print sheet ---------- */
-function printSheetHtml(j){
+function printLayout(){ return state.meta.printLayout==="process" ? "process" : "reference"; }
+function printSheetHtml(j, layout){ return (layout||printLayout())==="process" ? processSheetHtml(j) : refSheetHtml(j); }
+
+/* Reference sheet: matches the Mold / Job Reference Sheet template (Letter portrait, 7.9in content width) */
+var RS = {W:7.9, gap:0.06, lab:0.2, photoH:5.3, minPhotoH:2.9, contImgH:1.55, perCont:20, pageH:10.25};
+function rsRows(n){ var rows=[]; if(!n) return rows; if(n<=4) return [n]; for(var i=0;i<n;i+=4) rows.push(Math.min(4,n-i)); return rows; }
+function rsPhotoBlock(list, startIdx, budget, fixedImgH){
+  var rows=rsRows(list.length); if(!rows.length) return {html:"", h:0};
+  var w4=(RS.W-RS.gap*3)/4, single=list.length<=4;
+  var widths = rows.map(function(c){ return single ? (RS.W-RS.gap*(c-1))/c : (c===4 ? w4 : Math.min((RS.W-RS.gap*(c-1))/c, w4*1.5)); });
+  var ih = fixedImgH;
+  if(!ih){ var share=(budget-RS.gap*(rows.length-1))/rows.length-RS.lab; ih=Math.min(share, Math.min.apply(null, widths)*0.95); }
+  var k=0, html="";
+  rows.forEach(function(c, ri){
+    html += '<div class="rs-row">';
+    for(var i=0;i<c;i++,k++){ var p=list[k];
+      html += '<div class="rs-cell" style="width:'+widths[ri].toFixed(3)+'in"><div class="rs-lab">'+esc(p.label||("Photo "+(startIdx+k+1)))+'</div><div class="rs-ph"><img data-pid="'+esc(p.id)+'" alt="'+esc(p.label||"")+'"></div></div>';
+    }
+    html += '</div>';
+  });
+  var h = rows.length*(ih+RS.lab) + RS.gap*(rows.length-1);
+  return {html:html, h:h};
+}
+function rsUnit(u){ return ({"s":"seconds","lb":"lbs"})[u] || u; }
+function rsVal(f){
+  if(!f) return ""; var v=String(f.value||"").trim(); if(!v) return "";
+  if(!f.unit) return v;
+  var m=v.match(/^(-?[\d.,]+)(.*)$/); var u=rsUnit(f.unit);
+  return m ? m[1]+" "+u+m[2] : v+" "+u;
+}
+function rsDate(v){ var m=String(v||"").match(/^(\d{4})-(\d{2})-(\d{2})$/); return m? m[2]+"/"+m[3]+"/"+m[1] : v; }
+function rsBrandHtml(B, small){
+  var h='<div class="rs-brand">';
+  if(B.logo) h+='<img src="'+esc(B.logo)+'" alt="">';
+  else if(String(B.company||"").trim()){ var w=String(B.company).trim().split(/\s+/); h+='<div class="rs-co1">'+esc(w[0])+'</div>'+(w.length>1?'<div class="rs-co2">'+esc(w.slice(1).join(" "))+'</div>':''); }
+  if(!small && String(B.tagline||"").trim()) h+='<div class="rs-tag">'+esc(B.tagline)+'</div>';
+  return h+'</div>';
+}
+function rsFooter(B, j, pg, pages){
+  return '<div class="rs-ft"><span>'+esc(B.footer||"")+'</span><span class="meta l">'+esc([j.toolNumber, shortId(j)].filter(Boolean).join(" · "))+'</span><span class="meta">Printed '+esc(fmtDate(nowIso()))+(pages>1?' · Page '+pg+' of '+pages:'')+'</span></div>';
+}
+function refSheetHtml(j){
+  var B=getBrand(), photos=j.photos||[], first=photos.slice(0,12), rest=photos.slice(12);
+  var contPages=[]; for(var i=0;i<rest.length;i+=RS.perCont) contPages.push(rest.slice(i,i+RS.perCont));
+  var pages=1+contPages.length;
+  var title = j.partName || j.toolNumber || "Untitled part", tl=title.length;
+  var tsize = tl<=16? 30 : tl<=22? 26 : tl<=30? 21 : 17;
+  var ex = j.example? '<span class="rs-ex">EXAMPLE</span>' : '';
+  var hd = '<div class="rs-hd">'+rsBrandHtml(B)+'<div class="rs-title"><div class="rs-t1">MOLD / JOB REFERENCE SHEET'+ex+'</div><div class="rs-t2" style="font-size:'+tsize+'px">'+esc(title)+'</div>'+(String(B.subline||"").trim()?'<div class="rs-t3">'+esc(B.subline)+'</div>':'')+'</div><div class="rs-slogan">'+esc(B.slogan||"")+'</div></div>';
+  var pb = rsPhotoBlock(first, 0, RS.photoH);
+  var photosHtml = first.length ? '<div class="rs-photos" data-h="'+pb.h.toFixed(3)+'" style="height:'+pb.h.toFixed(3)+'in">'+pb.html+'</div>' : '';
+  // compact process strip only when temps/pressures have values
+  var pkeys=["dryer","nozzle","zone1","zone2","zone3","zone4","mold_a","mold_b","inj_press","hold_press","hold_time","back_press","rpm","cool_time"], pv=[];
+  pkeys.forEach(function(k){ var h=findField(j,k); if(h && String(h.f.value||"").trim()) pv.push('<span><b>'+esc(h.f.label)+':</b> '+esc(h.f.value)+(h.f.unit?' '+esc(h.f.unit):'')+'</span>'); });
+  var proc = pv.length ? '<div class="rs-proc"><h5>PROCESS</h5><div class="pv">'+pv.join("")+'</div></div>' : '';
+  // column 1: part info
+  var pi = secByRole(j,"partinfo");
+  function fld(key){ return findField(j,key); }
+  var rows = [["Customer", j.customer],["Part Name", j.partName],["Part Number", rsVal((fld("part_no")||{}).f)],["Description", rsVal((fld("description")||{}).f)],
+    ["Material", rsVal((fld("material")||{}).f)],["Color", rsVal((fld("color")||{}).f)],["Number of Cavities", rsVal((fld("cavities")||{}).f)],["Part Weight", rsVal((fld("part_wt")||{}).f)],
+    ["Shot Weight", rsVal((fld("shot_wt")||{}).f)],["Avg. Cycle Time", rsVal((fld("cycle")||{}).f)],["Machine Cycle Time", rsVal((fld("mach_cycle")||{}).f)],["Parts Per Hour", rsVal((fld("pph")||{}).f)],
+    ["Machine", rsVal((fld("machine")||{}).f) || j.press],["Tool Number", j.toolNumber],["Work Order", rsVal((fld("work_order")||{}).f)],["Date", rsDate(rsVal((fld("date")||{}).f))],["Revision", rsVal((fld("revision")||{}).f)]];
+  var known={}; PARTINFO_DEFS.forEach(function(d){ known[d[2]]=1; });
+  if(pi) (pi.fields||[]).forEach(function(f){ if(!known[f.key]) rows.push([f.label, rsVal(f)]); });
+  var c1 = '<div class="rs-box grow"><h5>'+esc((pi&&pi.title)||ROLE_TITLES.partinfo)+'</h5><table class="rs-kv">'+rows.map(function(r){ return '<tr><td class="k">'+esc(r[0])+':</td><td>'+esc(r[1]||"")+'</td></tr>'; }).join("")+'</table></div>';
+  // column 2: supplies, carton, packaging
+  var sup=secByRole(j,"supplies"), car=secByRole(j,"carton"), pk=secByRole(j,"packaging");
+  var srows = sup? (sup.rows||[]).filter(function(r){ return String(r.desc||"").trim() || String(r.qty||"").trim(); }) : [];
+  var c2 = '';
+  if(sup) c2 += '<div class="rs-box"><h5>'+esc(sup.title)+'</h5><table class="rs-sup"><tr><th class="n">No.</th><th>Description</th><th class="q">Qty.</th></tr>'+(srows.length? srows.map(function(r,i){ return '<tr><td class="n">'+(i+1)+'</td><td>'+esc(r.desc)+'</td><td class="q">'+esc(r.qty)+'</td></tr>'; }).join("") : '<tr><td class="n">1</td><td></td><td></td></tr><tr><td class="n">2</td><td></td><td></td></tr><tr><td class="n">3</td><td></td><td></td></tr>')+'</table></div>';
+  if(car) c2 += '<div class="rs-box"><h5>'+esc(car.title)+'</h5><table class="rs-kv">'+(car.fields||[]).map(function(f){ return '<tr><td class="k">'+esc(f.label)+':</td><td>'+esc(rsVal(f))+'</td></tr>'; }).join("")+'</table></div>';
+  if(pk) c2 += '<div class="rs-box grow"><h5>'+esc(pk.title)+'</h5><div class="rs-txt">'+esc(pk.text||"")+'</div></div>';
+  // column 3: instructions, quality, notes
+  var ins=secByRole(j,"instructions"), qc=secByRole(j,"quality"), nt=secByRole(j,"notes");
+  function items(sec){ return sec? (sec.items||[]).filter(function(it){ return String(it.text||"").trim(); }) : []; }
+  var c3 = '';
+  if(ins) c3 += '<div class="rs-box"><h5>'+esc(ins.title)+'</h5><ol class="rs-ol">'+items(ins).map(function(it){ return '<li>'+esc(it.text)+'</li>'; }).join("")+'</ol></div>';
+  if(qc) c3 += '<div class="rs-box"><h5>'+esc(qc.title)+'</h5><ul class="rs-ul">'+items(qc).map(function(it){ return '<li>'+esc(it.text)+'</li>'; }).join("")+'</ul></div>';
+  c3 += '<div class="rs-box grow"><h5>'+esc(nt && !/^notes$/i.test(nt.title||"") ? nt.title : ROLE_TITLES.notes)+'</h5><div class="rs-txt">'+esc(nt? nt.text||"" : "")+'</div></div>';
+  var out = '<div class="rs-pages"><div class="rs-page first">'+hd+photosHtml+proc+
+    '<div class="rs-bot"><div class="rs-col c1">'+c1+'</div><div class="rs-col c2">'+c2+'</div><div class="rs-col c3">'+c3+'</div></div>'+rsFooter(B, j, 1, pages)+'</div>';
+  contPages.forEach(function(list, pi2){
+    var start = 12 + pi2*RS.perCont;
+    var blk = rsPhotoBlock(list, start, 0, RS.contImgH);
+    var chd = '<div class="rs-hd small">'+rsBrandHtml(B, true)+'<div class="rs-title"><div class="rs-t1">MOLD / JOB REFERENCE SHEET — PHOTOS (CONT.)'+ex+'</div><div class="rs-t2" style="font-size:'+Math.min(tsize,20)+'px">'+esc(title)+'</div></div><div class="rs-slogan">'+esc(B.slogan||"")+'</div></div>';
+    out += '<div class="rs-page cont">'+chd+'<div class="rs-cont">Photos '+(start+1)+'–'+(start+list.length)+' of '+photos.length+'</div><div class="rs-photos" style="height:'+blk.h.toFixed(3)+'in">'+blk.html+'</div>'+rsFooter(B, j, pi2+2, pages)+'</div>';
+  });
+  return out + '</div>';
+}
+// Fit page 1 to one Letter page (shrink the photo band if the text columns are long) and scale the preview to the phone width.
+function fitSheet(){
+  var wrap=$("printArea"); if(!wrap) return;
+  var inner=wrap.querySelector(".rs-pages");
+  if(!inner){ wrap.style.height=""; return; }
+  var p1=inner.querySelector(".rs-page.first"), ph=p1 && p1.querySelector(".rs-photos");
+  if(ph){
+    var inch=96, design=parseFloat(ph.getAttribute("data-h"))*inch; ph.style.height=design+"px";
+    var bot=p1.querySelector(".rs-bot"); bot.style.flexGrow="0";
+    var gap=parseFloat(getComputedStyle(p1).rowGap)||0, sum=0, kids=p1.children;
+    for(var i=0;i<kids.length;i++) sum+=kids[i].offsetHeight;
+    sum += gap*(kids.length-1);
+    var over = sum - RS.pageH*inch;
+    var minH = Math.min(design, RS.minPhotoH*inch);
+    if(over>0) ph.style.height=Math.max(minH, design-over-2)+"px";
+    bot.style.flexGrow="";
+  }
+  inner.style.transform=""; 
+  var sc = wrap.clientWidth / inner.offsetWidth;
+  if(sc && sc<1){ inner.style.transform="scale("+sc+")"; wrap.style.height=Math.ceil(inner.offsetHeight*sc)+"px"; }
+  else wrap.style.height="";
+}
+function processSheetHtml(j){
+  // Process sheet = settings-focused (old layout). Supplies / packaging / instructions / QC live on the Reference sheet.
+  var REF_ONLY = {supplies:1, carton:1, packaging:1, instructions:1, quality:1};
   var secs = j.sections.map(function(s){
+    if(REF_ONLY[s.role]) return '';
+    if(s.role==="partinfo"){
+      var pf=(s.fields||[]).filter(function(f){ return String(f.value||"").trim(); });
+      if(!pf.length) return '';
+      return '<div class="ps-sec"><h4>'+esc(s.title)+'</h4><table>'+pf.map(function(f){ return '<tr><td class="k">'+esc(f.label)+'</td><td class="v">'+esc(f.value)+(f.unit?' '+esc(f.unit):'')+'</td></tr>'; }).join("")+'</table></div>';
+    }
+    if(s.type==="table"){
+      var tr=(s.rows||[]).filter(function(r){ return String(r.desc||"").trim(); });
+      if(!tr.length) return '';
+      return '<div class="ps-sec"><h4>'+esc(s.title)+'</h4><table>'+tr.map(function(r,i){ return '<tr><td class="k">'+(i+1)+'. '+esc(r.desc)+'</td><td class="v">'+esc(r.qty||"")+'</td></tr>'; }).join("")+'</table></div>';
+    }
+    if(s.type==="steps" && isPlainList(s)){
+      var li=(s.items||[]).filter(function(i){ return String(i.text||"").trim(); });
+      if(!li.length) return '';
+      return '<div class="ps-sec"><h4>'+esc(s.title)+'</h4><div class="nt">'+li.map(function(it,i){ return (s.style==="bullets"?"• ":(i+1)+". ")+esc(it.text); }).join("\n")+'</div></div>';
+    }
     if(s.type==="fields"){
       var rows=(s.fields||[]).map(function(f){ return '<tr><td class="k">'+esc(f.label)+'</td><td class="v">'+(f.value? esc(f.value)+(f.unit?' '+esc(f.unit):'') : '<span style="color:#aab">—</span>')+'</td></tr>'; }).join("");
       return '<div class="ps-sec"><h4>'+esc(s.title)+'</h4><table>'+rows+'</table></div>';
@@ -1163,11 +1518,14 @@ function printSheetHtml(j){
 }
 function viewPrint(){
   var j = curJob(); if(!j) return viewList();
-  var h = topbar(backBtn("#/job/"+j.id, j.toolNumber||"Job"), "Print / share", "Job sheet", "");
+  var lay = printLayout(), n=(j.photos||[]).length, pages = lay==="reference" ? 1+Math.ceil(Math.max(0,n-12)/RS.perCont) : 0;
+  var h = topbar(backBtn("#/job/"+j.id, j.toolNumber||"Job"), "Print / share", lay==="reference"?"Mold / job reference sheet":"Process sheet", "");
+  h += '<div class="seg no-print" style="grid-template-columns:1fr 1fr;margin-top:12px" role="tablist" aria-label="Sheet layout"><button class="active'+(lay==="reference"?' sel':'')+'" data-act="setLayout" data-v="reference" role="tab" aria-selected="'+(lay==="reference")+'">📋 Reference sheet</button><button class="active'+(lay==="process"?' sel':'')+'" data-act="setLayout" data-v="process" role="tab" aria-selected="'+(lay==="process")+'">⚙️ Process sheet</button></div>';
+  h += '<p class="faint no-print" style="margin:6px 2px 0">'+(lay==="reference"? 'Photos ('+n+'), part info, supplies, packaging, instructions & QC · Letter · '+pages+' page'+(pages>1?'s':'')+'. Branding: ⚙️ Settings.' : 'Specs, temperatures, pressures, setup steps and recent runs.')+'</p>';
   h += '<div class="btnrow no-print" style="margin-top:12px"><button class="btn primary tall" data-act="print">🖨️ Print / Save PDF</button><button class="btn ghost tall" data-act="shareText">📤 Share text</button></div>';
   h += '<div class="btnrow no-print" style="margin-top:8px"><button class="btn ghost" data-act="copyText">📋 Copy summary</button><button class="btn ghost" data-act="exportJob">💾 Export job file</button></div>';
   h += '<p class="faint no-print" style="margin:8px 2px 0">To share a PDF: Print → choose “Save as PDF” → share the file from Downloads.</p>';
-  h += '<div class="sheetwrap" id="printArea">'+printSheetHtml(j)+'</div>';
+  h += '<div class="sheetwrap'+(lay==="reference"?' ref':'')+'" id="printArea">'+printSheetHtml(j, lay)+'</div>';
   return h;
 }
 function summaryText(j){
@@ -1176,7 +1534,8 @@ function summaryText(j){
   out.push(["Customer: "+(j.customer||"—"), "Press: "+(j.press||"—"), "Status: "+statusLabel(j.status)].join(" | "));
   j.sections.forEach(function(s){
     if(s.type==="fields"){ var f=(s.fields||[]).filter(function(f){ return f.value; }); if(!f.length) return; out.push(""); out.push(s.title.toUpperCase()); f.forEach(function(x){ out.push("• "+x.label+": "+x.value+(x.unit?" "+x.unit:"")); }); }
-    else if(s.type==="steps"){ var it=(s.items||[]).filter(function(i){ return String(i.text||"").trim(); }); if(!it.length) return; out.push(""); out.push(s.title.toUpperCase()); it.forEach(function(x,i){ out.push((i+1)+". "+x.text); }); }
+    else if(s.type==="steps"){ var it=(s.items||[]).filter(function(i){ return String(i.text||"").trim(); }); if(!it.length) return; out.push(""); out.push(s.title.toUpperCase()); it.forEach(function(x,i){ out.push((s.style==="bullets"?"• ":(i+1)+". ")+x.text); }); }
+    else if(s.type==="table"){ var rw=(s.rows||[]).filter(function(r){ return String(r.desc||"").trim(); }); if(!rw.length) return; out.push(""); out.push(s.title.toUpperCase()); rw.forEach(function(r,i){ out.push((i+1)+". "+r.desc+(r.qty?" — "+r.qty:"")); }); }
     else if(s.text){ out.push(""); out.push(s.title.toUpperCase()); out.push(s.text); }
   });
   var last = (j.runLog||[]).slice().sort(function(a,b){ return (b.date||"").localeCompare(a.date||""); })[0];
@@ -1213,6 +1572,13 @@ function viewSettings(){
   h += '<p class="faint" style="margin-bottom:0">Install: Chrome menu ⋮ → <b>Add to Home screen</b> / <b>Install app</b>.</p></div></div>';
   h += '<div class="card"><div class="sec-hd"><h2>Preferences</h2></div><div class="card-bd"><span class="fl">Default units for new jobs</span><div class="seg" style="grid-template-columns:1fr 1fr"><button class="active'+(state.meta.units!=="metric"?' sel':'')+'" data-act="setUnits" data-v="us">°F · psi</button><button class="active'+(state.meta.units==="metric"?' sel':'')+'" data-act="setUnits" data-v="metric">°C · bar</button></div><div class="sp"></div>';
   h += '<label class="fl" for="opName">Your name (default operator in run log)</label><input id="opName" class="inp" data-meta="operator" value="'+esc(state.meta.operator||"")+'" placeholder="e.g. Allen H."></div></div>';
+  var B = getBrand();
+  h += '<div class="card" id="brandCard"><div class="sec-hd"><h2>Company branding</h2></div><div class="card-bd"><p class="faint" style="margin-top:0">Shown on the printed Mold / Job Reference Sheet header and footer.</p>';
+  h += '<span class="fl">Logo (optional)</span><div style="display:flex;gap:10px;align-items:center;margin-bottom:12px"><div class="logoprev">'+(B.logo?'<img src="'+esc(B.logo)+'" alt="Logo">':'No logo<br>(name shown)')+'</div><div style="display:flex;flex-direction:column;gap:6px;flex:1"><button class="btn ghost" data-act="logoPick">🖼️ '+(B.logo?'Change':'Upload')+' logo</button>'+(B.logo?'<button class="btn ghost" style="color:var(--danger)" data-act="logoRemove">Remove logo</button>':'')+'</div></div>';
+  [["company","Company name","e.g. Diverse Corporate Technology"],["tagline","Tagline (under name)","People • Process • Performance"],["slogan","Header slogan (right)","Building Solutions Together"],["subline","Sub-line (under part name)","Quality Products • …"],["footer","Footer text","Precision Molding • …"]].forEach(function(f){
+    h += '<div class="field" style="margin-bottom:10px"><label class="fl" for="br_'+f[0]+'">'+esc(f[1])+'</label><input id="br_'+f[0]+'" class="inp" data-brand="'+f[0]+'" value="'+esc(B[f[0]])+'" placeholder="'+esc(f[2])+'"></div>';
+  });
+  h += '<button class="btn ghost block" data-act="brandReset">↺ Reset branding to defaults</button></div></div>';
   var exN = state.jobs.filter(function(j){ return j.example; }).length + state.templates.filter(function(t){ return t.example; }).length;
   if(exN) h += '<div class="sp"></div><button class="btn ghost block" data-act="deleteExamples">🧹 Remove example jobs & template ('+exN+')</button>';
   h += '<p class="hint">Tooling Job Log v'+APP_VERSION+' · no login, no server · everything stays on this device</p>';
@@ -1312,7 +1678,7 @@ function renderModal(){
       '<div class="actions"><button class="btn ghost" data-act="closeModal">Cancel</button><button class="btn primary" data-act="fAddGo">Add</button></div>';
   } else if(m.type==="addSection"){
     h = '<h3>Add section</h3><div class="field"><label class="fl" for="nsTitle">Section name</label><input class="inp" id="nsTitle" placeholder="e.g. Hot runner zones, Maintenance, QC checks"></div>'+
-      '<span class="fl">Type</span><div class="seg" style="grid-template-columns:1fr 1fr 1fr">'+[["fields","Label / value"],["steps","Checklist steps"],["notes","Notes"]].map(function(t){ return '<button class="active'+(m.stype===t[0]?' sel':'')+'" data-act="pickSType" data-v="'+t[0]+'">'+t[1]+'</button>'; }).join("")+'</div>'+
+      '<span class="fl">Type</span><div class="seg" style="grid-template-columns:1fr 1fr">'+[["fields","Label / value"],["steps","Checklist steps"],["list","Numbered list"],["table","Item / qty table"],["notes","Notes"]].map(function(t){ return '<button class="active'+(m.stype===t[0]?' sel':'')+'" data-act="pickSType" data-v="'+t[0]+'">'+t[1]+'</button>'; }).join("")+'</div>'+
       '<div class="actions"><button class="btn ghost" data-act="closeModal">Cancel</button><button class="btn primary" data-act="addSectionGo">Add section</button></div>';
   } else if(m.type==="photoLabel"){
     var ph = j && (j.photos||[]).find(function(p){ return p.id===m.pid; });
@@ -1325,6 +1691,7 @@ function renderModal(){
     if(!p){ state.modal=null; return renderModal(); }
     root.innerHTML = '<div class="viewer" id="viewer"><div class="vtop"><button class="iconbtn" data-act="closeModal" aria-label="Close">✕</button><div class="vl">'+esc(p.label||"Photo")+' <span style="opacity:.6;font-weight:500">'+(m.i+1)+'/'+j.photos.length+'</span></div><button class="iconbtn" data-act="photoRelabel" aria-label="Relabel">🏷</button><button class="iconbtn" data-act="photoDelete" aria-label="Delete photo">🗑</button></div>'+
       '<div class="vimg" id="vimg"><img data-pid="'+esc(p.id)+'" alt="'+esc(p.label)+'"></div>'+
+      (j.photos.length>1? '<div class="vmove"><button class="btn ghost" data-act="photoMove" data-i="'+m.i+'" data-d="-1"'+(m.i?'':' disabled')+'>◀ Move earlier</button><button class="btn ghost" data-act="photoMove" data-i="'+m.i+'" data-d="1"'+(m.i<j.photos.length-1?'':' disabled')+'>Move later ▶</button></div>' : '')+
       '<div class="vbot"><button class="btn ghost" style="flex:1" data-act="photoNav" data-d="-1"'+(m.i?'':' disabled')+'>‹ Prev</button><span style="opacity:.7;font-size:13px;min-width:80px;text-align:center">'+esc(fmtBytes(p.bytes||0))+'</span><button class="btn ghost" style="flex:1" data-act="photoNav" data-d="1"'+(m.i<j.photos.length-1?'':' disabled')+'>Next ›</button></div></div>';
     hydratePhotos(root); bindSwipe(); return;
   } else if(m.type==="log"){
@@ -1420,7 +1787,7 @@ ACT.fAdd = function(t){ openModal({type:"addField", sid:t.getAttribute("data-sid
 ACT.fAddGo = function(){ var j=curJob(), lab=$("nfLabel").value.trim(); if(!lab){ $("nfLabel").focus(); return; } var s=secById(j,state.modal.sid); s.fields.push(F(lab, $("nfUnit").value.trim(), "", $("nfVal").value.trim())); touch(j); saveJobs(); closeModal(); render(); };
 ACT.addSection = function(){ openModal({type:"addSection", stype:"fields"}); };
 ACT.pickSType = function(t){ var v=$("nsTitle").value; state.modal.stype=t.getAttribute("data-v"); renderModal(); $("nsTitle").value=v; };
-ACT.addSectionGo = function(){ var j=curJob(), title=$("nsTitle").value.trim()||"New section", ty=state.modal.stype; var s={id:uid(), type:ty, title:title}; if(ty==="fields") s.fields=[]; else if(ty==="steps") s.items=[{id:uid(), text:"", done:false}]; else s.text=""; j.sections.push(s); touch(j); saveJobs(); closeModal(); render(); var el=document.querySelector('[data-sid="'+s.id+'"]'); if(el) el.scrollIntoView({behavior:"smooth"}); };
+ACT.addSectionGo = function(){ var j=curJob(), title=$("nsTitle").value.trim()||"New section", ty=state.modal.stype; var s={id:uid(), type:ty, title:title}; if(ty==="fields") s.fields=[]; else if(ty==="steps") s.items=[{id:uid(), text:"", done:false}]; else if(ty==="list"){ s.type="steps"; s.style="numbered"; s.items=[{id:uid(), text:"", done:false}]; } else if(ty==="table") s.rows=[{id:uid(), desc:"", qty:""}]; else s.text=""; j.sections.push(s); touch(j); saveJobs(); closeModal(); render(); var el=document.querySelector('[data-sid="'+s.id+'"]'); if(el) el.scrollIntoView({behavior:"smooth"}); };
 ACT.iToggle = function(t){ var j=curJob(); var s=secById(j,t.getAttribute("data-sid")); var it=s.items.find(function(x){ return x.id===t.getAttribute("data-iid"); }); it.done=!it.done; touch(j); saveJobs();
   if(navigator.vibrate) try{ navigator.vibrate(it.done?25:10); }catch(e){}
   var y=window.scrollY; render(); window.scrollTo(0,y);
@@ -1444,7 +1811,17 @@ ACT.duplicate = function(){ var j=curJob(); duplicateJob(j).then(function(c){ c.
 ACT.saveTemplate = function(){ openModal({type:"saveTemplate"}); };
 ACT.saveTemplateGo = function(){ var j=curJob(), name=$("tplName").value.trim()||jobTitle(j); var t=makeTemplate(j, name, false); if(!$("tplVals").checked) t.data.sections.forEach(function(s){ if(s.fields) s.fields.forEach(function(f){ f.value=""; }); }); state.templates.push(t); saveTemplates(); closeModal(); showToast("Template saved", {act:function(){ go("#/templates"); }, actLabel:"VIEW"}); };
 
+/* item/qty tables */
+function rowIdx(s, t){ return s.rows.findIndex(function(r){ return r.id===t.getAttribute("data-rid"); }); }
+ACT.tAdd = function(t){ var j=curJob(); var s=secById(j,t.getAttribute("data-sid")); var r={id:uid(), desc:"", qty:""}; s.rows.push(r); touch(j); saveJobs(); var y=window.scrollY; render(); window.scrollTo(0,y); var el=document.querySelector('[data-tdesc="'+r.id+'"]'); if(el) el.focus(); };
+ACT.tDelete = function(t){ var j=curJob(); var s=secById(j,t.getAttribute("data-sid")); var i=rowIdx(s,t); var r=s.rows.splice(i,1)[0]; touch(j); saveJobs(); render(); showToast("Row removed", {act:function(){ s.rows.splice(i,0,r); saveJobs(); render(); }}); };
+ACT.tMove = function(t){ var j=curJob(); var s=secById(j,t.getAttribute("data-sid")); moveIn(s.rows, rowIdx(s,t), +t.getAttribute("data-d")); touch(j); saveJobs(); render(); };
+
 /* photos */
+ACT.photoReorder = function(){ state.photoReorder=!state.photoReorder; var y=window.scrollY; render(); window.scrollTo(0,y); };
+ACT.photoMove = function(t){ var j=curJob(), i=+t.getAttribute("data-i"), d=+t.getAttribute("data-d"); if(i+d<0||i+d>=j.photos.length) return; moveIn(j.photos, i, d); touch(j); saveJobs();
+  if(state.modal && state.modal.type==="viewer"){ state.modal.i=i+d; renderModal(); var y0=window.scrollY; render(); window.scrollTo(0,y0); return; }
+  var y=window.scrollY; render(); window.scrollTo(0,y); };
 ACT.photoCam = function(){ $("inPhotoCam").click(); };
 ACT.photoLib = function(){ $("inPhotoLib").click(); };
 ACT.photoFiles = function(){ $("inPhotoFiles").click(); };
@@ -1487,7 +1864,7 @@ ACT.logSave = function(){
 ACT.logDelete = function(){ var j=curJob(), id=state.modal.entry.id; var i=j.runLog.findIndex(function(x){ return x.id===id; }); var e=j.runLog.splice(i,1)[0]; saveJobs(); closeModal(); render(); showToast("Entry deleted", {act:function(){ j.runLog.splice(i,0,e); saveJobs(); render(); }}); };
 
 /* share / print / export */
-ACT.print = function(){ var imgs=document.querySelectorAll("#printArea img"); Promise.all(Array.prototype.map.call(imgs, function(im){ return im.complete&&im.src? null : new Promise(function(r){ im.onload=im.onerror=r; setTimeout(r,1500); }); })).then(function(){ window.print(); }); };
+ACT.print = function(){ fitSheet(); var imgs=document.querySelectorAll("#printArea img"); Promise.all(Array.prototype.map.call(imgs, function(im){ return im.complete&&im.src? null : new Promise(function(r){ im.onload=im.onerror=r; setTimeout(r,1500); }); })).then(function(){ window.print(); }); };
 ACT.shareText = function(){ var j=curJob(); var txt=summaryText(j); closeModal();
   if(navigator.share){ navigator.share({title:jobTitle(j)+" — "+(j.partName||""), text:txt}).catch(function(err){ if(err && err.name!=="AbortError") copyText(txt); }); }
   else copyText(txt); };
@@ -1501,7 +1878,9 @@ function buildBackup(jobs, full){
   setBusy("Packing "+ids.length+" photo(s)…");
   return ids.reduce(function(p,id){ return p.then(function(){ return getPhoto(id).then(function(b){ if(b) return blobToDataUrl(b).then(function(u){ photos[id]=u; }); }); }); }, Promise.resolve()).then(function(){
     setBusy(null);
-    return {app:"tooling-job-log", format:2, kind: full?"full":"jobs", exportedAt:nowIso(), jobs:clone(jobs), templates: full? clone(state.templates) : [], photos:photos};
+    var o = {app:"tooling-job-log", format:2, schema:SCHEMA, kind: full?"full":"jobs", exportedAt:nowIso(), jobs:clone(jobs), templates: full? clone(state.templates) : [], photos:photos};
+    if(full && state.meta.brand) o.brand = clone(state.meta.brand);
+    return o;
   }).catch(function(e){ setBusy(null); throw e; });
 }
 function saveOrShare(obj, name, share){
@@ -1547,11 +1926,28 @@ function mergeBackup(o){
     else r.skipped++;
   });
   (o.templates||[]).forEach(function(t){ if(t && t.id && !state.templates.some(function(x){ return x.id===t.id; })){ state.templates.push(t); r.tpl++; } });
+  if(o.brand && typeof o.brand==="object" && !(state.meta.brand && Object.keys(state.meta.brand).length)){ state.meta.brand=o.brand; saveMeta(); }
   saveJobs(); saveTemplates();
   var ph=o.photos||{};
   return needPhotos.reduce(function(p, meta){ return p.then(function(){ var u=ph[meta.id]; if(!u) return; return dataUrlToBlob(u).then(function(b){ revokeUrl(meta.id); return putPhoto(meta.id, b); }).then(function(){ r.photos++; }); }); }, Promise.resolve()).then(function(){ return r; });
 }
 ACT.warmOcr = function(){ warmOcr(true); };
+ACT.setLayout = function(t){ state.meta.printLayout=t.getAttribute("data-v"); saveMeta(); render(); };
+ACT.logoPick = function(){ $("inLogo").click(); };
+ACT.logoRemove = function(){ state.meta.brand=state.meta.brand||{}; state.meta.brand.logo=""; saveMeta(); render(); showToast("Logo removed — company name is shown instead"); };
+ACT.brandReset = function(){ openModal({type:"confirm", title:"Reset branding?", text:"Company name, tagline, slogans and footer go back to the defaults and the logo is removed.", ok:"Reset", onOk:function(){ state.meta.brand={}; saveMeta(); render(); }}); };
+function compressLogo(file){
+  return loadImage(file).then(function(im){
+    var max=600, w=im.naturalWidth, h=im.naturalHeight, sc=Math.min(1, max/Math.max(w,h));
+    var c=document.createElement("canvas"); c.width=Math.max(1,Math.round(w*sc)); c.height=Math.max(1,Math.round(h*sc));
+    c.getContext("2d").drawImage(im,0,0,c.width,c.height);
+    var png = /png|gif|webp|svg/i.test(file.type||"") ? c.toDataURL("image/png") : "";
+    if(png && png.length < 350000) return png;
+    var g=c.getContext("2d"); var c2=document.createElement("canvas"); c2.width=c.width; c2.height=c.height; var g2=c2.getContext("2d"); g2.fillStyle="#fff"; g2.fillRect(0,0,c2.width,c2.height); g2.drawImage(c,0,0);
+    return c2.toDataURL("image/jpeg", 0.85);
+  });
+}
+function getBrand(){ return Object.assign({}, BRAND_DEFAULTS, state.meta.brand||{}); }
 ACT.setUnits = function(t){ state.meta.units=t.getAttribute("data-v"); saveMeta(); render(); showToast("New jobs will use "+(state.meta.units==="metric"?"°C / bar":"°F / psi")); };
 ACT.deleteExamples = function(){ openModal({type:"confirm", title:"Remove examples?", text:"Deletes the example jobs, their photos and the example template. Your own jobs are untouched.", ok:"Remove", danger:true, onOk:function(){
   state.jobs.filter(function(j){ return j.example; }).forEach(function(j){ (j.photos||[]).forEach(function(p){ delPhoto(p.id); }); });
@@ -1632,7 +2028,7 @@ ACT.rvApply = function(){
   if(!job) return;
   var n = applyReview(job, m.items);
   if(isNew) job.pendingChanges=[];
-  if($("rvNotes") && $("rvNotes").checked && m.raw){ var ns=job.sections.find(function(s){ return s.type==="notes"; }); if(!ns){ ns={id:uid(), type:"notes", title:"Notes", text:""}; job.sections.push(ns); } ns.text = (ns.text? ns.text+"\n\n" : "") + "— Scanned "+todayStr()+" —\n"+m.raw.trim(); }
+  if($("rvNotes") && $("rvNotes").checked && m.raw){ var ns=secByRole(job,"notes") || job.sections.find(function(s){ return s.type==="notes" && !s.role; }); if(!ns){ ns=roleSection("notes"); job.sections.push(ns); } ns.text = (ns.text? ns.text+"\n\n" : "") + "— Scanned "+todayStr()+" —\n"+m.raw.trim(); }
   if(isNew){ state.jobs.unshift(job); }
   state.scanTarget=null; saveJobs(); askPersist(); closeModal();
   if(isNew) go("#/job/"+job.id); else render();
@@ -1662,6 +2058,7 @@ document.addEventListener("input", function(e){
   if(t.hasAttribute("data-rvval")){ state.modal.items[+t.getAttribute("data-rvval")].value=t.value; return; }
   if(t.hasAttribute("data-rvunit")){ state.modal.items[+t.getAttribute("data-rvunit")].unit=t.value; return; }
   if(t.hasAttribute("data-meta")){ state.meta[t.getAttribute("data-meta")]=t.value.trim(); saveMeta(); return; }
+  if(t.hasAttribute("data-brand")){ state.meta.brand=state.meta.brand||{}; state.meta.brand[t.getAttribute("data-brand")]=t.value; saveMeta(); return; }
   if(!j) return;
   if(t.hasAttribute("data-auto")) autosize(t);
   var s = t.getAttribute("data-sid") ? secById(j, t.getAttribute("data-sid")) : null, f;
@@ -1671,6 +2068,8 @@ document.addEventListener("input", function(e){
   else if(t.hasAttribute("data-funit")){ f=s.fields.find(function(x){ return x.id===t.getAttribute("data-funit"); }); if(f) f.unit=t.value.trim(); }
   else if(t.hasAttribute("data-itext")){ var it=s.items.find(function(x){ return x.id===t.getAttribute("data-itext"); }); if(it) it.text=t.value; }
   else if(t.hasAttribute("data-notes")){ s.text=t.value; }
+  else if(t.hasAttribute("data-tdesc")){ var r1=s.rows.find(function(x){ return x.id===t.getAttribute("data-tdesc"); }); if(r1) r1.desc=t.value; }
+  else if(t.hasAttribute("data-tqty")){ var r2=s.rows.find(function(x){ return x.id===t.getAttribute("data-tqty"); }); if(r2) r2.qty=t.value; }
   else if(t.hasAttribute("data-sectitle")){ var sec=secById(j,t.getAttribute("data-sectitle")); if(sec) sec.title=t.value; }
   else return;
   touch(j); saveJobsSoon();
@@ -1696,6 +2095,9 @@ $("inPhotoLib").addEventListener("change", function(){ addPhotos(this.files); th
 $("inPhotoFiles").addEventListener("change", function(){ var all=Array.prototype.slice.call(this.files); this.value=""; var imgs=all.filter(function(f){ return /^image\//.test(f.type) || /\.(jpe?g|png|webp|gif)$/i.test(f.name||""); }); if(imgs.length<all.length) showToast("Skipped "+(all.length-imgs.length)+" non-image file(s). Use Scan for PDFs."); addPhotos(imgs); });
 ["inScanCam","inScanImg","inScanPdf","inScanFiles"].forEach(function(id){ $(id).addEventListener("change", function(){ var f=Array.prototype.slice.call(this.files); this.value=""; runScanFiles(f); }); });
 $("inImport").addEventListener("change", function(){ var f=this.files[0]; this.value=""; if(f) importFile(f); });
+$("inLogo").addEventListener("change", function(){ var f=this.files[0]; this.value=""; if(!f) return; compressLogo(f).then(function(u){ state.meta.brand=state.meta.brand||{}; state.meta.brand.logo=u; if(saveMeta()!==false){ render(); showToast("Logo saved ("+fmtBytes(Math.round(u.length*0.75))+")"); } }).catch(function(e){ showToast("Logo failed: "+(e.message||e), {err:true}); }); });
+window.addEventListener("resize", debounce(function(){ if(state.route.view==="print") fitSheet(); }, 150));
+window.addEventListener("beforeprint", function(){ if(state.route.view==="print") fitSheet(); });
 window.addEventListener("hashchange", onRoute);
 window.addEventListener("pagehide", saveJobs);
 document.addEventListener("visibilitychange", function(){ if(document.visibilityState==="hidden") saveJobs(); });
@@ -1727,7 +2129,11 @@ function init(){
     var m = migrateV1();
     if(!state.jobs.length) seedExamples(); else saveJobs();
     state.meta.seeded=true; if(m) state.meta.migratedV1=m;
+  } else if(!state.meta.cueSeeded && state.jobs.some(function(j){ return j.example; })){
+    seedCueExample(); // upgrade from v2.0.x: add the reference-sheet example next to the existing examples
   }
+  state.meta.cueSeeded = true;
+  if(!state.jobs.length || state.jobs.some(function(j){ return j.schema===SCHEMA; })) saveJobs(); // persist migrated jobs
   saveMeta();
   onRoute();
   registerSW();
