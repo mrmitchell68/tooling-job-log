@@ -317,12 +317,14 @@ pre.raw{white-space:pre-wrap;font-size:12px;background:var(--surface-2);padding:
   <input type="file" id="inScanCam" accept="image/*" capture="environment">
   <input type="file" id="inScanImg" accept="image/*" multiple>
   <input type="file" id="inScanPdf" accept="application/pdf,.pdf">
+  <input type="file" id="inPhotoFiles" accept="image/*,application/pdf,.jpg,.jpeg,.png,.webp,.gif" multiple>
+  <input type="file" id="inScanFiles" accept="image/*,application/pdf,.pdf,.jpg,.jpeg,.png,.webp" multiple>
   <input type="file" id="inImport" accept="application/json,.json">
 </div>
 <script>
 (function(){
 "use strict";
-var APP_VERSION = "2.0.0";
+var APP_VERSION = "2.0.1";
 var K = { jobs:"tjl2.jobs", tpl:"tjl2.templates", meta:"tjl2.meta", theme:"tjl2.theme", v1:"toolingJobLog.v1" };
 var CDN = {
   tess: "https://cdn.jsdelivr.net/npm/tesseract.js@5.1.1/dist/tesseract.min.js",
@@ -1069,7 +1071,7 @@ function photosHtml(j){
   if((j.photos||[]).length){
     h += '<div class="photogrid">'+j.photos.map(function(p,i){ return '<button class="ph" data-act="viewPhoto" data-i="'+i+'" aria-label="View photo '+esc(p.label)+'"><img data-pid="'+esc(p.id)+'" alt="'+esc(p.label)+'"><span class="cap">'+esc(p.label||"Photo")+'</span></button>'; }).join("")+'</div><div class="sp"></div>';
   } else h += '<p class="faint center" style="margin:6px 0 12px">No photos yet — mold halves, gate, water lines, setup sheet…</p>';
-  h += '<div class="btnrow"><button class="btn primary" data-act="photoCam">📷 Take photo</button><button class="btn ghost" data-act="photoLib">🖼️ Upload</button></div>';
+  h += '<div class="btnrow"><button class="btn primary" data-act="photoCam">📷 Take photo</button><button class="btn ghost" data-act="photoLib">🖼️ Gallery</button><button class="btn ghost" data-act="photoFiles">📁 Drive / Files</button></div>';
   return h + '</div></section>';
 }
 
@@ -1251,6 +1253,7 @@ function renderModal(){
       '<div class="sectitle">Fill from a document</div>'+
       '<button data-act="scanNew" data-kind="cam"><span class="ic">📷</span><span>Photo of process sheet<small>Camera → OCR → you review</small></span></button>'+
       '<button data-act="scanNew" data-kind="img"><span class="ic">🖼️</span><span>Image(s) from gallery</span></button>'+
+      '<button data-act="scanNew" data-kind="files"><span class="ic">📁</span><span>From Google Drive / Files<small>Photos or PDFs saved in Drive</small></span></button>'+
       '<button data-act="scanNew" data-kind="pdf"><span class="ic">📄</span><span>PDF (all pages)</span></button>'+
       '<button data-act="scanNew" data-kind="paste"><span class="ic">📋</span><span>Paste text<small>From Google Lens “Copy text” — most accurate</small></span></button>'+
       '</div><div class="actions"><button class="btn ghost" data-act="closeModal">Cancel</button></div>';
@@ -1269,6 +1272,7 @@ function renderModal(){
     h = '<h3>Scan to fill</h3><p class="sub">Read a process sheet, setup sheet or traveler. You’ll review every value before anything changes.</p><div class="menu">'+
       '<button data-act="scanHere" data-kind="cam"><span class="ic">📷</span><span>Take photo of document</span></button>'+
       '<button data-act="scanHere" data-kind="img"><span class="ic">🖼️</span><span>Image(s) from gallery</span></button>'+
+      '<button data-act="scanHere" data-kind="files"><span class="ic">📁</span><span>From Google Drive / Files<small>Photos or PDFs saved in Drive</small></span></button>'+
       '<button data-act="scanHere" data-kind="pdf"><span class="ic">📄</span><span>PDF (reads all pages)</span></button>'+
       '<button data-act="scanHere" data-kind="paste"><span class="ic">📋</span><span>Paste text<small>Google Lens → Select all → Copy text → paste here</small></span></button>'+
       '</div><div class="actions"><button class="btn ghost" data-act="closeModal">Cancel</button></div>';
@@ -1439,6 +1443,7 @@ ACT.saveTemplateGo = function(){ var j=curJob(), name=$("tplName").value.trim()|
 /* photos */
 ACT.photoCam = function(){ $("inPhotoCam").click(); };
 ACT.photoLib = function(){ $("inPhotoLib").click(); };
+ACT.photoFiles = function(){ $("inPhotoFiles").click(); };
 function addPhotos(files){
   var j=curJob(); if(!j || !files.length) return;
   var list=Array.prototype.slice.call(files), ids=[];
@@ -1553,7 +1558,7 @@ function scanJob(){ var t=state.scanTarget; if(!t) return null; return t.newJob 
 function startScan(kind, target){
   state.scanTarget = target; closeModal();
   if(kind==="paste"){ openModal({type:"paste"}); return; }
-  ({cam:$("inScanCam"), img:$("inScanImg"), pdf:$("inScanPdf")})[kind].click();
+  ({cam:$("inScanCam"), img:$("inScanImg"), pdf:$("inScanPdf"), files:$("inScanFiles")})[kind].click();
 }
 ACT.scanNew = function(t){ startScan(t.getAttribute("data-kind"), {newJob:newJob({status:"setup"})}); };
 ACT.scanHere = function(t){ startScan(t.getAttribute("data-kind"), {jobId:curJob().id}); };
@@ -1684,7 +1689,8 @@ document.addEventListener("change", function(e){
 });
 $("inPhotoCam").addEventListener("change", function(){ addPhotos(this.files); this.value=""; });
 $("inPhotoLib").addEventListener("change", function(){ addPhotos(this.files); this.value=""; });
-["inScanCam","inScanImg","inScanPdf"].forEach(function(id){ $(id).addEventListener("change", function(){ var f=Array.prototype.slice.call(this.files); this.value=""; runScanFiles(f); }); });
+$("inPhotoFiles").addEventListener("change", function(){ var all=Array.prototype.slice.call(this.files); this.value=""; var imgs=all.filter(function(f){ return /^image\//.test(f.type) || /\.(jpe?g|png|webp|gif)$/i.test(f.name||""); }); if(imgs.length<all.length) showToast("Skipped "+(all.length-imgs.length)+" non-image file(s). Use Scan for PDFs."); addPhotos(imgs); });
+["inScanCam","inScanImg","inScanPdf","inScanFiles"].forEach(function(id){ $(id).addEventListener("change", function(){ var f=Array.prototype.slice.call(this.files); this.value=""; runScanFiles(f); }); });
 $("inImport").addEventListener("change", function(){ var f=this.files[0]; this.value=""; if(f) importFile(f); });
 window.addEventListener("hashchange", onRoute);
 window.addEventListener("pagehide", saveJobs);
