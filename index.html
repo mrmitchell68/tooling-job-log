@@ -289,6 +289,11 @@ body.arr-dragging{cursor:grabbing}
 .rv .rin input.v{flex:1}
 .rv .rin input.u{width:64px}
 .rv .was{font-size:12.5px;color:var(--text-dim);margin-top:3px}
+.rv-warn{margin:6px 0;padding:8px 10px;border-radius:8px;background:var(--warn-bg,#fff4d6);color:var(--warn-text,#6b4d00);font-size:13.5px;font-weight:600}
+.rv-loose-hd{margin:14px 0 2px;padding-top:10px;border-top:2px solid var(--border);display:flex;flex-direction:column;gap:2px}
+.rv-loose-hd span{font-size:12.5px;color:var(--text-dim)}
+.rv.loose .rin select{flex:1;min-height:44px;font-size:15px}
+.rv .rin input.lab{font-weight:600}
 .rv .src{font-size:12px;color:var(--text-faint);margin-top:2px;font-style:italic;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .conf{font-size:10.5px;font-weight:800;padding:2px 7px;border-radius:99px;letter-spacing:.03em}
 .conf.hi{background:var(--good-dim);color:var(--good)}
@@ -437,7 +442,10 @@ pre.raw{white-space:pre-wrap;font-size:12px;background:var(--surface-2);padding:
 .rs-proc{border:1px solid #7f9cbf;display:flex;flex-shrink:0}
 .rs-proc h5{margin:0;writing-mode:horizontal-tb;background:linear-gradient(180deg,#1659aa,#0b3a75);color:#fff;font-size:8.2px;font-weight:700;letter-spacing:.06em;padding:3px 6px;display:flex;align-items:center;white-space:nowrap}
 .rs-proc .pv{padding:2px 6px;display:flex;flex-wrap:wrap;gap:0 10px;align-items:center}
-.rs-proc .pv span{white-space:nowrap}.rs-proc .pv b{color:#0b3a75}
+.rs-proc .pv span{white-space:normal;overflow-wrap:anywhere}.rs-proc .pv b{color:#0b3a75}
+.rs-more{display:grid;grid-template-columns:1fr 1fr;gap:.06in;flex-shrink:0;align-items:start}
+.rs-more .rs-other{grid-column:1/-1}
+.rs-morebody{display:flex;flex-direction:column;gap:.06in}
 .rs-bot{flex:1 0 auto;display:flex;gap:.06in;min-height:0}
 .rs-col{display:flex;flex-direction:column;gap:.06in;min-width:0}
 .rs-col.c1{width:35.5%}.rs-col.c2{width:32.5%}.rs-col.c3{flex:1}
@@ -497,8 +505,8 @@ pre.raw{white-space:pre-wrap;font-size:12px;background:var(--surface-2);padding:
 <script>
 (function(){
 "use strict";
-var APP_VERSION = "2.3.0";
-var SCHEMA = 3; // job data schema: 3 = reference-sheet sections (part info, supplies, packaging, instructions, QC)
+var APP_VERSION = "2.3.1";
+var SCHEMA = 4; // job data schema: 3 = reference-sheet sections (part info, supplies, packaging, instructions, QC); 4 = scanned/custom fields reconciled to their proper homes (v2.3.1)
 var K = { jobs:"tjl2.jobs", tpl:"tjl2.templates", meta:"tjl2.meta", theme:"tjl2.theme", v1:"toolingJobLog.v1" };
 var CDN = {
   tess: "https://cdn.jsdelivr.net/npm/tesseract.js@5.1.1/dist/tesseract.min.js",
@@ -621,7 +629,7 @@ function defaultSections(units){
   return [
     roleSection("partinfo"),
     {id:uid(), type:"fields", title:"Specs", fields:[
-      F("Material grade","","grade"), F("Dryer temp/time","","dryer"),
+      F("Material grade","","grade"), F("Colorant / masterbatch","","colorant"), F("Let-down ratio","","ldr"), F("Regrind","%","regrind"), F("Dryer temp/time","","dryer"),
       F("Runner type","","runner"), F("Gate type","","gate"), F("Shrinkage","%","shrink")
     ]},
     {id:uid(), type:"fields", title:"Temperatures", fields:[
@@ -664,6 +672,7 @@ function migrateJob(j){
   if(!secByRole(j,"instructions")) insertAt(roleSection("instructions"));
   if(!secByRole(j,"quality")) insertAt(roleSection("quality"));
   if(!notes) secs.push(roleSection("notes"));
+  reconcileFields(j);
   j.schema = SCHEMA;
 }
 function newJob(over){
@@ -700,6 +709,56 @@ function findField(j, key, label){
   return hit;
 }
 function fieldVal(j, key){ var h=findField(j, key); return h && h.f.value ? h.f.value+(h.f.unit?" "+h.f.unit:"") : ""; }
+// Best field for a key: the first one that has a value (older jobs can hold the same key twice, e.g. an empty part-info
+// field added by migration plus the filled one from the old Specs section), else the first one.
+function bestField(j, key){
+  var hits=[]; if(!key) return null;
+  (j.sections||[]).forEach(function(s){ if(s.type==="fields") (s.fields||[]).forEach(function(f){ if(f.key===key) hits.push({sec:s, f:f}); }); });
+  return hits.find(function(h){ return String(h.f.value||"").trim(); }) || hits[0] || null;
+}
+// For printing: keyed field with a value, else a custom (keyless) field whose label means the same thing ("Part Wt", "Colour", "Resin")
+function pfield(j, key){
+  var h = bestField(j, key);
+  if(h && String(h.f.value||"").trim()) return h;
+  var alt=null;
+  (j.sections||[]).some(function(s){ if(s.type!=="fields") return false; return (s.fields||[]).some(function(f){ if(!f.key && String(f.value||"").trim()){ var d=defForLabel(f.label); if(d && d.key===key){ alt={sec:s, f:f}; return true; } } return false; }); });
+  return alt || h;
+}
+var COLOR_WORDS = "light|dark|bright|pale|medium|natural|clear|black|white|red|blue|green|yellow|orange|purple|violet|pink|brown|tan|beige|ivory|gray|grey|silver|gold|amber|smoke|translucent|opaque|charcoal|navy|cream|bone|almond|teal|maroon|olive|lime|aqua";
+function isColorPhrase(v){ return new RegExp("^\\s*(?:(?:"+COLOR_WORDS+")\\b[\\s,\\/&+-]*){1,3}$","i").test(String(v||"")) ; }
+// v2.3.1 migration (schema 4): give recognizable custom fields their proper home so they print on the reference sheet.
+// Never deletes a value: a custom field is only removed after its value has been copied into the empty field it duplicates.
+function reconcileFields(j){
+  var notes=[], pi=secByRole(j,"partinfo"), PI={};
+  PARTINFO_DEFS.forEach(function(d){ PI[d[2]]=1; });
+  (j.sections||[]).forEach(function(s){
+    if(s.type!=="fields") return;
+    (s.fields||[]).slice().forEach(function(f){
+      if(f.key || !String(f.value||"").trim()) return;
+      var d = defForLabel(f.label); if(!d) return;
+      if(d.header){
+        if(!String(j[d.key]||"").trim()){ j[d.key]=String(f.value).trim(); s.fields.splice(s.fields.indexOf(f),1); notes.push(f.label+" → "+d.label); }
+        return;
+      }
+      var tgt = bestField(j, d.key);
+      if(!tgt){
+        f.key = d.key;
+        if(PI[d.key] && pi && s!==pi){ s.fields.splice(s.fields.indexOf(f),1); pi.fields.push(f); }
+        notes.push(f.label+" → "+d.label); return;
+      }
+      if(!String(tgt.f.value||"").trim()){
+        tgt.f.value = f.value; if(f.unit) tgt.f.unit = f.unit;
+        s.fields.splice(s.fields.indexOf(f),1); notes.push(f.label+" → "+tgt.f.label); return;
+      }
+      // both filled: keep both — the custom one prints under "Other specs"
+    });
+  });
+  // v2.0.x saved colors in "Material grade/color" (and never filled Color)
+  var g=bestField(j,"grade"), c=bestField(j,"color");
+  if(g && c && !String(c.f.value||"").trim() && /colou?r/i.test(g.f.label||"") && isColorPhrase(g.f.value)){ c.f.value=String(g.f.value).trim(); notes.push(g.f.label+" → Color (copied)"); }
+  if(notes.length) j.migrationNotes = (j.migrationNotes||[]).concat(notes);
+  return notes;
+}
 function haystack(j){
   var parts=[j.toolNumber,j.partName,j.customer,j.press,statusLabel(j.status), j.example?"example":""];
   (j.sections||[]).forEach(function(s){
@@ -885,10 +944,10 @@ function compressPhoto(file){
   });
 }
 function prepForOcr(blobOrCanvas){
-  // grayscale + contrast stretch, ~2000px longest side for good OCR speed/accuracy on phones
+  // grayscale + contrast stretch, ~2600px longest side: small table text (e.g. "3.269 lbs" on a reference sheet) needs the extra pixels
   var p = blobOrCanvas instanceof HTMLCanvasElement ? Promise.resolve(blobOrCanvas) : loadImage(blobOrCanvas);
   return p.then(function(src){
-    var w=src.naturalWidth||src.width, h=src.naturalHeight||src.height, s=Math.min(1.6, 2000/Math.max(w,h));
+    var w=src.naturalWidth||src.width, h=src.naturalHeight||src.height, s=Math.min(1.6, (window.__ocrMax||2600)/Math.max(w,h));
     var c=document.createElement("canvas"); c.width=Math.round(w*s); c.height=Math.round(h*s);
     var g=c.getContext("2d"); g.drawImage(src,0,0,c.width,c.height);
     try{
@@ -931,11 +990,52 @@ function tessWorker(){
   }).catch(function(e){ tessWorkerP=null; throw e; });
   return tessWorkerP;
 }
+function linesFromWords(words){
+  var ws = (words||[]).filter(function(w){ return w && w.bbox && String(w.text||"").trim(); }).map(function(w){
+    return {t:String(w.text).trim(), x0:w.bbox.x0, x1:w.bbox.x1, y0:w.bbox.y0, y1:w.bbox.y1, h:Math.max(1,w.bbox.y1-w.bbox.y0), c:(w.confidence||0)/100};
+  });
+  // drop low-confidence specks ("Fu", "~") — usually photo texture or broken glyphs
+  ws = ws.filter(function(w){ return !(w.c<0.4 && w.t.replace(/[^a-z0-9]/gi,"").length<=2 && !/^\d+$/.test(w.t)); });
+  // Tesseract sometimes reads the same spot twice in two blocks ("Material:" + "terial:"): keep the more confident one
+  ws.sort(function(a,b){ return b.c-a.c; });
+  var kept=[];
+  ws.forEach(function(w){
+    var dup = kept.some(function(k){ var ix=Math.min(w.x1,k.x1)-Math.max(w.x0,k.x0), iy=Math.min(w.y1,k.y1)-Math.max(w.y0,k.y0); return ix>0 && iy>0 && ix*iy > 0.5*Math.min((w.x1-w.x0)*w.h, (k.x1-k.x0)*k.h); });
+    if(!dup) kept.push(w);
+  });
+  ws = kept;
+  if(ws.length<3) return null;
+  var hs = ws.map(function(w){ return w.h; }).sort(function(a,b){ return a-b; }), mh = hs[hs.length>>1] || 12;
+  ws.forEach(function(w){ w.cy=(w.y0+w.y1)/2; });
+  ws.sort(function(a,b){ return a.cy-b.cy; });
+  var rows=[];
+  ws.forEach(function(w){
+    var r=null, best=0;
+    for(var i=rows.length-1; i>=0 && i>=rows.length-6; i--){
+      var R=rows[i], ov=Math.min(w.y1,R.y1)-Math.max(w.y0,R.y0), need=0.3*Math.min(w.h, R.y1-R.y0, mh*1.5);
+      if(ov>=need && ov>best){ best=ov; r=R; }
+    }
+    if(!r){ r={ws:[], y0:w.y0, y1:w.y1}; rows.push(r); }
+    r.ws.push(w);
+    var n=r.ws.length, sy0=r.ws.map(function(x){ return x.y0; }).sort(function(a,b){ return a-b; }), sy1=r.ws.map(function(x){ return x.y1; }).sort(function(a,b){ return a-b; });
+    r.y0=sy0[n>>1]; r.y1=sy1[n>>1]; // median band: one tall box doesn't swallow the next line
+  });
+  rows.sort(function(a,b){ return (a.y0+a.y1)-(b.y0+b.y1); });
+  return rows.map(function(r){
+    r.ws.sort(function(a,b){ return a.x0-b.x0; });
+    var txt="", prev=null, cs=0;
+    r.ws.forEach(function(w){ if(prev){ var gap=w.x0-prev.x1; txt += gap > mh*1.3 ? "   " : " "; } txt += w.t; prev=w; cs+=w.c; });
+    return {text:txt, conf:cs/r.ws.length};
+  }).filter(function(l){ return l.text.trim(); });
+}
 function ocrCanvas(canvas, label){
   return tessWorker().then(function(w){
-    return w.recognize(canvas).then(function(r){
+    // PSM 11 (sparse text): finds words in table cells / multi-column sheets; lines are rebuilt from word boxes below
+    return w.setParameters({tessedit_pageseg_mode:"11"}).then(function(){ return w.recognize(canvas); }).then(function(r){
       var data = r.data||{};
-      var lines = (data.lines||[]).map(function(l){ return {text:String(l.text||"").replace(/\s+$/,""), conf:(l.confidence||0)/100}; }).filter(function(l){ return l.text.trim(); });
+      // Rebuild lines from word boxes: keeps a label and its value on one line even when Tesseract splits a table into
+      // blocks, and marks column gaps with 3 spaces (like the PDF text layer) so values don't run into the next column.
+      var lines = linesFromWords(data.words) || (data.lines||[]).map(function(l){ return {text:String(l.text||"").replace(/\s+$/,""), conf:(l.confidence||0)/100}; }).filter(function(l){ return l.text.trim(); });
       if(!lines.length && data.text) lines = data.text.split(/\n/).filter(function(t){ return t.trim(); }).map(function(t){ return {text:t, conf:(data.confidence||60)/100}; });
       return {lines:lines, conf:(data.confidence||0)/100, label:label, kind:"ocr"};
     });
@@ -955,16 +1055,17 @@ function pdfTextLines(page){
 }
 
 /* ---------- field dictionary (scan-to-fill) ---------- */
-// "~" prefix = weak/ambiguous synonym (lower confidence, unchecked by default)
+// "~" prefix = weak/ambiguous synonym (lower confidence; needs a ":" separator, a confirming unit, or a short value with a digit)
+// Synonyms of 5+ characters are OCR-tolerant (i/l/1, o/0, s/5, g/q) — see synPattern.
 var FIELD_DEFS = [
-  {key:"toolNumber", label:"Tool #", header:true, syn:["tool number","tool no","tool #","tool#","tool id","mold number","mold no","mold #","mold#","mould no","mould #","tooling #","die #","~tool","~mold"]},
+  {key:"toolNumber", label:"Tool #", header:true, syn:["tool number","tool no","tool #","tool#","tool id","mold number","mold no","mold #","mold#","mold id","mould number","mould no","mould #","tool/mold #","mold/tool #","tooling #","die #","~tool","~mold","~mould"]},
   {key:"partName", label:"Part name", header:true, syn:["part name","part description","part desc","~part"]},
   {key:"customer", label:"Customer", header:true, syn:["customer name","customer","cust","client","account"]},
   {key:"press", label:"Press", header:true, syn:["press number","press no","press #","press#","~press"]},
-  {key:"part_no", label:"Part number", section:"Mold / part information", syn:["part number","part no","part #","part#","p/n","pn"]},
+  {key:"part_no", label:"Part number", section:"Mold / part information", syn:["part number","part no","part num","part #","part#","p/n","pn","item number","item no","item #","part id","part code"]},
   {key:"description", label:"Description", section:"Mold / part information", syn:["description","desc"]},
-  {key:"color", label:"Color", section:"Mold / part information", syn:["color","colour","colorant"]},
-  {key:"part_wt", label:"Part weight", section:"Mold / part information", unitType:"weight", syn:["part weight","part wt","part wgt","piece weight"]},
+  {key:"color", label:"Color", section:"Mold / part information", syn:["part color","part colour","material color","material colour","resin color","resin colour","color code","colour code","color","colour"]},
+  {key:"part_wt", label:"Part weight", section:"Mold / part information", unitType:"weight", syn:["part weight","part wt","part wgt","part wght","piece weight","piece wt","pc weight","pc wt","part mass","unit weight","weight per part","wt per part","weight/part","net part weight"]},
   {key:"mach_cycle", label:"Machine cycle time", section:"Mold / part information", unitType:"time", syn:["machine cycle time","machine cycle","mach cycle"]},
   {key:"pph", label:"Parts per hour", section:"Mold / part information", numeric:true, syn:["parts per hour","parts per hr","parts/hr","parts / hr","pcs per hour","pieces per hour","pcs/hr","pph"]},
   {key:"machine", label:"Machine", section:"Mold / part information", syn:["machine number","machine no","machine #","machine#","mach #","machine"]},
@@ -975,41 +1076,52 @@ var FIELD_DEFS = [
   {key:"qty_carton", label:"Quantity per carton", section:"Carton / packaging", syn:["quantity per carton","qty per carton","qty/carton","qty / carton","parts per carton","pcs per carton","pieces per carton","qty per box","parts per box","pack qty"]},
   {key:"pallet_size", label:"Pallet size", section:"Carton / packaging", syn:["pallet size","pallet dimensions","pallet"]},
   {key:"cartons_layer", label:"Cartons per layer", section:"Carton / packaging", syn:["cartons per layer","boxes per layer","cartons/layer","cartons / layer"]},
-  {key:"material", label:"Material", section:"Mold / part information", syn:["material","resin","matl","mat'l","polymer","plastic"]},
-  {key:"grade", label:"Material grade", section:"Specs", syn:["grade/color","grade / color","material grade","grade","masterbatch"]},
+  {key:"material", label:"Material", section:"Mold / part information", syn:["material type","type of material","resin type","type of resin","material/resin","base resin","raw material","material","resin","matl","mat'l","polymer","plastic","compound"]},
+  {key:"grade", label:"Material grade", section:"Specs", syn:["material grade","resin grade","grade/color","grade / color","grade"]},
+  {key:"colorant", label:"Colorant / masterbatch", section:"Specs", syn:["color concentrate","colour concentrate","color conc","masterbatch","master batch","colorant","colourant","pigment"]},
+  {key:"ldr", label:"Let-down ratio", section:"Specs", syn:["let down ratio","letdown ratio","let down","letdown","ldr","color ratio","colour ratio","colorant ratio","masterbatch ratio","mb ratio","mix ratio","blend ratio"]},
+  {key:"regrind", label:"Regrind", section:"Specs", unitType:"pct", syn:["regrind percentage","regrind allowed","max regrind","regrind %","% regrind","regrind","rework %","~rework"]},
   {key:"dryer_temp", label:"Dryer temp/time", section:"Specs", unitType:"temp", syn:["dryer temp","drying temp","dry temp","drying temperature","dryer temperature"]},
-  {key:"dryer_time", label:"Dryer temp/time", section:"Specs", unitType:"time", syn:["dryer time","drying time","dry time","residence time"]},
-  {key:"dryer", label:"Dryer temp/time", section:"Specs", syn:["dryer temp/time","dryer","drying"]},
-  {key:"cavities", label:"Number of cavities", section:"Mold / part information", numeric:true, syn:["number of cavities","no of cavities","# of cavities","cavities","cavity","# cav","# of cav","cavitation","cav"]},
-  {key:"shot_wt", label:"Shot weight", section:"Mold / part information", unitType:"weight", syn:["shot weight","shot wt","shot wgt","~shot"]},
+  {key:"dryer_time", label:"Dryer temp/time", section:"Specs", unitType:"time", syn:["dryer time","drying time","dry time","residence time","drying hours"]},
+  {key:"dryer", label:"Dryer temp/time", section:"Specs", syn:["dryer temp/time","drying conditions","dryer setting","dryer","drying"]},
+  {key:"cavities", label:"Number of cavities", section:"Mold / part information", numeric:true, syn:["number of cavities","no of cavities","# of cavities","# cavities","cavity count","cavities","cavity","# cav","# of cav","cavitation","cavs","cav"]},
+  {key:"shot_wt", label:"Shot weight", section:"Mold / part information", unitType:"weight", syn:["total shot weight","shot weight","shot wt","shot wgt","shot mass","~shot"]},
   {key:"cycle", label:"Avg. cycle time", section:"Mold / part information", unitType:"time", syn:["average cycle time","avg cycle time","avg cycle","cycle time","overall cycle","total cycle","~cycle"]},
   {key:"runner", label:"Runner type", section:"Specs", syn:["runner type","runner system","runner","hot runner","cold runner"]},
   {key:"gate", label:"Gate type", section:"Specs", syn:["gate type","gate style","gating","~gate"]},
   {key:"shrink", label:"Shrinkage", section:"Specs", unitType:"pct", syn:["shrinkage","shrink rate","shrink"]},
-  {key:"nozzle", label:"Nozzle", section:"Temperatures", unitType:"temp", syn:["nozzle temp","nozzle tip","nozzle","noz","nzl"]},
+  {key:"barrel", label:"Barrel temps", section:"Temperatures", syn:["barrel temperatures","barrel temperature","barrel temps","barrel temp","barrel profile","temp profile","heater bands","barrel heats"]},
+  {key:"nozzle", label:"Nozzle", section:"Temperatures", unitType:"temp", syn:["nozzle temperature","nozzle temp","nozzle tip","nozzle","noz","nzl"]},
   {key:"zone1", label:"Zone 1", section:"Temperatures", unitType:"temp", syn:["barrel zone 1","heater zone 1","heat zone 1","zone 1","barrel 1","z 1","~front zone","~front"]},
   {key:"zone2", label:"Zone 2", section:"Temperatures", unitType:"temp", syn:["barrel zone 2","heater zone 2","heat zone 2","zone 2","barrel 2","z 2","~center zone","~centre","~center","~middle","~mid"]},
   {key:"zone3", label:"Zone 3", section:"Temperatures", unitType:"temp", syn:["barrel zone 3","heater zone 3","heat zone 3","zone 3","barrel 3","z 3","~rear zone","~rear"]},
   {key:"zone4", label:"Zone 4", section:"Temperatures", unitType:"temp", syn:["barrel zone 4","heater zone 4","heat zone 4","zone 4","barrel 4","z 4","~feed zone","~feed throat","~feed"]},
+  {key:"mold_temp", label:"Mold temp", section:"Temperatures", unitType:"temp", syn:["mold temperature","mould temperature","mold temps","mold temp","mould temp","tool temperature","tool temp","mold water temp","water temp"]},
   {key:"mold_a", label:"Mold A side", section:"Temperatures", unitType:"temp", syn:["mold a side","mold temp a","mould a side","a side mold","a side","a-side","a half","cavity side","stationary half","fixed half","stationary"]},
   {key:"mold_b", label:"Mold B side", section:"Temperatures", unitType:"temp", syn:["mold b side","mold temp b","mould b side","b side mold","b side","b-side","b half","core side","moving half","ejector half","moving"]},
   {key:"inj_press", label:"Injection pressure", section:"Pressures & speeds", unitType:"press", alt:{time:"inj_time"}, syn:["injection pressure","inj pressure","inj press","inj pr","injection press","1st stage pressure","first stage pressure","fill pressure","inject pressure","~injection","~inj","~ip"]},
   {key:"inj_time", label:"Injection time", section:"Pressures & speeds", unitType:"time", syn:["injection time","inj time","fill time","1st stage time"]},
   {key:"inj_speed", label:"Injection speed", section:"Pressures & speeds", unitType:"speed", syn:["injection speed","inj speed","inj velocity","injection velocity","fill speed"]},
   {key:"hold_press", label:"Hold pressure", section:"Pressures & speeds", unitType:"press", alt:{time:"hold_time"}, syn:["hold pressure","holding pressure","hold press","hold pr","pack pressure","pack press","2nd stage pressure","second stage pressure","~hold","~pack"]},
-  {key:"hold_time", label:"Hold time", section:"Pressures & speeds", unitType:"time", syn:["hold time","holding time","pack time","2nd stage time","second stage time"]},
+  {key:"hold_time", label:"Hold time", section:"Pressures & speeds", unitType:"time", syn:["hold time","holding time","pack time","packing time","hold/pack time","2nd stage time","second stage time"]},
   {key:"back_press", label:"Back pressure", section:"Pressures & speeds", unitType:"press", syn:["back pressure","backpressure","back press","back pr","~bp"]},
   {key:"rpm", label:"Screw RPM", section:"Pressures & speeds", unitType:"rpm", syn:["screw rpm","screw speed","screw rotation","recovery speed","rpm"]},
   {key:"cool_time", label:"Cooling time", section:"Pressures & speeds", unitType:"time", syn:["cooling time","cool time","cooling","~cool"]},
   {key:"transfer", label:"Transfer position", section:"Pressures & speeds", unitType:"length", syn:["transfer position","transfer pos","v/p transfer","vp transfer","transfer"]},
-  {key:"shot_size", label:"Shot size", section:"Pressures & speeds", unitType:"length", syn:["shot size","shot length","dosing"]},
+  {key:"shot_size", label:"Shot size", section:"Pressures & speeds", unitType:"length", alt:{weight:"shot_wt"}, syn:["shot size","shot length","shot volume","shot stroke","dosing stroke","dosing"]},
   {key:"cushion", label:"Cushion", section:"Pressures & speeds", unitType:"length", syn:["cushion"]},
-  {key:"clamp", label:"Clamp tonnage", section:"Specs", unitType:"ton", syn:["clamp tonnage","clamp force","tonnage","clamp"]}
+  {key:"clamp", label:"Clamp tonnage", section:"Specs", unitType:"ton", syn:["clamp tonnage","clamp force","press tonnage","machine tonnage","press size","tonnage","clamp"]}
 ];
-var UNIT_TYPE = {"°F":"temp","°C":"temp","psi":"press","bar":"press","MPa":"press","s":"time","min":"time","hr":"time","rpm":"rpm","g":"weight","oz":"weight","lb":"weight","%":"pct","mm":"length","in":"length","in/s":"speed","mm/s":"speed","ton":"ton"};
-var SYN_INDEX = null;
+var DEF_BY_KEY = {}; FIELD_DEFS.forEach(function(d){ DEF_BY_KEY[d.key]=d; });
+var UNIT_TYPE = {"°F":"temp","°C":"temp","psi":"press","bar":"press","MPa":"press","s":"time","min":"time","hr":"time","rpm":"rpm","g":"weight","kg":"weight","oz":"weight","lb":"weight","%":"pct","mm":"length","in":"length","cc":"length","in³":"length","in/s":"speed","mm/s":"speed","ton":"ton"};
+var OCR_TOL = {i:"[i1l|!]", l:"[l1i|]", o:"[o0]", s:"[s5]", g:"[gq9]"};
 function synPattern(s){
-  var p = s.replace(/[.*+?^${}()|[\]\\]/g,"\\$&").replace(/\s+/g,"[\\s._-]*").replace(/\//g,"\\s*\\/\\s*");
+  var tol = s.replace(/[^a-z]/gi,"").length>=5;
+  var p = s.split("").map(function(ch){
+    if(/\s/.test(ch)) return " ";
+    if(tol && OCR_TOL[ch.toLowerCase()]) return OCR_TOL[ch.toLowerCase()];
+    return ch.replace(/[.*+?^${}()|[\]\\\/-]/g,"\\$&");
+  }).join("").replace(/ +/g,"[\\s._-]{0,2}").replace(/\\\//g,"\\s?\\/\\s?").replace(/\\-/g,"[\\s._-]{0,2}");
   var end = /[a-z0-9]$/i.test(s) ? "(?![a-z0-9])" : "";
   return "(?<![a-z0-9])"+p+end;
 }
@@ -1023,45 +1135,81 @@ function buildSynIndex(extraLabels){
   out.sort(function(a,b){ return b.syn.length-a.syn.length; });
   return out;
 }
-function normUnit(u, def){
+// Label text (e.g. an old custom field "Part Wt. (g)" or "Colour") → known field definition, or null
+var LABEL_INDEX = null;
+function labelKey(l){ return normKey(String(l||"").replace(/[\(\[][^)\]]*[\)\]]/g," ").replace(/%/g," pct ")).replace(/\b(pct|g|grams?|lbs?|oz|sec|secs|seconds|s|f|c|psi|in|mm)$/,"").trim(); }
+function defForLabel(label){
+  if(!LABEL_INDEX){ LABEL_INDEX={}; FIELD_DEFS.forEach(function(d){ [d.label].concat(d.syn).forEach(function(s){ var k=labelKey(s.replace(/^~/,"")); if(k && !LABEL_INDEX[k]) LABEL_INDEX[k]=d; }); }); LABEL_INDEX[labelKey("Material grade/color")]=DEF_BY_KEY.grade; LABEL_INDEX[labelKey("Cavities")]=DEF_BY_KEY.cavities; LABEL_INDEX[labelKey("Cycle time")]=DEF_BY_KEY.cycle; }
+  return LABEL_INDEX[labelKey(label)] || null;
+}
+function normUnit(u, type){
   if(!u) return "";
-  var x = u.toLowerCase().replace(/\s+/g,"");
+  var x = u.toLowerCase().replace(/\s+/g,"").replace(/\.$/,"");
+  if(/^[il1|]bs?$/.test(x)) return type==="press" ? "psi" : "lb";   // OCR reads "lbs" as "Ibs"/"1bs"
   if(/^(°|º|deg(rees)?)?f$/.test(x)) return "°F";
   if(/^(°|º|deg(rees)?)c$/.test(x) || x==="c") return "°C";
   if(x==="°"||x==="º"||x==="deg"||x==="degrees") return state.meta.units==="metric"?"°C":"°F";
-  if(x==="psi"||x==="lbs"||x==="psig") return "psi";
+  if(x==="psi"||x==="psig") return "psi";
   if(x==="bar") return "bar"; if(x==="mpa") return "MPa";
   if(/^(s|sec|secs|second|seconds|")$/.test(x)) return "s";
   if(/^min(s|ute|utes)?$/.test(x)) return "min";
   if(/^(h|hr|hrs|hour|hours)$/.test(x)) return "hr";
   if(x==="rpm") return "rpm";
-  if(/^(g|gr|gm|gms|gram|grams)$/.test(x)) return "g"; if(x==="oz") return "oz";
+  if(/^(g|gr|gm|gms|gram|grams)$/.test(x)) return "g"; if(/^kgs?$/.test(x)) return "kg"; if(x==="oz"||x==="ozs") return "oz";
+  if(x==="cc"||x==="cm3"||x==="cm³") return "cc"; if(x==="in3"||x==="in³"||x==="cuin"||x==="cu.in") return "in³";
   if(x==="mm") return "mm"; if(x==="in"||x==="inch"||x==="inches") return "in";
   if(x==="in/s"||x==="ips") return "in/s"; if(x==="mm/s") return "mm/s";
   if(/^(t|ton|tons)$/.test(x)) return "ton";
-  if(x==="%") return "%";
+  if(x==="%"||x==="pct"||x==="percent") return "%";
   return u;
 }
-var NUM_RE = /(-?\d{1,3}(?:,\d{3})+(?:\.\d+)?|-?\d*\.\d+|-?\d+)\s*(°\s*[fc]\b|º\s*[fc]\b|°|º|deg(?:rees)?\s*[fc]?\b|psig?\b|bar\b|mpa\b|rpm\b|sec(?:onds?|s)?\b|s\b|min(?:utes?|s)?\b|hrs?\b|hours?\b|h\b|grams?\b|gms?\b|g\b|oz\b|mm\/s\b|in\/s\b|ips\b|mm\b|in\b|%|tons?\b|t\b|[fc]\b|")?/i;
+var NUM_RE_SRC = "(-?\\d{1,3}(?:,\\d{3})+(?:\\.\\d+)?|-?\\d*\\.\\d+|-?\\d+)\\s*(°\\s*[fc]\\b|º\\s*[fc]\\b|°|º|deg(?:rees)?\\s*[fc]?\\b|psig?\\b|bar\\b|mpa\\b|rpm\\b|sec(?:onds?|s)?\\b|s\\b|min(?:utes?|s)?\\b|hrs?\\b|hours?\\b|h\\b|grams?\\b|gms?\\b|gr\\b|g\\b|kgs?\\b|ozs?\\b|[li1|]bs?\\b\\.?|cc\\b|cm3\\b|in3\\b|in³|cu\\.?\\s?in\\b|mm\\/s\\b|in\\/s\\b|ips\\b|mm\\b|in\\b|%|percent\\b|tons?\\b|t\\b|[fc]\\b|\")?";
+var NUM_RE = new RegExp(NUM_RE_SRC, "i");
 function fixOcrDigits(s){
-  return s.replace(/(\d)[oO]/g,"$10").replace(/[oO](?=\d)/g,"0").replace(/(\d)[lI|](?=\d|\b)/g,"$11").replace(/[lI|](?=\d)/g,"1").replace(/(\d)\s*,\s*(\d{3})(?!\d)/g,"$1,$2");
+  return s.replace(/(\d)[oO](?![a-z])/g,"$10").replace(/[oO](?=\d)/g,"0").replace(/(\d)[lI|](?=\d)/g,"$11").replace(/(^|\s)[lI|](?=\d)/g,"$11").replace(/(\d)\s*,\s*(\d{3})(?!\d)/g,"$1,$2");
 }
-function parseNumber(raw){
-  var s = fixOcrDigits(raw);
-  var m = s.match(NUM_RE);
-  if(!m) return null;
-  return {num:m[1].replace(/,/g,""), unit:normUnit(m[2]||""), idx:m.index, len:m[0].length};
+// First number in the text — preferring one whose unit matches the wanted unit type (e.g. "Press 7 / 150 ton" → 150 ton)
+function parseNumber(raw, unitType){
+  var s = fixOcrDigits(raw), re = new RegExp(NUM_RE_SRC, "gi"), m, first=null, pick=null;
+  while((m = re.exec(s))){
+    if(!m[0]) { re.lastIndex++; continue; }
+    var r = {num:m[1].replace(/,/g,""), unit:normUnit((m[2]||"").trim(), unitType), idx:m.index, len:m[0].length, rest:s.slice(m.index+m[0].length)};
+    if(!first) first=r;
+    if(unitType && r.unit && UNIT_TYPE[r.unit]===unitType){ pick=r; break; }
+  }
+  return pick || first;
 }
-function cleanVal(s){ return String(s||"").replace(/^[\s:=#.\-–—|)\]>_]+/,"").replace(/[\s|,;:_]+$/,"").replace(/\s{2,}/g," ").trim(); }
+function cleanVal(s){ return String(s||"").replace(/^[\s:;,=#.\-–—|)\]>_]+/,"").replace(/[\s|,;:_]+$/,"").replace(/\s{2,}/g," ").trim(); }
+// Cut a text value where a neighbouring column / numbered instruction starts ("TPU-85   6. Put label…")
+function trimBleed(raw){
+  var s = String(raw||"").replace(/^[\s:;,=#.\-–—|)\]>_]+/,"");
+  s = s.split(/\s{3,}|\t|\s\|\s/)[0];
+  s = s.replace(/\s+\d{1,2}[.)]?\s+[A-Z][a-z]{2,}.*$/,"").replace(/\s+\d{1,2}[.)]\s+[A-Z].*$/,"");
+  return cleanVal(s);
+}
+// unit written in the label: "Part Wt. (g):", "Regrind %:", "Cycle (sec)"
+function labelUnitHint(seg){
+  var m = seg.match(/^\s*\.?\s*[\(\[]\s*([a-z°º%"\/.³ ]{1,9}?)\s*[\)\]]/i);
+  if(m) return {unit:m[1], len:m[0].length};
+  m = seg.match(/^\s*(%)(?=\s*[:=\s]|$)/);
+  if(m) return {unit:"%", len:m[0].length};
+  return null;
+}
+var PROSE_START = /^(is|are|and|or|of|with|the|to|for|be|on|in|at|as|by|that|if|when|will|must|should)\s/;
 
+// OCR noise filter: most tokens must look like words (with vowels) or numbers/units
+function looksReal(t){
+  t=String(t||"").trim(); if(!/[a-z]{3,}/i.test(t) || !/[aeiou]/i.test(t)) return false;
+  var toks=t.split(/\s+/), real=toks.filter(function(w){ return /^[\d.,\/%°#()x-]+[a-z]{0,3}\.?$/i.test(w) || (/^[a-z(][a-z'.,:()&\/-]*$/i.test(w) && w.replace(/[^a-z]/gi,"").length>=2 && /[aeiouy]/i.test(w) && !/[A-Z]{2,}[a-z]+[A-Z]/.test(w)); }).length;
+  return real/toks.length>=0.75;
+}
 function parseLines(lines, job, baseConf){
   var customLabels=[];
-  (job.sections||[]).forEach(function(s){ if(s.type==="fields") (s.fields||[]).forEach(function(f){ if(!f.key) customLabels.push(f.label); }); });
+  (job.sections||[]).forEach(function(s){ if(s.type==="fields") (s.fields||[]).forEach(function(f){ if(!f.key && !defForLabel(f.label)) customLabels.push(f.label); }); });
   var idx = buildSynIndex(customLabels);
   var cands=[], extras=[];
   var used = lines.map(function(){ return false; });
-  lines.forEach(function(L, li){
-    var text = L.text; if(!text || !text.trim()) return;
+  function findLabels(text){
     var found=[];
     idx.forEach(function(e){
       e.re.lastIndex=0; var m;
@@ -1071,47 +1219,81 @@ function parseLines(lines, job, baseConf){
         if(m[0].length===0) e.re.lastIndex++;
       }
     });
+    return found.sort(function(a,b){ return a.st-b.st; });
+  }
+  var foundBy = lines.map(function(L){ return (L.text && L.text.trim()) ? findLabels(L.text) : []; });
+  // table header row: "Part Wt    Shot Wt    Resin    Colour" with the values on the next line
+  lines.forEach(function(L, li){
+    var found = foundBy[li], nx = lines[li+1];
+    if(found.length<2 || !nx || used[li]) return;
+    var emptySegs = found.every(function(f, fi){ var seg=L.text.slice(f.en, found[fi+1]? found[fi+1].st : L.text.length); var h=labelUnitHint(seg); if(h) seg=seg.slice(h.len); return !cleanVal(seg); });
+    if(!emptySegs || foundBy[li+1].some(function(f){ return !f.e.weak; })) return;
+    var cells = nx.text.trim().split(/\s{2,}|\t|\s\|\s|\s*\|\s*/).map(cleanVal).filter(function(c){ return c; });
+    if(cells.length!==found.length) return;
+    found.forEach(function(f, fi){ f.tableVal = cells[fi]; });
+    used[li]=true; used[li+1]=true; foundBy[li+1]=[]; lines[li+1]._tableRow=true;
+  });
+  lines.forEach(function(L, li){
+    var text = L.text; if(!text || !text.trim() || L._tableRow) return;
+    var found = foundBy[li];
     if(!found.length){
-      var gm = text.match(/^\s*([A-Za-z][A-Za-z0-9 #\/().'&-]{1,28}?)\s*[:=]\s*(.{1,60})$/);
-      if(gm) extras.push({label:gm[1].trim(), value:cleanVal(gm[2]), conf:(L.conf||baseConf)*0.6, src:text, li:li});
+      var gm = text.match(/^\s*([A-Za-z][A-Za-z0-9 #\/().'&%-]{1,32}?)\s*[:=]\s*(.{1,80})$/);
+      if(gm && cleanVal(gm[2]) && looksReal(gm[1]) && looksReal(text)) extras.push({label:gm[1].trim(), value:cleanVal(gm[2]), conf:(L.conf||baseConf)*0.6, lineConf:(L.conf==null?baseConf:L.conf), ocr:L.kind==="ocr", src:text, li:li});
       return;
     }
-    found.sort(function(a,b){ return a.st-b.st; });
     found.forEach(function(f, fi){
       if(f.skip) return;
       var next = found[fi+1];
       var d = f.e.def, q = f.e.weak ? 0.62 : 1;
       // text fields: "Machine: 3-540 – Machine #3" → keep the whole value
       if(!(d.numeric || d.unitType)){ var ni=fi+1; while(next && next.e.def===d){ next.skip=true; ni++; next=found[ni]; } }
-      var rawSeg = text.slice(f.en, next? next.st : text.length);
-      var sepQ = (/^\s*[:=#-]/.test(rawSeg) || f.inheritSep) ? 1 : 0.9;
-      var val = cleanVal(rawSeg), lineConf = (L.conf==null? baseConf : L.conf);
+      var rawSeg = f.tableVal!=null ? f.tableVal : text.slice(f.en, next? next.st : text.length);
+      var hint = f.tableVal!=null ? labelUnitHint(text.slice(f.en, next? next.st : text.length)) : labelUnitHint(rawSeg);
+      if(hint && f.tableVal==null) rawSeg = rawSeg.slice(hint.len);
+      var sepQ = (f.tableVal!=null || (/^\s*[:=#-]/.test(rawSeg) || /^\s*[.;,]\s/.test(rawSeg) || (fi===0 && /^[\s•·*\-–—\d.)(]*$/.test(text.slice(0,f.st)) && /^\s{3,}\S/.test(rawSeg))) || f.inheritSep) ? 1 : 0.9;
+      // a label in the middle of a sentence ("Ensure color is consistent") is probably not a label
+      if(fi===0 && f.st>0 && sepQ<1){ var pre=text.slice(0,f.st); if(!/(\s{2,}|\||\t)$/.test(pre) && !/^[\s•·*\-–—\d.)(]*$/.test(pre)) q*=0.5; }
+      if(sepQ<1 && /(^|\s{3,})\d{1,2}[.)]?\s+$/.test(text.slice(0,f.st))) q*=0.5; // "5   Material Blender" — a numbered list / table row, not a label
+      if(sepQ<1 && fi>0 && found[fi-1].bare) q*=0.5; // "Material Dryer 1" — two label words in a row are a phrase (supplies list), not label + value
+      if(sepQ<1 && !cleanVal(rawSeg) && next) f.bare=true;
+      if(sepQ<1 && /^\s*\)/.test(rawSeg)) q*=0.5; // "(540-ton machine) 1" — a word inside parentheses, not a label
+      var isText = !(d.numeric || d.unitType);
+      var val = isText ? trimBleed(rawSeg) : cleanVal(rawSeg), lineConf = (L.conf==null? baseConf : L.conf);
       if(!val && next && next.e.def===d && sepQ===1){ next.inheritSep=true; return; } // "Press: Press 5"
+      if(!val && !isText && next && next.e.weak && f.tableVal==null){ var nn=found[fi+2]; rawSeg=text.slice(f.en, nn? nn.st : text.length); if(hint) rawSeg=rawSeg.slice(hint.len); next.skip=true; next=nn; val=cleanVal(rawSeg); } // "Tonnage:  Press 7 / 150 ton"
       var nextLineUsed=false;
-      if(!val && !next && lines[li+1] && lines[li+1].text.trim().length<40){ val = cleanVal(lines[li+1].text); nextLineUsed=true; q*=0.75; lineConf=Math.min(lineConf, lines[li+1].conf==null?baseConf:lines[li+1].conf); }
-      if(!val) return;
-      var out = {def:d, value:"", unit:"", src:text, li:li};
+      if(!val && !next && lines[li+1] && !used[li+1] && lines[li+1].text.trim().length<48 && !foundBy[li+1].length){ val = isText? trimBleed(lines[li+1].text) : cleanVal(lines[li+1].text); nextLineUsed=true; q*=0.8; lineConf=Math.min(lineConf, lines[li+1].conf==null?baseConf:lines[li+1].conf); }
+      if(!val || !/[a-z0-9]/i.test(val)) return;
+      var out = {def:d, value:"", unit:"", src:text+(nextLineUsed? " ⏎ "+lines[li+1].text.trim() : "")+(f.tableVal!=null && lines[li+1]? " ⏎ "+lines[li+1].text.trim() : ""), li:li};
       var wantsNum = d.numeric || !!d.unitType;
       if(wantsNum){
-        var pn = parseNumber(val);
+        var pn = parseNumber(val, d.unitType);
         if(!pn){ return; }
-        out.value = pn.num; out.unit = pn.unit;
-        if(d.unitType==="weight" && /^\s*lbs?\b/i.test(fixOcrDigits(val).slice(pn.idx+pn.len))) out.unit = "lb";
+        out.value = pn.num; out.unit = pn.unit || (hint? normUnit(hint.unit, d.unitType) : "");
+        var rest = pn.rest.trim();
+        var paren = rest.match(/^(\([^)]{1,24}\))/); if(paren) out.value += " "+paren[1];                    // "320 sec (Semi)"
+        else if(!pn.unit && /^[a-z]{1,5}\b/i.test(rest) && !PROSE_START.test(rest) && d.unitType){ out.value += " "+rest.match(/^[a-z]{1,5}/i)[0]; q*=0.8; } // unknown unit: keep it visible instead of guessing
+        if(!out.unit && d.unitType==="pct" && /%/.test(text.slice(f.st, f.en+3))) out.unit="%";
         var uType = UNIT_TYPE[out.unit];
         if(f.e.weak && d.unitType && uType===d.unitType) q = 0.95; // e.g. "Hold 975 psi": unit confirms the weak label
         if(d.unitType && uType && uType!==d.unitType){
-          if(d.alt && d.alt[uType]){ out.def = FIELD_DEFS.find(function(x){ return x.key===d.alt[uType]; }); q*=0.85; }
+          if(d.alt && d.alt[uType]){ out.def = DEF_BY_KEY[d.alt[uType]]; q = Math.min(q,1)*0.9; }
           else q*=0.5;
         }
+        if(f.e.weak && sepQ<1 && !(uType && uType===d.unitType) && fi===0 && f.tableVal==null) q*=0.7;
         if(d.unitType==="temp" && !out.unit){ q*=0.92; }
         if(d.numeric && !d.unitType){ out.unit=""; }
       } else {
-        out.value = val.slice(0,60);
+        out.value = val.slice(0,80);
         if(d.header && d.key==="toolNumber") out.value = out.value.split(/\s{2,}/)[0];
         if(d.header && d.key==="press" && /^[\d.]+[a-z]?$/i.test(out.value)) out.value = "Press "+out.value;
         if(f.e.weak && sepQ===1) q = Math.max(q, 0.8);
+        if(f.e.weak && sepQ<1 && f.tableVal==null && !(/\d/.test(out.value) && out.value.length<=16)) return; // "MOLD / PART INFORMATION" is a heading, not a mold #
+        if(PROSE_START.test(out.value)) q*=0.5;
+        if(d.key==="color") out.value = out.value.replace(/\s+\d{1,2}$/,""); // "Black 9" — row number from the next column
       }
       out.conf = Math.max(0.05, Math.min(0.99, lineConf * q * sepQ));
+      out.sep = sepQ===1;
       cands.push(out); used[li]=true; if(nextLineUsed) used[li+1]=true;
     });
   });
@@ -1120,45 +1302,95 @@ function parseLines(lines, job, baseConf){
   var dm = cands.filter(function(c){ return c.def.key==="dryer_time"; }).sort(function(a,b){ return b.conf-a.conf; })[0];
   cands = cands.filter(function(c){ return c.def.key!=="dryer_temp" && c.def.key!=="dryer_time"; });
   if(dt||dm){
-    var dryDef = FIELD_DEFS.find(function(x){ return x.key==="dryer"; });
-    cands.push({def:dryDef, value:[dt&&(dt.value+(dt.unit?" "+dt.unit:"")), dm&&(dm.value+(dm.unit?" "+dm.unit:""))].filter(Boolean).join(" / "), unit:"", conf:Math.min(dt?dt.conf:1, dm?dm.conf:1), src:[dt&&dt.src, dm&&dm.src].filter(Boolean).join(" | ")});
+    cands.push({def:DEF_BY_KEY.dryer, value:[dt&&(dt.value+(dt.unit?" "+dt.unit:"")), dm&&(dm.value+(dm.unit?" "+dm.unit:""))].filter(Boolean).join(" / "), unit:"", conf:Math.min(dt?dt.conf:1, dm?dm.conf:1), src:[dt&&dt.src, dm&&dm.src].filter(Boolean).join(" | ")});
   }
   // best candidate per target
   var best = {};
-  cands.forEach(function(c){ var k = c.def.key || ("c:"+normKey(c.def.label)); if(!best[k] || c.conf>best[k].conf) best[k]=c; });
-  return {best:best, extras:extras.filter(function(x){ return !used[x.li]; }).slice(0,12)};
+  var score = function(c){ return c.conf + (c.sep? 0.15 : 0); }; // "Label: value" beats a bare word found mid-line
+  cands.forEach(function(c){ var k = c.def.key || ("c:"+normKey(c.def.label)); if(!best[k] || score(c)>score(best[k])) best[k]=c; });
+  // lines nothing was taken from — shown in review so they can be assigned by hand
+  var extraLi = {}; extras.forEach(function(x){ extraLi[x.li]=1; });
+  var unmatched = [];
+  lines.forEach(function(L, li){
+    var t = String(L.text||"").trim(); if(used[li] || extraLi[li] || L._tableRow || t.length<3 || t.length>90) return;
+    var good = (t.match(/[a-z0-9 .,:\/%°#()-]/gi)||[]).length/t.length;
+    if(good<0.85 || (L.conf!=null && L.conf<0.5)) return;
+    if(!/[\d:=]/.test(t) || !looksReal(t)) return; // headings / prose without a value, OCR noise
+    unmatched.push({text:t, li:li, conf:(L.conf==null?baseConf:L.conf)});
+  });
+  return {best:best, extras:extras.filter(function(x){ return !used[x.li]; }).slice(0,20), unmatched:unmatched.slice(0,30)};
+}
+// Where a field belongs on the job: the role section for part info / carton, otherwise the section titled like def.section
+function homeSection(job, sectionName){
+  var role = normKey(sectionName)===normKey(ROLE_TITLES.partinfo) ? "partinfo" : normKey(sectionName)===normKey(ROLE_TITLES.carton) ? "carton" : null;
+  var sec = (role && secByRole(job, role)) || job.sections.find(function(s){ return s.type==="fields" && normKey(s.title)===normKey(sectionName); });
+  return sec || null;
+}
+function existingFor(job, d){
+  if(!d || d.header) return null;
+  var h = d.key ? bestField(job, d.key) : null;
+  if(!h) h = findField(job, null, d.label);
+  if(!h && d.syn) d.syn.some(function(s){ h = findField(job, null, s.replace(/^~/,"")); return !!h; });
+  return h;
+}
+function reviewItem(job, d, value, unit, conf, src){
+  var prev="", isNew=false, label=d.label;
+  if(d.header){ prev = job[d.key]||""; }
+  else {
+    var h = existingFor(job, d);
+    if(h){ prev = h.f.value||""; label=h.f.label; if(!unit && /^-?[\d.]+$/.test(String(value).trim())) unit=h.f.unit||""; }
+    else isNew = true;
+  }
+  return {id:uid(), header:!!d.header, key:d.key||"", label:label, section:d.section||"Specs", value:value, unit:unit||"", prev:prev, conf:conf, src:src||"", isNew:isNew, selected:conf>=0.55};
 }
 function buildReview(job, parsed){
   var items=[];
   Object.keys(parsed.best).forEach(function(k){
-    var c = parsed.best[k], d=c.def, prev="", isNew=false, label=d.label, unit=c.unit;
-    if(d.header){ prev = job[d.key]||""; }
-    else {
-      var h = findField(job, d.key, d.label) || (d.syn ? null : null);
-      if(!h && d.syn) d.syn.some(function(s){ h = findField(job, null, s.replace(/^~/,"")); return !!h; });
-      if(h){ prev = h.f.value||""; label=h.f.label; if(!unit) unit=h.f.unit||""; else if(h.f.unit && UNIT_TYPE[h.f.unit]!==UNIT_TYPE[unit]) unit=unit; }
-      else isNew = true;
-    }
-    if(String(prev).trim()===String(c.value).trim()) return;
-    items.push({id:uid(), header:!!d.header, key:d.key||"", label:label, section:d.section||"Specs", value:c.value, unit:unit||"", prev:prev, conf:c.conf, src:c.src||"", isNew:isNew, selected:c.conf>=0.55});
+    var c = parsed.best[k];
+    var it = reviewItem(job, c.def, c.value, c.unit, c.conf, c.src);
+    if(String(it.prev).trim()===String(c.value).trim()) return;
+    items.push(it);
   });
   var order = {toolNumber:0, partName:1, customer:2, press:3};
   items.sort(function(a,b){ var oa=a.header?order[a.key]:10, ob=b.header?order[b.key]:10; if(oa!==ob) return oa-ob; return 0; });
   (parsed.extras||[]).forEach(function(x){
-    if(findField(job, null, x.label)) { var h=findField(job,null,x.label); if(String(h.f.value)===x.value) return; items.push({id:uid(), header:false, key:h.f.key, label:h.f.label, section:h.sec.title, value:x.value, unit:h.f.unit, prev:h.f.value, conf:0.7, src:x.src, isNew:false, selected:true}); return; }
-    items.push({id:uid(), header:false, key:"", label:x.label, section:"Specs", value:x.value, unit:"", prev:"", conf:x.conf, src:x.src, isNew:true, extra:true, selected:false});
+    var h=findField(job,null,x.label);
+    if(h){ if(String(h.f.value)===x.value) return; items.push({id:uid(), header:false, key:h.f.key, label:h.f.label, section:h.sec.title, value:x.value, unit:h.f.unit, prev:h.f.value, conf:0.7, src:x.src, isNew:false, selected:true}); return; }
+    // unknown "Label: value" → kept as an "Other spec" (prints on both sheets); pick a field to map it instead
+    var wordy = /^[A-Za-z][A-Za-z .#\/()&'%-]*$/.test(x.label) && x.label.split(/\s+/).every(function(w){ return w.length>=2 || /[#%&\/]/.test(w); }) && /[aeiou]/i.test(x.label);
+    items.push({id:uid(), header:false, key:"", label:x.label, section:"Specs", value:x.value, unit:"", prev:"", conf:x.conf, src:x.src, isNew:true, extra:true, loose:true, target:"other", selected: wordy && !x.ocr && x.lineConf>=0.8});
+  });
+  (parsed.unmatched||[]).forEach(function(u){
+    var m = u.text.match(/^(.{2,40}?)\s*[:=]\s*(.+)$/);
+    items.push({id:uid(), header:false, key:"", label:m? cleanVal(m[1]) : "", section:"Specs", value:m? cleanVal(m[2]) : cleanVal(u.text), unit:"", prev:"", conf:u.conf*0.4, src:u.text, isNew:true, loose:true, unmatched:true, target:"", selected:false});
   });
   return items;
+}
+// review: assign a loose line to a field ("" = ignore, "other" = keep as its own spec, or a field key)
+function retargetItem(job, r, target){
+  r.target = target; r.selected = !!target;
+  if(!target) return;
+  if(target==="other"){ r.header=false; r.key=""; r.section="Specs"; if(!r.label) r.label="Note"; r.prev=""; r.isNew=true; return; }
+  var d = DEF_BY_KEY[target]; if(!d) return;
+  var v = r.value, u = r.unit;
+  if(d.numeric || d.unitType){ var pn = parseNumber(String(v), d.unitType); if(pn){ v = pn.num; u = pn.unit || u; } }
+  var it = reviewItem(job, d, v, u, 0.9, r.src);
+  ["header","key","label","section","value","unit","prev","isNew"].forEach(function(k){ r[k]=it[k]; });
 }
 function applyReview(job, items){
   var n=0;
   items.forEach(function(r){
-    if(!r.selected) return; n++;
+    if(!r.selected) return;
+    if(r.loose && !r.target) return;
     var v = String(r.value||"").trim();
+    if(!v && !r.header) return;
+    n++;
     if(r.header){ recordChange(job, r.label, job[r.key], v, ""); job[r.key]=v; return; }
-    var h = findField(job, r.key, r.label);
-    if(h){ recordChange(job, h.f.label, h.f.value, v, r.unit||h.f.unit); h.f.value=v; if(r.unit) h.f.unit=r.unit; return; }
-    var sec = job.sections.find(function(s){ return s.type==="fields" && normKey(s.title)===normKey(r.section); }) || job.sections.find(function(s){ return s.type==="fields"; });
+    var h = r.key ? bestField(job, r.key) : null;
+    if(!h && !(r.loose && r.target==="other")) h = findField(job, r.key, r.label);
+    if(!h && r.loose && r.target==="other") h = findField(job, null, r.label);
+    if(h){ recordChange(job, h.f.label, h.f.value, v, r.unit||h.f.unit); h.f.value=v; if(r.unit) h.f.unit=r.unit; if(r.key && !h.f.key) h.f.key=r.key; return; }
+    var sec = homeSection(job, r.section) || job.sections.find(function(s){ return s.type==="fields" && !s.role; }) || job.sections.find(function(s){ return s.type==="fields"; });
     if(!sec){ sec={id:uid(), type:"fields", title:r.section||"Specs", fields:[]}; job.sections.unshift(sec); }
     sec.fields.push(F(r.label, r.unit, r.key, v));
   });
@@ -1497,6 +1729,11 @@ function rsBrandHtml(B, small){
 function rsFooter(B, j, pg, pages){
   return '<div class="rs-ft"><span>'+esc(B.footer||"")+'</span><span class="meta l">'+esc([j.toolNumber, shortId(j)].filter(Boolean).join(" · "))+'</span><span class="meta">Printed '+esc(fmtDate(nowIso()))+(pages>1?' · Page '+pg+' of '+pages:'')+'</span></div>';
 }
+// Material & process block on the reference sheet (printed only when a value is filled)
+var MP_KEYS = ["grade","colorant","ldr","regrind","dryer","clamp","shot_size","barrel","nozzle","zone1","zone2","zone3","zone4","mold_temp","mold_a","mold_b",
+  "inj_press","inj_speed","inj_time","hold_press","hold_time","back_press","rpm","cool_time","transfer","cushion","runner","gate","shrink"];
+function isStockSteps(s){ var it=(s.items||[]).filter(function(i){ return String(i.text||"").trim(); }).map(function(i){ return i.text.trim(); }); return it.length===DEFAULT_STEPS.length && it.every(function(t,i){ return t===DEFAULT_STEPS[i]; }); }
+function rsKv(label, f){ if(f && f.unit) label=String(label).replace(/\s*(\([^)]*\)|\[[^\]]*\]|%)\s*$/,""); return '<span><b>'+esc(label)+':</b> '+esc(rsVal(f))+'</span>'; }
 function refSheetHtml(j){
   var B=getBrand(), photos=j.photos||[], first=photos.slice(0,12), rest=photos.slice(12);
   var contPages=[]; for(var i=0;i<rest.length;i+=RS.perCont) contPages.push(rest.slice(i,i+RS.perCont));
@@ -1507,26 +1744,23 @@ function refSheetHtml(j){
   var hd = '<div class="rs-hd">'+rsBrandHtml(B)+'<div class="rs-title"><div class="rs-t1">MOLD / JOB REFERENCE SHEET'+ex+'</div><div class="rs-t2" style="font-size:'+tsize+'px">'+esc(title)+'</div>'+(String(B.subline||"").trim()?'<div class="rs-t3">'+esc(B.subline)+'</div>':'')+'</div><div class="rs-slogan">'+esc(B.slogan||"")+'</div></div>';
   var pb = rsPhotoBlock(first, 0, RS.photoH);
   var photosHtml = first.length ? '<div class="rs-photos" data-h="'+pb.h.toFixed(3)+'" style="height:'+pb.h.toFixed(3)+'in">'+pb.html+'</div>' : '';
-  // compact process strip only when temps/pressures have values
-  var pkeys=["dryer","nozzle","zone1","zone2","zone3","zone4","mold_a","mold_b","inj_press","hold_press","hold_time","back_press","rpm","cool_time"], pv=[];
-  pkeys.forEach(function(k){ var h=findField(j,k); if(h && String(h.f.value||"").trim()) pv.push('<span><b>'+esc(h.f.label)+':</b> '+esc(h.f.value)+(h.f.unit?' '+esc(h.f.unit):'')+'</span>'); });
-  var proc = pv.length ? '<div class="rs-proc"><h5>PROCESS</h5><div class="pv">'+pv.join("")+'</div></div>' : '';
-  // column 1: part info
+  var printed = {}; // field ids already on the sheet
+  function fld(key){ var h=pfield(j,key); if(h && String(h.f.value||"").trim()) printed[h.f.id]=1; return h? h.f : null; }
+  // column 1: part info (fixed template rows, then extra part-info fields)
   var pi = secByRole(j,"partinfo");
-  function fld(key){ return findField(j,key); }
-  var rows = [["Customer", j.customer],["Part Name", j.partName],["Part Number", rsVal((fld("part_no")||{}).f)],["Description", rsVal((fld("description")||{}).f)],
-    ["Material", rsVal((fld("material")||{}).f)],["Color", rsVal((fld("color")||{}).f)],["Number of Cavities", rsVal((fld("cavities")||{}).f)],["Part Weight", rsVal((fld("part_wt")||{}).f)],
-    ["Shot Weight", rsVal((fld("shot_wt")||{}).f)],["Avg. Cycle Time", rsVal((fld("cycle")||{}).f)],["Machine Cycle Time", rsVal((fld("mach_cycle")||{}).f)],["Parts Per Hour", rsVal((fld("pph")||{}).f)],
-    ["Machine", rsVal((fld("machine")||{}).f) || j.press],["Tool Number", j.toolNumber],["Work Order", rsVal((fld("work_order")||{}).f)],["Date", rsDate(rsVal((fld("date")||{}).f))],["Revision", rsVal((fld("revision")||{}).f)]];
+  var rows = [["Customer", j.customer],["Part Name", j.partName],["Part Number", rsVal(fld("part_no"))],["Description", rsVal(fld("description"))],
+    ["Material", rsVal(fld("material"))],["Color", rsVal(fld("color"))],["Number of Cavities", rsVal(fld("cavities"))],["Part Weight", rsVal(fld("part_wt"))],
+    ["Shot Weight", rsVal(fld("shot_wt"))],["Avg. Cycle Time", rsVal(fld("cycle"))],["Machine Cycle Time", rsVal(fld("mach_cycle"))],["Parts Per Hour", rsVal(fld("pph"))],
+    ["Machine", rsVal(fld("machine")) || j.press],["Tool Number", j.toolNumber],["Work Order", rsVal(fld("work_order"))],["Date", rsDate(rsVal(fld("date")))],["Revision", rsVal(fld("revision"))]];
   var known={}; PARTINFO_DEFS.forEach(function(d){ known[d[2]]=1; });
-  if(pi) (pi.fields||[]).forEach(function(f){ if(!known[f.key]) rows.push([f.label, rsVal(f)]); });
+  if(pi) (pi.fields||[]).forEach(function(f){ if(!known[f.key] && !printed[f.id] && !(f.key && printed[(bestField(j,f.key)||{f:{}}).f.id])){ rows.push([f.label, rsVal(f)]); if(String(f.value||"").trim()) printed[f.id]=1; } });
   var c1 = '<div class="rs-box grow"><h5>'+esc((pi&&pi.title)||ROLE_TITLES.partinfo)+'</h5><table class="rs-kv">'+rows.map(function(r){ return '<tr><td class="k">'+esc(r[0])+':</td><td>'+esc(r[1]||"")+'</td></tr>'; }).join("")+'</table></div>';
   // column 2: supplies, carton, packaging
   var sup=secByRole(j,"supplies"), car=secByRole(j,"carton"), pk=secByRole(j,"packaging");
   var srows = sup? (sup.rows||[]).filter(function(r){ return String(r.desc||"").trim() || String(r.qty||"").trim(); }) : [];
   var c2 = '';
   if(sup) c2 += '<div class="rs-box"><h5>'+esc(sup.title)+'</h5><table class="rs-sup"><tr><th class="n">No.</th><th>Description</th><th class="q">Qty.</th></tr>'+(srows.length? srows.map(function(r,i){ return '<tr><td class="n">'+(i+1)+'</td><td>'+esc(r.desc)+'</td><td class="q">'+esc(r.qty)+'</td></tr>'; }).join("") : '<tr><td class="n">1</td><td></td><td></td></tr><tr><td class="n">2</td><td></td><td></td></tr><tr><td class="n">3</td><td></td><td></td></tr>')+'</table></div>';
-  if(car) c2 += '<div class="rs-box"><h5>'+esc(car.title)+'</h5><table class="rs-kv">'+(car.fields||[]).map(function(f){ return '<tr><td class="k">'+esc(f.label)+':</td><td>'+esc(rsVal(f))+'</td></tr>'; }).join("")+'</table></div>';
+  if(car){ (car.fields||[]).forEach(function(f){ printed[f.id]=1; }); c2 += '<div class="rs-box"><h5>'+esc(car.title)+'</h5><table class="rs-kv">'+(car.fields||[]).map(function(f){ return '<tr><td class="k">'+esc(f.label)+':</td><td>'+esc(rsVal(f))+'</td></tr>'; }).join("")+'</table></div>'; }
   if(pk) c2 += '<div class="rs-box grow"><h5>'+esc(pk.title)+'</h5><div class="rs-txt">'+esc(pk.text||"")+'</div></div>';
   // column 3: instructions, quality, notes
   var ins=secByRole(j,"instructions"), qc=secByRole(j,"quality"), nt=secByRole(j,"notes");
@@ -1535,34 +1769,80 @@ function refSheetHtml(j){
   if(ins) c3 += '<div class="rs-box"><h5>'+esc(ins.title)+'</h5><ol class="rs-ol">'+items(ins).map(function(it){ return '<li>'+esc(it.text)+'</li>'; }).join("")+'</ol></div>';
   if(qc) c3 += '<div class="rs-box"><h5>'+esc(qc.title)+'</h5><ul class="rs-ul">'+items(qc).map(function(it){ return '<li>'+esc(it.text)+'</li>'; }).join("")+'</ul></div>';
   c3 += '<div class="rs-box grow"><h5>'+esc(nt && !/^notes$/i.test(nt.title||"") ? nt.title : ROLE_TITLES.notes)+'</h5><div class="rs-txt">'+esc(nt? nt.text||"" : "")+'</div></div>';
+  // material & process strip (compact, only filled values)
+  var pv=[];
+  MP_KEYS.forEach(function(k){ var h=pfield(j,k); if(h && String(h.f.value||"").trim() && !printed[h.f.id]){ printed[h.f.id]=1; pv.push(rsKv(h.f.label || DEF_BY_KEY[k].label, h.f)); } });
+  var proc = pv.length ? '<div class="rs-proc" data-mv="proc"><h5>MATERIAL &amp; PROCESS</h5><div class="pv">'+pv.join("")+'</div></div>' : '';
+  // everything else that has a value: other specs + custom sections (so nothing entered silently fails to print)
+  var seen={}; // hide exact duplicates of values already printed (same meaning + same value)
+  (j.sections||[]).forEach(function(s){ if(s.type==="fields") (s.fields||[]).forEach(function(f){ if(printed[f.id]){ var d=f.key? DEF_BY_KEY[f.key] : defForLabel(f.label); seen[(d? d.key : normKey(f.label))+"|"+normKey(f.value)]=1; } }); });
+  var other=[], blocks=[];
+  (j.sections||[]).forEach(function(s){
+    if(s.type==="fields"){
+      (s.fields||[]).forEach(function(f){
+        if(printed[f.id] || !String(f.value||"").trim()) return;
+        var d=f.key? DEF_BY_KEY[f.key] : defForLabel(f.label), sig=(d? d.key : normKey(f.label))+"|"+normKey(f.value);
+        if(seen[sig]) return; seen[sig]=1;
+        other.push(rsKv(f.label || (d&&d.label) || "Spec", f));
+      });
+      return;
+    }
+    if(s.role) return;
+    if(s.type==="notes" && String(s.text||"").trim()) blocks.push('<div class="rs-box"><h5>'+esc(s.title||"Notes")+'</h5><div class="rs-txt">'+esc(s.text)+'</div></div>');
+    else if(s.type==="table"){ var tr=(s.rows||[]).filter(function(r){ return String(r.desc||"").trim() || String(r.qty||"").trim(); }); if(tr.length) blocks.push('<div class="rs-box"><h5>'+esc(s.title)+'</h5><table class="rs-sup"><tr><th class="n">No.</th><th>Description</th><th class="q">Qty.</th></tr>'+tr.map(function(r,i){ return '<tr><td class="n">'+(i+1)+'</td><td>'+esc(r.desc)+'</td><td class="q">'+esc(r.qty)+'</td></tr>'; }).join("")+'</table></div>'); }
+    else if(s.type==="steps"){ var it=items(s); if(it.length && !isStockSteps(s)) blocks.push('<div class="rs-box"><h5>'+esc(s.title)+'</h5>'+(s.style==="bullets"? '<ul class="rs-ul">' : '<ol class="rs-ol">')+it.map(function(x){ return '<li>'+esc(x.text)+'</li>'; }).join("")+(s.style==="bullets"? '</ul>' : '</ol>')+'</div>'); }
+  });
+  if(other.length) blocks.unshift('<div class="rs-proc rs-other"><h5>OTHER SPECS</h5><div class="pv">'+other.join("")+'</div></div>');
+  var more = blocks.length ? '<div class="rs-more" data-mv="more">'+blocks.join("")+'</div>' : '';
   var out = '<div class="rs-pages"><div class="rs-page first">'+hd+photosHtml+proc+
-    '<div class="rs-bot"><div class="rs-col c1">'+c1+'</div><div class="rs-col c2">'+c2+'</div><div class="rs-col c3">'+c3+'</div></div>'+rsFooter(B, j, 1, pages)+'</div>';
+    '<div class="rs-bot"><div class="rs-col c1">'+c1+'</div><div class="rs-col c2">'+c2+'</div><div class="rs-col c3">'+c3+'</div></div>'+more+rsFooter(B, j, 1, pages)+'</div>';
+  // overflow page: fitSheet moves "other specs"/custom sections (and if needed the process strip) here when page 1 is full
+  var chd = function(t){ return '<div class="rs-hd small">'+rsBrandHtml(B, true)+'<div class="rs-title"><div class="rs-t1">MOLD / JOB REFERENCE SHEET — '+t+ex+'</div><div class="rs-t2" style="font-size:'+Math.min(tsize,20)+'px">'+esc(title)+'</div></div><div class="rs-slogan">'+esc(B.slogan||"")+'</div></div>'; };
   contPages.forEach(function(list, pi2){
     var start = 12 + pi2*RS.perCont;
     var blk = rsPhotoBlock(list, start, 0, RS.contImgH);
-    var chd = '<div class="rs-hd small">'+rsBrandHtml(B, true)+'<div class="rs-title"><div class="rs-t1">MOLD / JOB REFERENCE SHEET — PHOTOS (CONT.)'+ex+'</div><div class="rs-t2" style="font-size:'+Math.min(tsize,20)+'px">'+esc(title)+'</div></div><div class="rs-slogan">'+esc(B.slogan||"")+'</div></div>';
-    out += '<div class="rs-page cont">'+chd+'<div class="rs-cont">Photos '+(start+1)+'–'+(start+list.length)+' of '+photos.length+'</div><div class="rs-photos" style="height:'+blk.h.toFixed(3)+'in">'+blk.html+'</div>'+rsFooter(B, j, pi2+2, pages)+'</div>';
+    out += '<div class="rs-page cont">'+chd("PHOTOS (CONT.)")+'<div class="rs-cont">Photos '+(start+1)+'–'+(start+list.length)+' of '+photos.length+'</div><div class="rs-photos" style="height:'+blk.h.toFixed(3)+'in">'+blk.html+'</div>'+rsFooter(B, j, pi2+2, pages)+'</div>';
   });
+  if(proc || more) out += '<template class="rs-more-tpl"><div class="rs-page more">'+chd("CONT.")+'<div class="rs-cont">Material, process &amp; other specs (continued from page 1)</div><div class="rs-morebody"></div>'+rsFooter(B, j, 2, pages+1)+'</div></template>';
   return out + '</div>';
 }
-// Fit page 1 to one Letter page (shrink the photo band if the text columns are long) and scale the preview to the phone width.
+// Fit page 1 to one Letter page: shrink the photo band first; if the text still doesn't fit, move "other specs"/custom
+// sections (then the process strip) to a continuation page. Also scales the preview to the phone width.
 function fitSheet(){
   var wrap=$("printArea"); if(!wrap) return;
   var inner=wrap.querySelector(".rs-pages");
   if(!inner){ wrap.style.height=""; return; }
-  var p1=inner.querySelector(".rs-page.first"), ph=p1 && p1.querySelector(".rs-photos");
-  if(ph){
-    var inch=96, design=parseFloat(ph.getAttribute("data-h"))*inch; ph.style.height=design+"px";
-    var bot=p1.querySelector(".rs-bot"); bot.style.flexGrow="0";
-    var gap=parseFloat(getComputedStyle(p1).rowGap)||0, sum=0, kids=p1.children;
-    for(var i=0;i<kids.length;i++) sum+=kids[i].offsetHeight;
-    sum += gap*(kids.length-1);
-    var over = sum - RS.pageH*inch;
-    var minH = Math.min(design, RS.minPhotoH*inch);
-    if(over>0) ph.style.height=Math.max(minH, design-over-2)+"px";
-    bot.style.flexGrow="";
+  inner.style.transform="";
+  var p1=inner.querySelector(".rs-page.first"), mp=inner.querySelector(".rs-page.more"), tpl=inner.querySelector("template.rs-more-tpl");
+  if(p1){
+    var inch=96, ph=p1.querySelector(".rs-photos"), bot=p1.querySelector(".rs-bot"), ft=p1.querySelector(".rs-ft");
+    if(mp){ // undo an earlier move
+      var body=mp.querySelector(".rs-morebody");
+      Array.prototype.slice.call(body.children).forEach(function(el){ p1.insertBefore(el, el.getAttribute("data-mv")==="proc" ? bot : ft); });
+      mp.remove(); mp=null;
+    }
+    var needMore = function(){ if(!mp && tpl){ mp=tpl.content.firstElementChild.cloneNode(true); p1.parentNode.insertBefore(mp, p1.nextSibling); } return mp; };
+    var design = ph ? parseFloat(ph.getAttribute("data-h"))*inch : 0;
+    var over = function(){
+      bot.style.flexGrow="0";
+      var gap=parseFloat(getComputedStyle(p1).rowGap)||0, sum=0, kids=p1.children;
+      for(var i=0;i<kids.length;i++) sum+=kids[i].offsetHeight;
+      sum += gap*(kids.length-1);
+      bot.style.flexGrow="";
+      return sum - RS.pageH*inch;
+    };
+    var fitPhotos = function(){ if(!ph) return over(); ph.style.height=design+"px"; var o=over(); if(o>0){ ph.style.height=Math.max(Math.min(design, RS.minPhotoH*inch), design-o-2)+"px"; o=over(); } return o; };
+    var o = fitPhotos();
+    if(o>0 && tpl){
+      var mv=p1.querySelector(".rs-more"), pr=p1.querySelector(".rs-proc[data-mv=proc]");
+      if(mv){ needMore().querySelector(".rs-morebody").appendChild(mv); o=fitPhotos(); }
+      if(o>0 && pr){ var b2=needMore().querySelector(".rs-morebody"); b2.insertBefore(pr, b2.firstChild); fitPhotos(); }
+    }
+    // page numbers
+    var pgs=Array.prototype.slice.call(inner.querySelectorAll(".rs-page"));
+    pgs.forEach(function(p, i){ var m=p.querySelector(".rs-ft .meta:not(.l)"); if(m) m.textContent="Printed "+fmtDate(nowIso())+(pgs.length>1? " · Page "+(i+1)+" of "+pgs.length : ""); });
+    var pc=$("rsPageCount"); if(pc) pc.textContent=pgs.length+" page"+(pgs.length>1?"s":"");
   }
-  inner.style.transform=""; 
   var sc = wrap.clientWidth / inner.offsetWidth;
   if(sc && sc<1){ inner.style.transform="scale("+sc+")"; wrap.style.height=Math.ceil(inner.offsetHeight*sc)+"px"; }
   else wrap.style.height="";
@@ -1613,7 +1893,7 @@ function viewPrint(){
   var lay = printLayout(), n=(j.photos||[]).length, pages = lay==="reference" ? 1+Math.ceil(Math.max(0,n-12)/RS.perCont) : 0;
   var h = topbar(backBtn("#/job/"+j.id, j.toolNumber||"Job"), "Print / share", lay==="reference"?"Mold / job reference sheet":"Process sheet", "");
   h += '<div class="seg no-print" style="grid-template-columns:1fr 1fr;margin-top:12px" role="tablist" aria-label="Sheet layout"><button class="active'+(lay==="reference"?' sel':'')+'" data-act="setLayout" data-v="reference" role="tab" aria-selected="'+(lay==="reference")+'">📋 Reference sheet</button><button class="active'+(lay==="process"?' sel':'')+'" data-act="setLayout" data-v="process" role="tab" aria-selected="'+(lay==="process")+'">⚙️ Process sheet</button></div>';
-  h += '<p class="faint no-print" style="margin:6px 2px 0">'+(lay==="reference"? 'Photos ('+n+'), part info, supplies, packaging, instructions & QC · Letter · '+pages+' page'+(pages>1?'s':'')+'. Branding: ⚙️ Settings.' : 'Specs, temperatures, pressures, setup steps and recent runs.')+'</p>';
+  h += '<p class="faint no-print" style="margin:6px 2px 0">'+(lay==="reference"? 'Photos ('+n+'), part info, material &amp; process, supplies, packaging, instructions, QC &amp; any other specs · Letter · <span id="rsPageCount">'+pages+' page'+(pages>1?'s':'')+'</span>. Branding: ⚙️ Settings.' : 'Specs, temperatures, pressures, setup steps and recent runs.')+'</p>';
   h += '<div class="btnrow no-print" style="margin-top:12px"><button class="btn primary tall" data-act="print">🖨️ Print / Save PDF</button><button class="btn ghost tall" data-act="shareText">📤 Share text</button></div>';
   if(n) h += '<button class="btn ghost block no-print" style="margin-top:8px" data-act="arrangeOpen">↕ Arrange photos ('+n+') — order, labels, pictures</button>';
   h += '<div class="btnrow no-print" style="margin-top:8px"><button class="btn ghost" data-act="copyText">📋 Copy summary</button><button class="btn ghost" data-act="exportJob">💾 Export job file</button></div>';
@@ -1710,6 +1990,26 @@ function warmOcr(manual){
 /* ---------- overlay: modal / busy / toast ---------- */
 function renderOverlay(){ renderModal(); renderBusy(); renderToast(); }
 function sheet(inner){ return '<div class="scrim" id="scrim"><div class="sheet" role="dialog" aria-modal="true"><div class="grab"></div>'+inner+'</div></div>'; }
+var RV_GROUPS = [["Job header",["toolNumber","partName","customer","press"]],
+  ["Mold / part information",["part_no","description","material","color","cavities","part_wt","shot_wt","cycle","mach_cycle","pph","machine","work_order","date","revision"]],
+  ["Material & process",["grade","colorant","ldr","regrind","dryer","clamp","shot_size","barrel","nozzle","zone1","zone2","zone3","zone4","mold_temp","mold_a","mold_b","inj_press","inj_speed","inj_time","hold_press","hold_time","back_press","rpm","cool_time","transfer","cushion","runner","gate","shrink"]],
+  ["Carton / packaging",["carton_size","qty_carton","pallet_size","cartons_layer"]]];
+function rvTargetSelect(r, i){
+  var h='<select class="inp rv-tgt" data-rvtarget="'+i+'" aria-label="Assign to field"><option value=""'+(r.target===""?' selected':'')+'>— Ignore this line —</option><option value="other"'+(r.target==="other"?' selected':'')+'>Other spec (keep label)</option>';
+  RV_GROUPS.forEach(function(g){ h+='<optgroup label="'+esc(g[0])+'">'+g[1].map(function(k){ return '<option value="'+k+'"'+(r.target===k?' selected':'')+'>'+esc(DEF_BY_KEY[k].label)+'</option>'; }).join("")+'</optgroup>'; });
+  return h+'</select>';
+}
+function rvRowHtml(r, i){
+  var pc=Math.round(r.conf*100), cls = pc>=80?"hi":pc>=55?"md":"lo";
+  var head = r.loose
+    ? '<div class="rk">'+(r.unmatched?'Unmatched line':'Unknown label')+(r.target? ' → '+esc(r.target==="other"? "Other spec" : DEF_BY_KEY[r.target].label) : '')+'</div>'
+    : '<div class="rk">'+esc(r.label)+' <span class="conf '+cls+'">'+pc+'%</span>'+(r.isNew?' <span class="newtag">new field</span>':'')+(r.header?' <span class="newtag">header</span>':'')+'</div>';
+  var h = '<div class="rv'+(r.loose?' loose':'')+'" data-rvrow="'+i+'"><input type="checkbox" data-rvchk="'+i+'"'+(r.selected?' checked':'')+' aria-label="Apply '+esc(r.label||r.src)+'"><div class="rb">'+head;
+  if(r.loose) h += '<div class="rin">'+rvTargetSelect(r, i)+'</div>'+(r.target==="other"? '<div class="rin"><input class="v lab" data-rvlabel="'+i+'" value="'+esc(r.label)+'" placeholder="Label" aria-label="Label"></div>' : '');
+  if(!r.loose || r.target) h += '<div class="rin"><input class="v" data-rvval="'+i+'" value="'+esc(r.value)+'" aria-label="Value">'+(r.header || (!r.unit && isNaN(parseFloat(r.value)))?'':'<input class="u" data-rvunit="'+i+'" list="unitList" value="'+esc(r.unit)+'" placeholder="unit" aria-label="Unit">')+'</div>';
+  h += (r.prev? '<div class="was">currently: '+esc(r.prev)+'</div>' : '')+(r.src? '<div class="src">“'+esc(r.src)+'”</div>' : '')+'</div></div>';
+  return h;
+}
 function renderModal(){
   var root=$("modalRoot"); var m=state.modal;
   if(!m){ root.innerHTML=""; document.body.style.overflow=""; return; }
@@ -1733,6 +2033,7 @@ function renderModal(){
       '<button data-act="go" data-hash="#/job/'+esc(j.id)+'/log"><span class="ic">📝</span>Run log</button>'+
       '<button data-act="shareText"><span class="ic">📤</span>Share as text</button>'+
       '<button data-act="go" data-hash="#/job/'+esc(j.id)+'/print"><span class="ic">🖨️</span>Print sheet / Save PDF</button>'+
+      (rescanText(j)? '<button data-act="rescanNotes"><span class="ic">🔁</span>Re-check notes / saved scan<small>Finds part weight, material, color… in Notes text so you can assign them</small></button>' : '')+
       '<button data-act="saveTemplate"><span class="ic">📑</span>Save as mold template</button>'+
       '<button data-act="duplicate"><span class="ic">⧉</span>Duplicate job<small>Copies sheet & photos, clears checklist & log</small></button>'+
       '<button data-act="exportJob"><span class="ic">💾</span>Export this job (.json)</button>'+
@@ -1751,22 +2052,21 @@ function renderModal(){
       '<textarea class="inp" id="pasteBox" style="min-height:200px" placeholder="Tool #: T-1042&#10;Material: PP&#10;Nozzle 430F  Zone 1 425F&#10;Inj Press 1450 psi  Hold 850 psi&#10;…"></textarea>'+
       '<div class="actions"><button class="btn ghost" data-act="closeModal">Cancel</button><button class="btn primary" data-act="pasteGo">Find values</button></div>';
   } else if(m.type==="review"){
-    var items=m.items||[];
+    var items=m.items||[], main=[], loose=[];
+    items.forEach(function(r, i){ (r.loose? loose : main).push(i); });
     h = '<h3>Review scanned values</h3><p class="sub">'+esc(m.summary||"")+'</p>';
     if(!items.length){
       h += '<p class="muted">No recognizable labels found. Try a straighter, closer photo in good light, or use Paste text from Google Lens.</p>';
     } else {
-      var sel = items.filter(function(i){ return i.selected; }).length;
+      var unchecked = main.filter(function(i){ return !items[i].selected; }).length;
       h += '<div class="btnrow" style="margin-bottom:6px"><button class="btn ghost" data-act="rvAll" data-v="1">Select all</button><button class="btn ghost" data-act="rvAll" data-v="0">Select none</button></div>';
       h += '<p class="faint" style="margin:4px 0">Fix any misread values here. <span class="conf hi">High</span> <span class="conf md">Check</span> <span class="conf lo">Low</span> = match confidence. Low ones start unchecked.</p>';
-      items.forEach(function(r, i){
-        var pc=Math.round(r.conf*100), cls = pc>=80?"hi":pc>=55?"md":"lo";
-        h += '<div class="rv"><input type="checkbox" data-rvchk="'+i+'"'+(r.selected?' checked':'')+' aria-label="Apply '+esc(r.label)+'"><div class="rb">'+
-          '<div class="rk">'+esc(r.label)+' <span class="conf '+cls+'">'+pc+'%</span>'+(r.isNew?' <span class="newtag">new field</span>':'')+(r.header?' <span class="newtag">header</span>':'')+'</div>'+
-          '<div class="rin"><input class="v" data-rvval="'+i+'" value="'+esc(r.value)+'" aria-label="Value">'+(r.header || (!r.unit && isNaN(parseFloat(r.value)))?'':'<input class="u" data-rvunit="'+i+'" list="unitList" value="'+esc(r.unit)+'" placeholder="unit" aria-label="Unit">')+'</div>'+
-          (r.prev? '<div class="was">currently: '+esc(r.prev)+'</div>' : '')+
-          (r.src? '<div class="src">“'+esc(r.src)+'”</div>' : '')+'</div></div>';
-      });
+      if(unchecked) h += '<p class="rv-warn" id="rvWarn">⚠ '+unchecked+' value'+(unchecked>1?'s are':' is')+' unchecked and won’t be saved — check '+(unchecked>1?'them':'it')+' if correct.</p>';
+      main.forEach(function(i){ h += rvRowHtml(items[i], i); });
+      if(loose.length){
+        h += '<div class="rv-loose-hd" id="rvLoose"><b>Not matched to a field ('+loose.length+')</b><span>Pick a field to use a line, or “Other spec” to keep it with its own label — it prints on the sheet under Other specs.</span></div>';
+        loose.forEach(function(i){ h += rvRowHtml(items[i], i); });
+      }
     }
     h += '<label style="display:flex;gap:10px;align-items:center;margin-top:10px;min-height:44px"><input type="checkbox" id="rvNotes" style="width:24px;height:24px"'+(items.length?'':' checked')+'> Also save the scanned text in Notes</label>';
     if(m.raw) h += '<details><summary class="linkbtn" style="display:flex;align-items:center">Show scanned text</summary><pre class="raw">'+esc(m.raw)+'</pre></details>';
@@ -2359,6 +2659,14 @@ ACT.scanHere = function(t){ startScan(t.getAttribute("data-kind"), {jobId:curJob
 ACT.pasteGo = function(){ var txt=$("pasteBox").value; if(!txt.trim()){ $("pasteBox").focus(); return; } closeModal();
   var lines = txt.split(/\r?\n/).map(function(t){ return {text:t, conf:0.95}; });
   finishScan([{lines:lines, kind:"paste"}], "Pasted text · "+lines.filter(function(l){ return l.text.trim(); }).length+" lines"); };
+function rescanText(j){
+  var t=""; (j.sections||[]).forEach(function(s){ if(s.type==="notes" && String(s.text||"").trim()) t += (t?"\n":"")+s.text; });
+  var i=t.indexOf("— Scanned "); return (i>=0? t.slice(i) : t).trim();
+}
+ACT.rescanNotes = function(){ var j=curJob(); if(!j) return; var txt=rescanText(j); closeModal(); if(!txt){ showToast("No notes text to check"); return; }
+  state.scanTarget={jobId:j.id};
+  var lines = txt.split(/\r?\n/).filter(function(t){ return !/^— Scanned /.test(t); }).map(function(t){ return {text:t, conf:0.95}; });
+  finishScan([{lines:lines, kind:"paste"}], "Notes text · "+lines.filter(function(l){ return l.text.trim(); }).length+" lines"); };
 ACT.cancelScan = function(){ state.scanCancelled=true; setBusy(null); if(tessWorkerP){ tessWorkerP.then(function(w){ w.terminate(); }).catch(function(){}); tessWorkerP=null; } showToast("Scan stopped"); };
 function checkCancel(){ if(state.scanCancelled) throw {cancelled:true}; }
 function runScanFiles(files){
@@ -2383,7 +2691,7 @@ function runScanFiles(files){
             return pdfTextLines(page).then(function(lines){
               var chars = lines.reduce(function(a,l){ return a+l.text.trim().length; }, 0);
               if(chars>=25){ pages.push({lines:lines, kind:"pdf-text"}); state.busy && (state.busy.text="Reading PDF text — page "+i+" of "+n, state.busy.pct=Math.round(i/n*100)); renderBusy(); return; }
-              var vp=page.getViewport({scale:2.2}); var c=document.createElement("canvas"); c.width=vp.width; c.height=vp.height;
+              var vp=page.getViewport({scale:window.__pdfScale||3}); var c=document.createElement("canvas"); c.width=vp.width; c.height=vp.height;
               if(state.busy){ state.busy.text="Rendering PDF page "+i+" of "+n+"…"; renderBusy(); }
               return page.render({canvasContext:c.getContext("2d"), viewport:vp}).promise.then(function(){ return prepForOcr(c); }).then(function(pc){ checkCancel(); if(state.busy){ state.busy.page=i; state.busy.pages=n; } return ocrCanvas(pc, "PDF p"+i); }).then(function(r){ pages.push(r); });
             });
@@ -2411,12 +2719,13 @@ function runScanFiles(files){
 function finishScan(pages, summary){
   setBusy(null); ocrProgressCb=null;
   var job = scanJob(); if(!job){ showToast("Job not found", {err:true}); return; }
-  var lines=[]; pages.forEach(function(p){ lines = lines.concat(p.lines); });
+  var lines=[]; pages.forEach(function(p){ lines = lines.concat(p.lines.map(function(l){ return Object.assign({kind:p.kind}, l); })); });
   var parsed = parseLines(lines, job, 0.9);
   var items = buildReview(job, parsed);
   openModal({type:"review", items:items, raw:lines.map(function(l){ return l.text; }).join("\n"), summary:summary+" · "+items.length+" value"+(items.length===1?"":"s")+" found"});
 }
-ACT.rvAll = function(t){ var v=t.getAttribute("data-v")==="1"; state.modal.items.forEach(function(i){ i.selected=v; }); document.querySelectorAll("[data-rvchk]").forEach(function(c){ c.checked=v; }); };
+ACT.rvAll = function(t){ var v=t.getAttribute("data-v")==="1"; state.modal.items.forEach(function(i){ i.selected = v && (!i.loose || !!i.target); }); rvRerender(); };
+function rvRerender(){ var sh=document.querySelector("#modalRoot .sheet"), y=sh? sh.scrollTop : 0; renderModal(); sh=document.querySelector("#modalRoot .sheet"); if(sh) sh.scrollTop=y; }
 ACT.rvApply = function(){
   var job=scanJob(), m=state.modal, isNew=!!(state.scanTarget && state.scanTarget.newJob);
   if(!job) return;
@@ -3018,6 +3327,7 @@ document.addEventListener("input", function(e){
   if(t.id==="searchInput"){ state.search=t.value; $("jobList").innerHTML=jobListHtml(filteredJobs()); hydratePhotos($("jobList")); return; }
   if(t.hasAttribute("data-rvval")){ state.modal.items[+t.getAttribute("data-rvval")].value=t.value; return; }
   if(t.hasAttribute("data-rvunit")){ state.modal.items[+t.getAttribute("data-rvunit")].unit=t.value; return; }
+  if(t.hasAttribute("data-rvlabel")){ state.modal.items[+t.getAttribute("data-rvlabel")].label=t.value; return; }
   if(t.hasAttribute("data-meta")){ state.meta[t.getAttribute("data-meta")]=t.value.trim(); saveMeta(); return; }
   if(t.hasAttribute("data-brand")){ state.meta.brand=state.meta.brand||{}; state.meta.brand[t.getAttribute("data-brand")]=t.value; saveMeta(); return; }
   if(!j) return;
@@ -3038,7 +3348,8 @@ document.addEventListener("input", function(e){
 document.addEventListener("change", function(e){
   var t=e.target, j=curJob();
   if(t.id==="sortSel"){ state.sort=t.value; $("jobList").innerHTML=jobListHtml(filteredJobs()); hydratePhotos($("jobList")); return; }
-  if(t.hasAttribute("data-rvchk")){ state.modal.items[+t.getAttribute("data-rvchk")].selected=t.checked; return; }
+  if(t.hasAttribute("data-rvchk")){ var ri=state.modal.items[+t.getAttribute("data-rvchk")]; ri.selected=t.checked; if(ri.loose && t.checked && !ri.target){ retargetItem(scanJob(), ri, ri.label? "other" : ""); if(!ri.target){ t.checked=false; ri.selected=false; showToast("Pick a field for this line first"); } else rvRerender(); } return; }
+  if(t.hasAttribute("data-rvtarget")){ var rt=state.modal.items[+t.getAttribute("data-rvtarget")]; retargetItem(scanJob(), rt, t.value); rvRerender(); return; }
   if(t.hasAttribute("data-ce")){ ceInput(t, true); return; }
   if(t.hasAttribute("data-meta-bool")){ state.meta[t.getAttribute("data-meta-bool")]=t.checked; saveMeta(); showToast(t.checked? "Will offer ✨ Clean up after adding photos" : "Won’t offer clean-up after adding photos (still in Arrange & viewer)"); return; }
   if(!j) return;
@@ -3108,7 +3419,7 @@ function init(){
     if(!state.meta.ocrWarmAt && !c.saveData && c.type!=="cellular") warmOcr(false);
   }, 8000);
 }
-window.__tjl = {state:state, parseLines:parseLines, buildReview:buildReview, render:render,
+window.__tjl = {state:state, parseLines:parseLines, buildReview:buildReview, render:render, scan:{buildSynIndex:buildSynIndex, labelUnitHint:labelUnitHint, parseNumber:parseNumber, defForLabel:defForLabel, reconcileFields:reconcileFields},
   ce:function(){ return CE; }, ceTestMask:function(o){ ceTestMask=o||null; }, getPhoto:getPhoto}; // test hooks (ceTestMask: fake segmentation when no model is available)
 init();
 })();

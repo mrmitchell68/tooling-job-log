@@ -10,10 +10,44 @@ sw.js                  service worker: caches the app shell + CDN libs (OCR, pdf
 bgworker.js            Web Worker that loads @imgly/background-removal on first use and returns the cutout mask
 icons/                 icon-192.png, icon-512.png, icon-maskable-512.png, apple-touch-icon.png, favicon-64.png
 shots/                 412×915 phone screenshots
-tests/                 Playwright end-to-end tests (test.py, test_refsheet.py, test_arrange.py, test_cleanup.py) + fixture generators
+tests/                 Playwright end-to-end tests (test.py, test_refsheet.py, test_arrange.py, test_cleanup.py, test_scanfields.py) + fixture generators
 ```
 
 All URLs are relative, so it runs from any path: `https://<user>.github.io/<repo>/`, a subfolder, or localhost.
+
+## What's new in 2.3.1 — Scanned values now print on the Reference Sheet
+
+**Bug fixed:** part weight, shot weight, material, color and other molding values that came from a scan or paste were saved on the job but were missing from the printed **Mold / Job Reference Sheet**. The causes:
+- The reference sheet printed a fixed list of fields, looked up by internal key only. Custom fields, fields with no key, Specs (grade, tonnage, temps, pressures), unknown labels and custom sections printed only on the old Process sheet.
+- Jobs made in v2.0.x saved "Color" into *Material grade/color* and "part weight" as *Shot weight*. The v2.1 migration then added empty Color / Part weight fields, and the sheet printed those blanks.
+- There were also parser gaps. "Material Type: X" was saved as "Type". "Mold temp" matched Tool #. Header-row tables weren't read. OCR's "Ibs" wasn't treated as lb, so weights printed as grams. Labels inside sentences were matched. On multi-column sheets, values ran on into the next column.
+
+**Where values print now (Reference Sheet):**
+- **Mold / Part Information:** Customer, Part name/number, Description, Material, Color, Cavities, Part weight, Shot weight, cycle times, Machine/Press, Tool #, and so on. Values saved under a custom label with the same meaning are picked up too.
+- **Material & Process** strip (only fields that have values): Material grade, Colorant/masterbatch, Let-down ratio, Regrind %, Dryer temp/time, Clamp tonnage, Shot size, Barrel temps, Nozzle/zones, Mold temp, Injection/hold pressures, Hold/Cooling times.
+- **Other specs:** every other field that has a value, plus custom sections (notes, tables, steps). When they don't fit, the sheet continues on page 2.
+
+**Scan labels recognized** (with or without a colon, value on the same line or the next line, in header-row tables or two-column layouts, tolerant of OCR letter swaps like `weiqht` and `Materia1`):
+- **Part weight:** Part Weight, Part Wt, Part Wt. (g), Piece weight, Piece wt
+- **Shot weight:** Shot Weight, Shot Wt, Shot size (a weight unit makes it the shot weight)
+- **Material:** Material, Resin, Material Type, Resin type, Plastic. *Grade* / Material grade go to Material grade.
+- **Color:** Color, Colour, Material Color. Colorant / Masterbatch / MB and Let-down ratio / LDR have their own fields.
+- **Units:** g, grams, kg, oz, lb, lbs, OCR "Ibs"/"1bs", cc, in³, °F/°C, psi/bar, s/sec, %, ton. A unit written in the label is used too, e.g. "Part Wt. (g)" or "Regrind %".
+- **Other molding fields:** cycle time, cavities / cavitation, press / machine, clamp tonnage, mold / tool number, part number, customer, regrind %, dryer temp/time, barrel temps, nozzle, zones, mold temp, injection / hold pressure, hold time, cooling time.
+
+**Review screen:**
+- Unknown "Label: value" lines are offered as **Other spec**.
+- Lines that matched nothing are listed under **Not matched to a field** with a dropdown so you can assign each one to any field or keep it as an Other spec.
+- A banner warns when some values are unchecked.
+
+**Existing jobs:** a safe migration (schema 4) runs on load, and no data is deleted:
+- Custom or unkeyed fields whose label means Part weight, Shot weight, Material, Color and so on are linked to the proper field.
+- A v2.0 *Material grade/color* that holds only a color is copied into Color.
+- If two fields hold different values, both are kept, and the extra one prints under Other specs.
+
+**⋮ → 🔁 Re-check notes / saved scan** re-reads text saved in Notes into the review screen. Use it if a scan's text ended up in Notes.
+
+**OCR:** runs at a higher resolution and in sparse-text mode, and rebuilds lines from word positions so that labels and values in table columns stay together.
 
 ## What's new in 2.3.0 — ✨ Clean up (photo editor)
 
@@ -118,6 +152,8 @@ python tests/test.py                 # expects the server on :8766; fixture path
 python tests/test_refsheet.py        # reference sheet, branding, migration
 python tests/test_arrange.py         # Arrange photos: touch long-press drag, mouse drag, auto-scroll, action sheet, undo, print order
 python tests/make_cleanup_sample.py  # synthetic "part on a busy workbench" photo + ground-truth mask (tests/fixtures/)
+python tests/make_scan_fixtures.py   # sample mold sheet PDF (text layer) + PNG (for OCR) in tests/fixtures/
+python tests/test_scanfields.py      # 2.3.1 scan labels/units, review + assign, apply, detail, both print layouts, page 2, migration
 python tests/test_cleanup.py         # ✨ Clean up: every entry point, REAL background removal (downloads the model), backgrounds,
                                      # sliders, crop, rotate, brush, save/revert/cancel, print sheet, batch, offline, dark mode, setting
 ```
@@ -143,7 +179,7 @@ Chrome's `Page.getInstallabilityErrors` reports no errors, so the app is install
   - **Memory:** about 0.8 GB peak while the model runs (its input is fixed at 1024×1024). On phones with little RAM, Chrome might kill the tab. The worker is shut down after each photo to limit this.
   - Tested in desktop headless Chrome with Android emulation (412×915, touch). **Not yet tried on a physical Android phone.**
   - Rotate 90° in Arrange rotates the cleaned photo only. The kept original isn't rotated, so Revert brings back the original orientation.
-- OCR runs in the browser (Tesseract). It works well on clean printed sheets. Handwriting, glare, curled paper and complex tables are much less reliable. **Paste text from Google Lens** is the most accurate route on Android. Tabular "label / value in the next column" layouts are handled only when both sit on the same line or the value is on the next line.
+- OCR runs in the browser (Tesseract). It works well on clean printed sheets. Handwriting, glare, curled paper and complex tables are much less reliable. **Paste text from Google Lens** is the most accurate route on Android. Label/value tables, header-row tables and two-column sheets are handled. Dense 3-column sheets still misread a word now and then (e.g. a work-order line), so always check the review screen. The migration can't tell a v2.0 "part weight" that was saved as Shot weight from a real shot weight, so check those old jobs by eye.
 - Ordinal barrel names (front/center/rear/feed) are ambiguous from shop to shop. They're mapped to Zones 1–4 at low confidence and start unchecked.
 - The OCR engine and English data (~7 MB) have to download once before scanning works offline. Everything else works offline after the first load.
 - Share PDF goes through the print dialog ("Save as PDF"). There's no one-tap PDF file share. There's no QR code, only a printed Job ID label.
