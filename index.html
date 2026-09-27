@@ -289,7 +289,10 @@ pre.raw{white-space:pre-wrap;font-size:12px;background:var(--surface-2);padding:
 .ps-sec ol li .b{width:10px;height:10px;border:1.3px solid #16222e;border-radius:2px;flex-shrink:0;margin-top:1px}
 .ps-sec .nt{white-space:pre-wrap;padding:4px 6px;border:1px solid #e3e9ef;border-top:0;min-height:26px}
 .ps-photos{display:grid;grid-template-columns:repeat(4,1fr);gap:6px;padding:0 10px 8px}
-.ps-photos figure{margin:0;border:1px solid #c9d3dd}
+.ps-photos figure{margin:0;border:1px solid #c9d3dd;break-inside:avoid;page-break-inside:avoid}
+.ps-photos-more{grid-template-columns:repeat(3,1fr)}
+.ps-photos-more img{height:160px}
+.ps-more{padding-top:4px}
 .ps-photos img{width:100%;height:92px;object-fit:cover;display:block}
 .ps-photos figcaption{font-size:8.5px;font-weight:700;text-transform:uppercase;letter-spacing:.05em;padding:2px 4px;background:#eef3f8}
 .ps-log{padding:0 10px 8px}
@@ -324,7 +327,7 @@ pre.raw{white-space:pre-wrap;font-size:12px;background:var(--surface-2);padding:
 <script>
 (function(){
 "use strict";
-var APP_VERSION = "2.0.1";
+var APP_VERSION = "2.0.2";
 var K = { jobs:"tjl2.jobs", tpl:"tjl2.templates", meta:"tjl2.meta", theme:"tjl2.theme", v1:"toolingJobLog.v1" };
 var CDN = {
   tess: "https://cdn.jsdelivr.net/npm/tesseract.js@5.1.1/dist/tesseract.min.js",
@@ -1146,7 +1149,7 @@ function printSheetHtml(j){
     }
     return s.text ? '<div class="ps-sec"><h4>'+esc(s.title)+'</h4><div class="nt">'+esc(s.text)+'</div></div>' : '';
   }).join("");
-  var photos = (j.photos||[]).slice(0,4);
+  var allPhotos = (j.photos||[]), photos = allPhotos.slice(0,4), morePhotos = allPhotos.slice(4);
   var log = (j.runLog||[]).slice().sort(function(a,b){ return (b.date||"").localeCompare(a.date||""); }).slice(0,3);
   return '<div class="ps">'+
     '<div class="ps-hd"><div class="l"><div class="ey">TOOLING JOB SHEET'+(j.example?' <span class="ps-ex">EXAMPLE</span>':'')+'</div><div class="tn">'+esc(j.toolNumber||"No tool #")+'</div><div class="pn">'+esc(j.partName||"")+'</div></div>'+
@@ -1155,11 +1158,12 @@ function printSheetHtml(j){
     (photos.length? '<div class="ps-photos" style="padding-top:8px">'+photos.map(function(p){ return '<figure><img data-pid="'+esc(p.id)+'" alt=""><figcaption>'+esc(p.label||"Photo")+'</figcaption></figure>'; }).join("")+'</div>' : '')+
     '<div class="ps-body">'+secs+'</div>'+
     (log.length? '<div class="ps-log"><div class="ps-sec"><h4>Recent runs</h4></div><table><tr><th>Date</th><th>Operator</th><th>Change</th><th>Cycle</th><th>Issues</th></tr>'+log.map(function(e){ return '<tr><td>'+esc(e.date)+'</td><td>'+esc(e.operator)+'</td><td>'+esc(e.change)+'</td><td>'+esc(e.cycle? e.cycle+' s':'')+'</td><td>'+esc(e.issues)+'</td></tr>'; }).join("")+'</table></div>' : '')+
+    (morePhotos.length? '<div class="ps-more"><div class="ps-sec"><h4>More photos ('+morePhotos.length+')</h4></div><div class="ps-photos ps-photos-more">'+morePhotos.map(function(p){ return '<figure><img data-pid="'+esc(p.id)+'" alt=""><figcaption>'+esc(p.label||"Photo")+'</figcaption></figure>'; }).join("")+'</div></div>' : '')+
     '<div class="ps-ft"><span>Tooling Job Log · '+esc(shortId(j))+'</span><span>Printed '+esc(fmtDate(nowIso()))+' — verify against the current process before running</span></div></div>';
 }
 function viewPrint(){
   var j = curJob(); if(!j) return viewList();
-  var h = topbar(backBtn("#/job/"+j.id, j.toolNumber||"Job"), "Print / share", "One-page sheet", "");
+  var h = topbar(backBtn("#/job/"+j.id, j.toolNumber||"Job"), "Print / share", "Job sheet", "");
   h += '<div class="btnrow no-print" style="margin-top:12px"><button class="btn primary tall" data-act="print">🖨️ Print / Save PDF</button><button class="btn ghost tall" data-act="shareText">📤 Share text</button></div>';
   h += '<div class="btnrow no-print" style="margin-top:8px"><button class="btn ghost" data-act="copyText">📋 Copy summary</button><button class="btn ghost" data-act="exportJob">💾 Export job file</button></div>';
   h += '<p class="faint no-print" style="margin:8px 2px 0">To share a PDF: Print → choose “Save as PDF” → share the file from Downloads.</p>';
