@@ -154,10 +154,45 @@ textarea.inp{resize:vertical;min-height:90px;line-height:1.4}
 .ph img{width:100%;aspect-ratio:4/3;object-fit:cover;display:block}
 .ph .cap{position:absolute;left:0;right:0;bottom:0;background:linear-gradient(transparent,rgba(0,0,0,.72));color:#fff;font-size:13px;font-weight:700;padding:18px 8px 6px;letter-spacing:.02em}
 .ph .ord{position:absolute;left:6px;top:6px;background:rgba(8,20,36,.72);color:#fff;font-size:12px;font-weight:800;border-radius:99px;min-width:24px;height:24px;display:flex;align-items:center;justify-content:center;padding:0 7px}
-.ph.reorder{outline:2px dashed var(--primary);outline-offset:1px}
-.ph .mvb{position:absolute;top:calc(50% - 30px);width:46px;height:46px;border-radius:99px;border:2px solid #fff;background:rgba(13,63,122,.92);color:#fff;font-size:20px;font-weight:800;padding:0;display:flex;align-items:center;justify-content:center}
-.ph .mvb.l{left:6px} .ph .mvb.r{right:6px}
-.ph .mvb:disabled{opacity:.3}
+/* arrange photos (mirrors the reference-sheet grid) */
+.arr-intro{margin:10px 2px 0;font-size:14px;color:var(--text-dim)}
+.arr-intro b{color:var(--text)}
+.arr-grid{user-select:none;-webkit-user-select:none;-webkit-touch-callout:none;padding-bottom:8px}
+.arr-page{display:flex;align-items:center;gap:8px;margin:14px 2px 8px;font-size:12px;letter-spacing:.1em;text-transform:uppercase;color:var(--text-faint);font-weight:800;white-space:nowrap}
+.arr-page::before,.arr-page::after{content:"";flex:1;height:2px;background:var(--border)}
+.arr-page.brk{color:var(--accent);margin-top:20px}
+.arr-page.brk::before,.arr-page.brk::after{height:0;border-top:2px dashed var(--accent);background:none}
+.arr-rows{display:flex;flex-direction:column;gap:8px}
+.arr-row{display:flex;justify-content:center;gap:6px}
+.arr-cell{width:calc((100% - 18px) / 4);flex-shrink:0;position:relative;border-radius:10px;border:1px solid var(--border);background:var(--surface);overflow:hidden;padding:0;cursor:grab;touch-action:manipulation;-webkit-touch-callout:none;user-select:none;-webkit-user-select:none;box-shadow:var(--shadow);transition:transform .2s}
+.arr-cell img{width:100%;aspect-ratio:4/3;object-fit:cover;display:block;pointer-events:none;background:var(--surface-2);-webkit-user-drag:none}
+.arr-num{position:absolute;left:4px;top:4px;min-width:32px;height:32px;border-radius:99px;background:var(--primary);color:var(--primary-ink);font-family:'Barlow Condensed',sans-serif;font-size:21px;font-weight:700;line-height:1;display:flex;align-items:center;justify-content:center;padding:0 7px;box-shadow:0 1px 5px rgba(0,0,0,.4);border:2px solid var(--surface)}
+.arr-lab{font-size:11.5px;font-weight:700;line-height:1.15;padding:4px 5px 0;margin-bottom:5px;max-height:calc(2.3em + 4px);min-height:calc(2.3em + 4px);display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;color:var(--text);overflow-wrap:anywhere}
+.arr-lab.none{color:var(--text-faint);font-style:italic;font-weight:600}
+.arr-cell.pressing{transform:scale(.94)}
+.arr-cell.arr-ph{border:2px dashed var(--primary);background:var(--primary-dim);box-shadow:none;display:flex;flex-direction:column;align-items:center;justify-content:center;color:var(--primary);font-weight:800;font-size:12px;cursor:grabbing}
+.arr-cell.arr-ph .ph-box{width:100%;aspect-ratio:4/3;display:flex;align-items:center;justify-content:center;font-size:24px}
+.arr-cell.arr-ph .arr-lab{color:var(--primary);text-align:center;font-style:normal}
+.arr-ghost{position:fixed;left:0;top:0;z-index:150;pointer-events:none;margin:0;cursor:grabbing;box-shadow:0 14px 34px rgba(0,0,0,.45);outline:3px solid var(--accent);transition:none;will-change:transform}
+body.arr-dragging{cursor:grabbing}
+.arr-cell.flash{animation:arrflash 1.4s ease-out}
+@keyframes arrflash{0%,45%{outline:4px solid var(--accent);outline-offset:1px}100%{outline:4px solid transparent;outline-offset:1px}}
+.arrbar{position:fixed;left:0;right:0;bottom:0;z-index:45;background:var(--surface);border-top:1px solid var(--border);padding:8px 10px calc(8px + env(safe-area-inset-bottom,0px));display:grid;grid-template-columns:1fr 1.25fr 1fr;gap:8px;box-shadow:0 -4px 14px rgba(0,0,0,.08)}
+.arrbar .btn{min-height:60px;border-radius:14px;font-size:16px;padding:0 8px}
+.arrbar .btn:disabled{opacity:.4}
+.arr-hd{display:flex;gap:12px;align-items:center;margin-bottom:12px}
+.arr-hd .thumb{width:96px;height:72px}
+.arr-hd .pos{font-family:'Barlow Condensed',sans-serif;font-size:28px;font-weight:700;color:var(--primary);line-height:1}
+.arr-hd .pos small{font-family:'Barlow',sans-serif;font-size:13px;color:var(--text-dim);font-weight:600}
+.arr-hd .lab{font-weight:700;font-size:15.5px;margin-top:3px;overflow-wrap:anywhere}
+.arr-mv{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:10px}
+.arr-mv .btn{min-height:58px;border-radius:14px;font-size:16px}
+.arr-mv .btn:disabled{opacity:.35}
+.arr-nums{display:grid;grid-template-columns:repeat(5,1fr);gap:8px}
+.arr-nums button{min-height:58px;border-radius:12px;border:1px solid var(--border);background:var(--surface);font-family:'Barlow Condensed',sans-serif;font-size:26px;font-weight:700;color:var(--primary);padding:0}
+.arr-nums button.sel{background:var(--primary);border-color:var(--primary);color:var(--primary-ink)}
+.arr-nums .pg{grid-column:1/-1;font-size:11.5px;letter-spacing:.1em;text-transform:uppercase;color:var(--text-faint);font-weight:800;margin:4px 2px -2px}
+.arr-nums .pg.brk{color:var(--accent)}
 .trow{display:flex;align-items:center;gap:6px;padding:4px 8px;border-top:1px solid var(--border);min-height:56px}
 .trow:first-child{border-top:0}
 .trow .tn{width:22px;text-align:right;font-weight:800;color:var(--primary);font-size:14px;flex-shrink:0}
@@ -405,11 +440,12 @@ pre.raw{white-space:pre-wrap;font-size:12px;background:var(--surface-2);padding:
   <input type="file" id="inScanFiles" accept="image/*,application/pdf,.pdf,.jpg,.jpeg,.png,.webp" multiple>
   <input type="file" id="inImport" accept="application/json,.json">
   <input type="file" id="inLogo" accept="image/*">
+  <input type="file" id="inReplace" accept="image/*">
 </div>
 <script>
 (function(){
 "use strict";
-var APP_VERSION = "2.1.0";
+var APP_VERSION = "2.2.0";
 var SCHEMA = 3; // job data schema: 3 = reference-sheet sections (part info, supplies, packaging, instructions, QC)
 var K = { jobs:"tjl2.jobs", tpl:"tjl2.templates", meta:"tjl2.meta", theme:"tjl2.theme", v1:"toolingJobLog.v1" };
 var CDN = {
@@ -435,7 +471,7 @@ var state = {
   route:{view:"list"}, jobs:[], templates:[], meta:{},
   search:"", fStatus:"all", fPress:"all", sort:"recent",
   modal:null, editSec:{}, toast:null, busy:null, scanCancelled:false,
-  photoQueue:[], pendingDelete:null, swUpdate:null, photoReorder:false
+  photoQueue:[], pendingDelete:null, swUpdate:null, arrUndo:[], arrFrom:null, arrPushed:false, arrFlash:null
 };
 
 /* ---------- utils ---------- */
@@ -1096,6 +1132,7 @@ function go(hash){ if(location.hash===hash) onRoute(); else location.hash = hash
 function onRoute(){
   var r = parseRoute();
   if(state.route.view==="setup" && r.view!=="setup") releaseWake();
+  if(state.route.view==="arrange" && (r.view!=="arrange" || r.id!==state.route.id)) arrLeave();
   state.route = r; state.modal=null; state.editSec={};
   if(r.id && !getJob(r.id)){ state.route={view:"list"}; history.replaceState(null,"","#/"); }
   if(r.openNew){ state.route={view:"list"}; history.replaceState(null,"","#/"); state.modal={type:"newJob"}; }
@@ -1106,13 +1143,15 @@ function onRoute(){
 /* ---------- render root ---------- */
 function render(){
   var v = state.route.view, html="";
+  if(arrDrag) arrAbort();
   document.body.classList.toggle("setup", v==="setup");
   if(v==="detail") html=viewDetail(); else if(v==="setup") html=viewSetup(); else if(v==="log") html=viewLog();
-  else if(v==="print") html=viewPrint(); else if(v==="templates") html=viewTemplates(); else if(v==="settings") html=viewSettings();
+  else if(v==="print") html=viewPrint(); else if(v==="arrange") html=viewArrange(); else if(v==="templates") html=viewTemplates(); else if(v==="settings") html=viewSettings();
   else html=viewList();
   $("app").innerHTML = html;
   $("app").querySelectorAll("textarea[data-auto]").forEach(autosize);
   hydratePhotos($("app"));
+  if(v==="arrange") arrBind();
   if(v==="print"){ fitSheet(); if(document.fonts && document.fonts.ready) document.fonts.ready.then(function(){ if(state.route.view==="print") fitSheet(); }); }
   renderOverlay();
 }
@@ -1291,12 +1330,11 @@ function sectionHtml(j, s, si){
   return h + '</section>';
 }
 function photosHtml(j){
-  var n=(j.photos||[]).length, ro=state.photoReorder && n>1;
-  var h = '<section class="card" id="photosCard"><div class="sec-hd"><h2>Photos</h2><span class="meta">'+n+'</span>'+(n>1?'<button class="smallbtn" data-act="photoReorder">'+(ro?'Done':'⇄ Reorder')+'</button>':'')+'</div><div class="card-bd">';
+  var n=(j.photos||[]).length;
+  var h = '<section class="card" id="photosCard"><div class="sec-hd"><h2>Photos</h2><span class="meta">'+n+'</span>'+(n?'<button class="smallbtn" data-act="arrangeOpen">↕ Arrange</button>':'')+'</div><div class="card-bd">';
   if(n){
-    if(n>1) h += '<p class="faint" style="margin:0 0 8px">'+(ro? 'Tap ◀ ▶ to move photos. This order is used on the printed sheet.' : 'Printed in this order on the reference sheet (all '+n+' photos).')+'</p>';
+    h += '<p class="faint" style="margin:0 0 8px">Printed in this order on the reference sheet (all '+n+' photo'+(n>1?'s':'')+'). Tap <b>↕ Arrange</b> to drag them into place, relabel, replace or rotate.</p>';
     h += '<div class="photogrid">'+j.photos.map(function(p,i){
-      if(ro) return '<div class="ph reorder"><img data-pid="'+esc(p.id)+'" alt="'+esc(p.label)+'"><span class="ord">'+(i+1)+'</span><button class="mvb l" data-act="photoMove" data-i="'+i+'" data-d="-1" aria-label="Move earlier"'+(i?'':' disabled')+'>◀</button><button class="mvb r" data-act="photoMove" data-i="'+i+'" data-d="1" aria-label="Move later"'+(i<n-1?'':' disabled')+'>▶</button><span class="cap">'+esc(p.label||"Photo")+'</span></div>';
       return '<button class="ph" data-act="viewPhoto" data-i="'+i+'" aria-label="View photo '+esc(p.label)+'"><img data-pid="'+esc(p.id)+'" alt="'+esc(p.label)+'"><span class="ord">'+(i+1)+'</span><span class="cap">'+esc(p.label||"Photo")+'</span></button>';
     }).join("")+'</div><div class="sp"></div>';
   } else h += '<p class="faint center" style="margin:6px 0 12px">No photos yet — mold halves, gate, water lines, setup sheet…</p>';
@@ -1523,6 +1561,7 @@ function viewPrint(){
   h += '<div class="seg no-print" style="grid-template-columns:1fr 1fr;margin-top:12px" role="tablist" aria-label="Sheet layout"><button class="active'+(lay==="reference"?' sel':'')+'" data-act="setLayout" data-v="reference" role="tab" aria-selected="'+(lay==="reference")+'">📋 Reference sheet</button><button class="active'+(lay==="process"?' sel':'')+'" data-act="setLayout" data-v="process" role="tab" aria-selected="'+(lay==="process")+'">⚙️ Process sheet</button></div>';
   h += '<p class="faint no-print" style="margin:6px 2px 0">'+(lay==="reference"? 'Photos ('+n+'), part info, supplies, packaging, instructions & QC · Letter · '+pages+' page'+(pages>1?'s':'')+'. Branding: ⚙️ Settings.' : 'Specs, temperatures, pressures, setup steps and recent runs.')+'</p>';
   h += '<div class="btnrow no-print" style="margin-top:12px"><button class="btn primary tall" data-act="print">🖨️ Print / Save PDF</button><button class="btn ghost tall" data-act="shareText">📤 Share text</button></div>';
+  if(n) h += '<button class="btn ghost block no-print" style="margin-top:8px" data-act="arrangeOpen">↕ Arrange photos ('+n+') — order, labels, pictures</button>';
   h += '<div class="btnrow no-print" style="margin-top:8px"><button class="btn ghost" data-act="copyText">📋 Copy summary</button><button class="btn ghost" data-act="exportJob">💾 Export job file</button></div>';
   h += '<p class="faint no-print" style="margin:8px 2px 0">To share a PDF: Print → choose “Save as PDF” → share the file from Downloads.</p>';
   h += '<div class="sheetwrap'+(lay==="reference"?' ref':'')+'" id="printArea">'+printSheetHtml(j, lay)+'</div>';
@@ -1685,7 +1724,9 @@ function renderModal(){
     h = '<h3>Label photo'+(m.left? ' <span class="faint">('+m.left+' more)</span>':'')+'</h3><div style="display:flex;gap:12px;align-items:center;margin-bottom:10px"><div class="thumb" style="width:84px;height:84px"><img data-pid="'+esc(m.pid)+'" alt=""></div><p class="sub" style="margin:0">Tap a label, or type your own.</p></div>'+
       '<div class="chipwrap">'+PHOTO_PRESETS.map(function(p){ return '<button class="chip'+(ph&&ph.label===p?' sel':'')+'" data-act="photoPreset" data-v="'+esc(p)+'">'+esc(p)+'</button>'; }).join("")+'</div>'+
       '<div class="field" style="margin-top:12px"><input class="inp" id="plCustom" placeholder="Custom label" value="'+esc(ph&&PHOTO_PRESETS.indexOf(ph.label)<0? ph.label : "")+'"></div>'+
-      '<div class="actions"><button class="btn ghost" data-act="photoLabelSkip">Skip</button><button class="btn primary" data-act="photoLabelGo">Save</button></div>';
+      '<div class="actions"><button class="btn ghost" data-act="photoLabelSkip">'+(m.arr?'Cancel':'Skip')+'</button><button class="btn primary" data-act="photoLabelGo">Save</button></div>';
+  } else if(m.type==="arrPhoto" || m.type==="arrMoveTo" || m.type==="arrReplace"){
+    h = arrModalHtml(j, m); if(h==null){ state.modal=null; return renderModal(); }
   } else if(m.type==="viewer"){
     var p = (j.photos||[])[m.i];
     if(!p){ state.modal=null; return renderModal(); }
@@ -1744,7 +1785,7 @@ function renderBusy(){
 }
 var toastTimer=null;
 function showToast(text, opts){
-  opts=opts||{}; state.toast={text:text, act:opts.act, actLabel:opts.actLabel, err:opts.err};
+  opts=opts||{}; state.toast={text:text, act:opts.act, actLabel:opts.actLabel, err:opts.err, arr:opts.arr};
   clearTimeout(toastTimer); renderToast();
   toastTimer=setTimeout(function(){ var t=state.toast; state.toast=null; renderToast(); if(t && opts.onExpire) opts.onExpire(); }, opts.ms || (opts.act? 7000 : 3200));
 }
@@ -1818,7 +1859,6 @@ ACT.tDelete = function(t){ var j=curJob(); var s=secById(j,t.getAttribute("data-
 ACT.tMove = function(t){ var j=curJob(); var s=secById(j,t.getAttribute("data-sid")); moveIn(s.rows, rowIdx(s,t), +t.getAttribute("data-d")); touch(j); saveJobs(); render(); };
 
 /* photos */
-ACT.photoReorder = function(){ state.photoReorder=!state.photoReorder; var y=window.scrollY; render(); window.scrollTo(0,y); };
 ACT.photoMove = function(t){ var j=curJob(), i=+t.getAttribute("data-i"), d=+t.getAttribute("data-d"); if(i+d<0||i+d>=j.photos.length) return; moveIn(j.photos, i, d); touch(j); saveJobs();
   if(state.modal && state.modal.type==="viewer"){ state.modal.i=i+d; renderModal(); var y0=window.scrollY; render(); window.scrollTo(0,y0); return; }
   var y=window.scrollY; render(); window.scrollTo(0,y); };
@@ -1833,7 +1873,9 @@ function addPhotos(files){
   .then(function(){ setBusy(null); touch(j); saveJobs(); askPersist(); render(); if(ids.length){ state.photoQueue=ids.slice(1); openModal({type:"photoLabel", pid:ids[0], left:state.photoQueue.length}); } })
   .catch(function(e){ setBusy(null); saveJobs(); render(); showToast("Photo failed: "+(e.message||e), {err:true}); });
 }
-function setPhotoLabel(label){ var j=curJob(); var p=j.photos.find(function(x){ return x.id===state.modal.pid; }); if(p){ p.label=label; touch(j); saveJobs(); } nextPhotoLabel(); }
+function setPhotoLabel(label){ var j=curJob(), arr=state.modal && state.modal.arr; var p=j.photos.find(function(x){ return x.id===state.modal.pid; });
+  if(p && arr && p.label!==label){ arrPushUndo(j, "Label changed"); p.label=label; touch(j); saveJobs(); nextPhotoLabel(); arrToast("Label: "+label); return; }
+  if(p){ p.label=label; touch(j); saveJobs(); } nextPhotoLabel(); }
 function nextPhotoLabel(){ var back=state.modal && state.modal.backTo; if(state.photoQueue.length){ var id=state.photoQueue.shift(); openModal({type:"photoLabel", pid:id, left:state.photoQueue.length}); } else if(back!=null){ openModal({type:"viewer", i:back}); } else closeModal(); render(); }
 ACT.photoPreset = function(t){ setPhotoLabel(t.getAttribute("data-v")); };
 ACT.photoLabelGo = function(){ var v=$("plCustom").value.trim(); if(v) setPhotoLabel(v); else nextPhotoLabel(); };
@@ -1842,7 +1884,285 @@ ACT.viewPhoto = function(t){ openModal({type:"viewer", i:+t.getAttribute("data-i
 ACT.photoNav = function(t){ navPhoto(+t.getAttribute("data-d")); };
 ACT.photoRelabel = function(){ var j=curJob(); var i=state.modal.i; openModal({type:"photoLabel", pid:j.photos[i].id, backTo:i}); };
 ACT.photoDelete = function(){ var j=curJob(), i=state.modal.i, p=j.photos[i]; j.photos.splice(i,1); touch(j); saveJobs(); closeModal(); render();
-  showToast("Photo deleted", {act:function(){ j.photos.splice(i,0,p); saveJobs(); render(); }, onExpire:function(){ if(!j.photos.some(function(q){ return q.id===p.id; })) delPhoto(p.id); }}); };
+  showToast("Photo deleted", {act:function(){ j.photos.splice(i,0,p); saveJobs(); render(); }, onExpire:function(){ if(!photoReferenced(p.id)) delPhoto(p.id); }}); };
+
+/* ---------- arrange photos (full screen, mirrors the reference-sheet grid) ---------- */
+var VIEW_ORDER = PHOTO_PRESETS.slice(0,11); // template view order: mold A, B, sides, top, bottom, insert, profile, finished top/bottom/front edge
+var arrDrag = null, arrJustDragged = 0;
+function arrPageOf(i){ return i<12 ? 1 : 2+Math.floor((i-12)/RS.perCont); }
+function arrPagesFor(n){ return 1+Math.ceil(Math.max(0,n-12)/RS.perCont); }
+function arrSegments(n){ var segs=[], i=0; if(!n) return segs; segs.push([0, Math.min(12,n)]); i=12; while(i<n){ segs.push([i, Math.min(n, i+RS.perCont)]); i+=RS.perCont; } return segs; }
+function arrImg(p){ var u=urlCache[p.id]; return '<img '+(u?'src="'+u+'" ':'')+'data-pid="'+esc(p.id)+'" alt="" draggable="false">'; }
+// items: photo objects, with null = drop placeholder
+function arrGridHtml(items){
+  var n=items.length, h='';
+  if(!n) return '<div class="empty"><div class="big">🖼️</div>No photos yet.<br>Add them from the job’s Photos section.</div>';
+  arrSegments(n).forEach(function(seg, si){
+    var a=seg[0], b=seg[1], pg=si+1;
+    h += '<div class="arr-page'+(si?' brk':'')+'">'+(si? '✂ Page '+pg+' · photos '+(a+1)+'–'+b : 'Page 1'+(n>12? ' · photos 1–12' : ''))+'</div><div class="arr-rows">';
+    var k=a;
+    rsRows(b-a).forEach(function(c){
+      h += '<div class="arr-row">';
+      for(var x=0;x<c;x++,k++){
+        var p=items[k];
+        if(!p){ h += '<div class="arr-cell arr-ph arr-slot" data-slot="'+k+'"><div class="ph-box">⤓</div><span class="arr-num">'+(k+1)+'</span><div class="arr-lab">Drop here</div></div>'; continue; }
+        var lab=String(p.label||"").trim();
+        h += '<div class="arr-cell arr-slot'+(state.arrFlash===p.id?' flash':'')+'" role="button" tabindex="0" data-act="arrTap" data-id="'+esc(p.id)+'" data-slot="'+k+'" aria-label="Position '+(k+1)+': '+esc(lab||"Unlabeled photo")+'. Tap for options, press and hold to drag.">'+
+          arrImg(p)+'<span class="arr-num">'+(k+1)+'</span><div class="arr-lab'+(lab?'':' none')+'">'+esc(lab||("Photo "+(k+1)))+'</div></div>';
+      }
+      h += '</div>';
+    });
+    h += '</div>';
+  });
+  return h;
+}
+function viewArrange(){
+  var j=curJob(); if(!j) return viewList();
+  var n=j.photos.length, pages=arrPagesFor(n), canUndo=arrCanUndo(j);
+  var h = topbar('<button class="back" data-act="arrDone"><span class="arr">‹</span>Done</button>', "Arrange photos", jobTitle(j)+" · reference sheet order",
+    '<button class="iconbtn" data-act="arrUndo" aria-label="Undo last change" title="Undo"'+(canUndo?'':' disabled style="opacity:.35"')+'>↶</button>');
+  h += '<p class="arr-intro"><b>'+n+' photo'+(n===1?'':'s')+' · '+pages+' sheet page'+(pages>1?'s':'')+'.</b> Same order &amp; grid as the printed sheet. <b>Press &amp; hold</b> a photo to drag it, or <b>tap</b> it for move, label, replace, rotate &amp; delete.</p>';
+  h += '<div class="arr-grid" id="arrGrid">'+arrGridHtml(j.photos)+'</div>';
+  h += '<div class="arrbar no-print"><button class="btn ghost" data-act="arrUndo"'+(canUndo?'':' disabled')+'>↶ Undo</button><button class="btn ghost" data-act="arrSort"'+(n>1?'':' disabled')+'>⇅ Preset order</button><button class="btn primary" data-act="arrDone">✓ Done</button></div>';
+  return h;
+}
+function arrCanUndo(j){ return state.arrUndo.some(function(u){ return u.jobId===j.id; }); }
+function arrPushUndo(j, label){ state.arrUndo.push({jobId:j.id, label:label, photos:clone(j.photos)}); if(state.arrUndo.length>40) state.arrUndo.shift(); }
+function arrToast(text){ showToast(text, {act:arrUndo, actLabel:"UNDO", arr:true}); }
+function arrRerender(){ var y=window.scrollY; render(); window.scrollTo(0,y); }
+function arrFlashTo(pid){
+  var el=document.querySelector('.arr-cell[data-id="'+pid+'"]'); state.arrFlash=null; if(!el) return;
+  var r=el.getBoundingClientRect(); if(r.top<90 || r.bottom>window.innerHeight-100) el.scrollIntoView({block:"center"});
+}
+// apply one arrange change: snapshot for undo, mutate, save immediately, re-render
+function arrApply(label, fn, flash){
+  var j=curJob(); if(!j) return;
+  arrPushUndo(j, label);
+  if(fn(j)===false){ state.arrUndo.pop(); return; }
+  touch(j); saveJobs();
+  state.arrFlash = flash||null; arrRerender(); if(flash) arrFlashTo(flash);
+  arrToast(label);
+}
+function arrUndo(){
+  var u=null; for(var k=state.arrUndo.length-1;k>=0;k--){ if(state.arrUndo[k].jobId===state.route.id){ u=state.arrUndo.splice(k,1)[0]; break; } }
+  if(!u){ showToast("Nothing to undo"); return; }
+  var j=getJob(u.jobId); if(!j) return;
+  j.photos=u.photos; touch(j); saveJobs();
+  if(state.modal && state.modal.type && state.modal.type.indexOf("arr")===0) state.modal=null;
+  arrRerender(); showToast("Undone: "+u.label, {arr:true});
+}
+function photoReferenced(id){
+  if(state.jobs.some(function(j){ return (j.photos||[]).some(function(q){ return q.id===id; }); })) return true;
+  if(state.pendingDelete && (state.pendingDelete.job.photos||[]).some(function(q){ return q.id===id; })) return true;
+  return state.arrUndo.some(function(u){ return u.photos.some(function(q){ return q.id===id; }); });
+}
+// leaving the arrange screen: drop undo history and delete pictures that were replaced/rotated/deleted
+function arrLeave(){
+  if(arrDrag) arrAbort();
+  var ids={}; state.arrUndo.forEach(function(u){ u.photos.forEach(function(q){ ids[q.id]=1; }); });
+  state.arrUndo=[]; state.arrPushed=false; state.arrFlash=null;
+  Object.keys(ids).forEach(function(id){ if(!photoReferenced(id)) delPhoto(id); });
+  if(state.toast && state.toast.arr){ state.toast=null; clearTimeout(toastTimer); renderToast(); }
+}
+function arrMovePid(j, pid, to){ var from=j.photos.findIndex(function(p){ return p.id===pid; }); if(from<0) return false; to=Math.max(0, Math.min(j.photos.length-1, to)); if(to===from) return false; var x=j.photos.splice(from,1)[0]; j.photos.splice(to,0,x); }
+function arrIdx(j, pid){ return j.photos.findIndex(function(p){ return p.id===pid; }); }
+function presetRank(label){
+  var k=normKey(label); if(!k) return 99;
+  for(var i=0;i<VIEW_ORDER.length;i++){ if(normKey(VIEW_ORDER[i])===k) return i; }
+  for(var m=0;m<VIEW_ORDER.length;m++){ var pk=normKey(VIEW_ORDER[m]); if(k.indexOf(pk)===0 || (k.length>=8 && pk.indexOf(k)===0)) return m; }
+  return 99;
+}
+function presetSorted(photos){ return photos.map(function(p,i){ return {p:p, i:i, r:presetRank(p.label)}; }).sort(function(a,b){ return a.r-b.r || a.i-b.i; }).map(function(x){ return x.p; }); }
+
+/* modal sheets for the arrange screen */
+function arrModalHtml(j, m){
+  var i=arrIdx(j, m.pid), n=j.photos.length; if(i<0) return null;
+  var p=j.photos[i], lab=String(p.label||"").trim()||("Photo "+(i+1));
+  var hd='<div class="arr-hd"><div class="thumb"><img data-pid="'+esc(p.id)+'" alt=""></div><div style="min-width:0"><div class="pos">#'+(i+1)+' <small>of '+n+' · sheet page '+arrPageOf(i)+'</small></div><div class="lab">'+esc(lab)+'</div></div></div>';
+  if(m.type==="arrPhoto"){
+    return hd+'<div class="arr-mv">'+
+      '<button class="btn ghost" data-act="arrMove" data-d="first"'+(i?'':' disabled')+'>⇤ Move first</button>'+
+      '<button class="btn ghost" data-act="arrMove" data-d="last"'+(i<n-1?'':' disabled')+'>Move last ⇥</button>'+
+      '<button class="btn ghost" data-act="arrMove" data-d="-1"'+(i?'':' disabled')+'>◀ Earlier</button>'+
+      '<button class="btn ghost" data-act="arrMove" data-d="1"'+(i<n-1?'':' disabled')+'>Later ▶</button></div>'+
+      '<div class="menu">'+
+      (n>1? '<button data-act="arrMoveTo"><span class="ic">🔢</span><span>Move to position…<small>Pick its spot 1–'+n+' on the sheet</small></span></button>' : '')+
+      '<button data-act="arrLabel"><span class="ic">🏷</span><span>Change label<small>Template views or your own text</small></span></button>'+
+      '<button data-act="arrReplace"><span class="ic">🔄</span><span>Replace picture<small>Camera, gallery or Drive — keeps label &amp; position</small></span></button>'+
+      '<button data-act="arrRotate"><span class="ic">⟳</span><span>Rotate 90°<small>Clockwise, saved right away</small></span></button>'+
+      '<button data-act="arrView"><span class="ic">🔍</span><span>View full size</span></button>'+
+      '<button data-act="arrDelete" class="danger"><span class="ic">🗑</span><span>Delete photo<small>You can undo</small></span></button>'+
+      '</div><div class="actions"><button class="btn ghost" data-act="closeModal">Close</button></div>';
+  }
+  if(m.type==="arrMoveTo"){
+    var nums='';
+    for(var k=0;k<n;k++){
+      if(k===0 && n>12) nums+='<div class="pg">Page 1</div>';
+      if(k>=12 && (k-12)%RS.perCont===0) nums+='<div class="pg brk">Page '+arrPageOf(k)+'</div>';
+      nums+='<button class="'+(k===i?'sel':'')+'" data-act="arrMoveToGo" data-v="'+(k+1)+'" aria-label="Move to position '+(k+1)+'"'+(k===i?' aria-current="true"':'')+'>'+(k+1)+'</button>';
+    }
+    return '<h3>Move to position</h3>'+hd+'<p class="sub">Tap the new spot. Positions match the numbered grid on the printed sheet.</p><div class="arr-nums">'+nums+'</div>'+
+      '<div class="actions"><button class="btn ghost" data-act="arrBack">‹ Back</button><button class="btn ghost" data-act="closeModal">Cancel</button></div>';
+  }
+  if(m.type==="arrReplace"){
+    return '<h3>Replace picture</h3>'+hd+'<p class="sub">The new picture keeps this label and position #'+(i+1)+'.</p><div class="menu">'+
+      '<button data-act="arrReplacePick" data-kind="cam"><span class="ic">📷</span><span>Take new photo</span></button>'+
+      '<button data-act="arrReplacePick" data-kind="lib"><span class="ic">🖼️</span><span>Choose from gallery</span></button>'+
+      '<button data-act="arrReplacePick" data-kind="files"><span class="ic">📁</span><span>From Google Drive / Files</span></button>'+
+      '</div><div class="actions"><button class="btn ghost" data-act="arrBack">‹ Back</button><button class="btn ghost" data-act="closeModal">Cancel</button></div>';
+  }
+  return null;
+}
+
+/* actions */
+ACT.arrangeOpen = function(){ var j=curJob(); if(!j) return; state.arrFrom = state.route.view==="print" ? "print" : "detail"; state.modal=null; state.arrPushed=true; go("#/job/"+j.id+"/arrange"); };
+ACT.arrDone = function(){
+  var j=curJob(); if(!j){ go("#/"); return; }
+  if(state.arrPushed && history.length>1){ state.arrPushed=false; history.back(); return; }
+  go("#/job/"+j.id+(state.arrFrom==="print"?"/print":""));
+};
+ACT.arrUndo = function(){ arrUndo(); };
+ACT.arrTap = function(t){ if(arrJustDragged && Date.now()-arrJustDragged<800) return; /* swallow the click that can follow a drop */ openModal({type:"arrPhoto", pid:t.getAttribute("data-id")}); };
+ACT.arrBack = function(){ openModal({type:"arrPhoto", pid:state.modal.pid}); };
+ACT.arrMove = function(t){
+  var j=curJob(), pid=state.modal.pid, i=arrIdx(j,pid), d=t.getAttribute("data-d"), n=j.photos.length;
+  var to = d==="first"? 0 : d==="last"? n-1 : i+(+d);
+  if(to<0 || to>=n || to===i) return;
+  if(d==="first"||d==="last"){ state.modal=null; renderModal(); }
+  arrApply(d==="first"? "Moved to first" : d==="last"? "Moved to last (#"+n+")" : "Moved to #"+(to+1), function(j){ return arrMovePid(j, pid, to); }, pid);
+};
+ACT.arrMoveTo = function(){ openModal({type:"arrMoveTo", pid:state.modal.pid}); };
+ACT.arrMoveToGo = function(t){ var pid=state.modal.pid, to=+t.getAttribute("data-v")-1; state.modal=null; renderModal(); arrApply("Moved to #"+(to+1), function(j){ return arrMovePid(j, pid, to); }, pid); };
+ACT.arrLabel = function(){ openModal({type:"photoLabel", pid:state.modal.pid, arr:true}); };
+ACT.arrReplace = function(){ openModal({type:"arrReplace", pid:state.modal.pid}); };
+ACT.arrReplacePick = function(t){
+  var kind=t.getAttribute("data-kind"), inp=$("inReplace");
+  state.arrReplacePid = state.modal.pid; closeModal();
+  if(kind==="cam") inp.setAttribute("capture","environment"); else inp.removeAttribute("capture");
+  inp.setAttribute("accept", kind==="files" ? "image/*,application/pdf,.jpg,.jpeg,.png,.webp,.gif" : "image/*");
+  inp.click();
+};
+function arrReplaceFile(f){
+  var pid=state.arrReplacePid, j=curJob(); state.arrReplacePid=null;
+  if(!j || !pid || arrIdx(j,pid)<0) return;
+  if(!(/^image\//.test(f.type) || /\.(jpe?g|png|webp|gif)$/i.test(f.name||""))){ showToast("That isn’t a picture — choose a JPG/PNG photo", {err:true}); return; }
+  setBusy("Replacing picture…");
+  compressPhoto(f).then(function(r){ var id=uid(); return putPhoto(id, r.blob).then(function(){
+    setBusy(null);
+    arrApply("Picture replaced", function(j){ var i=arrIdx(j,pid); if(i<0) return false; var o=j.photos[i]; j.photos[i]={id:id, label:o.label, addedAt:o.addedAt||nowIso(), replacedAt:nowIso(), bytes:r.blob.size, w:r.w, h:r.h}; }, id);
+  }); }).catch(function(e){ setBusy(null); showToast("Replace failed: "+(e.message||e), {err:true}); });
+}
+function rotateBlob(blob){
+  return loadImage(blob).then(function(im){
+    var w=im.naturalWidth, h=im.naturalHeight, s=Math.min(1, 1280/Math.max(w,h)), W=Math.round(w*s), H=Math.round(h*s);
+    var c=document.createElement("canvas"); c.width=H; c.height=W;
+    var g=c.getContext("2d"); g.translate(H,0); g.rotate(Math.PI/2); g.drawImage(im,0,0,W,H);
+    return canvasBlob(c,"image/jpeg",0.72).then(function(b){ return {blob:b, w:c.width, h:c.height}; });
+  });
+}
+ACT.arrRotate = function(){
+  var pid=state.modal.pid; if(state.arrBusy) return; state.arrBusy=true;
+  setBusy("Rotating…");
+  getPhoto(pid).then(function(b){ if(!b) throw new Error("picture not found"); return rotateBlob(b); }).then(function(r){ var id=uid(); return putPhoto(id, r.blob).then(function(){
+    setBusy(null); state.arrBusy=false;
+    if(state.modal && state.modal.type==="arrPhoto" && state.modal.pid===pid) state.modal.pid=id; // keep the sheet open on the rotated picture
+    arrApply("Rotated 90°", function(j){ var i=arrIdx(j,pid); if(i<0) return false; var o=j.photos[i]; j.photos[i]=Object.assign({}, o, {id:id, bytes:r.blob.size, w:r.w, h:r.h, rotatedAt:nowIso()}); }, id);
+  }); }).catch(function(e){ setBusy(null); state.arrBusy=false; showToast("Rotate failed: "+(e.message||e), {err:true}); });
+};
+ACT.arrView = function(){ var j=curJob(), i=arrIdx(j, state.modal.pid); if(i>=0) openModal({type:"viewer", i:i}); };
+ACT.arrDelete = function(){ var pid=state.modal.pid; state.modal=null; renderModal(); arrApply("Photo deleted", function(j){ var i=arrIdx(j,pid); if(i<0) return false; j.photos.splice(i,1); }); };
+ACT.arrSort = function(){
+  var j=curJob(); if(!j || j.photos.length<2) return;
+  var sorted=presetSorted(j.photos);
+  if(sorted.every(function(p,i){ return p===j.photos[i]; })){ showToast(j.photos.some(function(p){ return presetRank(p.label)<99; }) ? "Already in preset order" : "No template view labels to sort by — label photos first"); return; }
+  arrApply("Sorted by template view order", function(j){ j.photos=presetSorted(j.photos); });
+};
+
+/* drag & drop: pointer events (touch = press-and-hold 250 ms to pick up; mouse = drag) */
+function arrBind(){
+  var g=$("arrGrid"); if(!g) return;
+  g.addEventListener("pointerdown", arrDown);
+  g.addEventListener("pointermove", arrMove);
+  g.addEventListener("pointerup", arrUp);
+  g.addEventListener("pointercancel", arrCancelEv);
+  g.addEventListener("lostpointercapture", function(e){ if(arrDrag && arrDrag.active && e.pointerId===arrDrag.pointerId) arrDrop(); });
+  g.addEventListener("contextmenu", function(e){ e.preventDefault(); });
+  g.addEventListener("dragstart", function(e){ e.preventDefault(); });
+  // once a photo is picked up, stop the page from panning (touch-action stays auto so normal swipes scroll)
+  g.addEventListener("touchmove", function(e){ if(arrDrag && arrDrag.active && e.cancelable) e.preventDefault(); }, {passive:false});
+}
+function arrDown(e){
+  arrJustDragged=0; // a new press: any click from here on is a real tap
+  if(arrDrag || state.modal) return;
+  if(e.pointerType==="mouse" && e.button!==0) return;
+  var cell=e.target.closest(".arr-cell[data-id]"); if(!cell) return;
+  arrDrag={pid:cell.getAttribute("data-id"), pointerId:e.pointerId, type:e.pointerType, x0:e.clientX, y0:e.clientY, x:e.clientX, y:e.clientY, active:false, cell:cell};
+  if(e.pointerType!=="mouse"){ cell.classList.add("pressing"); arrDrag.timer=setTimeout(arrPick, 250); }
+}
+function arrMove(e){
+  var d=arrDrag; if(!d || e.pointerId!==d.pointerId) return;
+  d.x=e.clientX; d.y=e.clientY;
+  if(!d.active){
+    var dist=Math.hypot(d.x-d.x0, d.y-d.y0);
+    if(d.type==="mouse"){ if(dist>6) arrPick(); }
+    else if(dist>10) arrReset(); // finger moved before the hold: it's a scroll, let the browser have it
+    return;
+  }
+  e.preventDefault(); arrGhostPos(); arrHit();
+}
+function arrUp(e){
+  var d=arrDrag; if(!d || e.pointerId!==d.pointerId) return;
+  if(d.active) arrDrop(); else arrReset();
+}
+function arrCancelEv(e){ var d=arrDrag; if(!d || e.pointerId!==d.pointerId) return; if(d.active) arrDrop(); else arrReset(); }
+function arrReset(){ if(!arrDrag) return; clearTimeout(arrDrag.timer); if(arrDrag.cell) arrDrag.cell.classList.remove("pressing"); arrDrag=null; }
+function arrPick(){
+  var d=arrDrag, j=curJob(); if(!d || d.active || !j) return;
+  clearTimeout(d.timer);
+  var from=arrIdx(j, d.pid); if(from<0){ arrReset(); return; }
+  d.cell.classList.remove("pressing");
+  var r=d.cell.getBoundingClientRect();
+  d.active=true; d.from=from; d.target=from; d.offX=d.x0-r.left; d.offY=d.y0-r.top;
+  d.list=j.photos.filter(function(p){ return p.id!==d.pid; });
+  var gh=d.cell.cloneNode(true); gh.classList.add("arr-ghost"); gh.classList.remove("flash"); gh.removeAttribute("data-act"); gh.removeAttribute("data-slot"); gh.classList.remove("arr-slot"); gh.removeAttribute("tabindex"); gh.setAttribute("aria-hidden","true");
+  gh.style.width=r.width+"px"; document.body.appendChild(gh); d.ghost=gh;
+  // keep the touched node attached (hidden) so its touchmove events still bubble to the grid's non-passive listener
+  d.cell.classList.remove("arr-slot"); d.cell.removeAttribute("data-act"); d.cell.style.display="none";
+  try{ $("arrGrid").setPointerCapture(d.pointerId); }catch(err){}
+  document.body.classList.add("arr-dragging");
+  if(navigator.vibrate) try{ navigator.vibrate(20); }catch(err){}
+  arrRenderPreview(); arrGhostPos();
+  d.raf=requestAnimationFrame(arrAutoScroll);
+}
+function arrGhostPos(){ var d=arrDrag; if(!d || !d.ghost) return; var lift = d.type==="mouse" ? 0 : 56; /* float above the finger so the drop spot stays visible */ d.ghost.style.transform="translate("+(d.x-d.offX)+"px,"+(d.y-d.offY-lift)+"px) scale(1.08) rotate(-1.5deg)"; }
+function arrRenderPreview(){
+  var d=arrDrag, g=$("arrGrid"); if(!d || !g) return;
+  var items=d.list.slice(); items.splice(d.target, 0, null);
+  g.innerHTML=arrGridHtml(items); g.appendChild(d.cell); hydratePhotos(g);
+  var sy=window.scrollY, sx=window.scrollX;
+  d.slots=Array.prototype.map.call(g.querySelectorAll(".arr-slot"), function(el){ var b=el.getBoundingClientRect(); return {l:b.left+sx, r:b.right+sx, t:b.top+sy, b:b.bottom+sy}; });
+}
+function arrHit(){
+  var d=arrDrag; if(!d || !d.active || !d.slots || !d.slots.length) return;
+  var x=d.x+window.scrollX, y=d.y+window.scrollY, s=d.slots, t=-1;
+  for(var k=0;k<s.length;k++){ if(x>=s[k].l-3 && x<=s[k].r+3 && y>=s[k].t-4 && y<=s[k].b+4){ t=k; break; } }
+  if(t<0){ var last=s[s.length-1]; if(y>last.b) t=s.length-1; else if(y<s[0].t) t=0; }
+  if(t>=0 && t!==d.target){ d.target=t; arrRenderPreview(); if(navigator.vibrate) try{ navigator.vibrate(6); }catch(err){} }
+}
+function arrAutoScroll(){
+  var d=arrDrag; if(!d || !d.active) return;
+  var H=window.innerHeight, top=110, bot=H-115, v=0;
+  if(d.y<top) v=-Math.min(20, Math.ceil((top-d.y)/5)); else if(d.y>bot) v=Math.min(20, Math.ceil((d.y-bot)/5));
+  if(v){ var y0=window.scrollY; window.scrollBy(0, v); if(window.scrollY!==y0) arrHit(); }
+  d.raf=requestAnimationFrame(arrAutoScroll);
+}
+function arrEndCommon(){ var d=arrDrag; arrDrag=null; if(!d) return null; clearTimeout(d.timer); cancelAnimationFrame(d.raf); if(d.ghost) d.ghost.remove(); document.body.classList.remove("arr-dragging"); try{ $("arrGrid").releasePointerCapture(d.pointerId); }catch(err){} return d; }
+function arrDrop(){
+  var d=arrEndCommon(); if(!d) return; arrJustDragged=Date.now();
+  if(d.target!==d.from) arrApply("Moved to #"+(d.target+1), function(j){ return arrMovePid(j, d.pid, d.target); }, d.pid);
+  else { var g=$("arrGrid"), j=curJob(); if(g && j){ g.innerHTML=arrGridHtml(j.photos); hydratePhotos(g); } }
+}
+function arrAbort(){ var d=arrEndCommon(); if(!d) return; var g=$("arrGrid"), j=curJob(); if(g && j){ g.innerHTML=arrGridHtml(j.photos); hydratePhotos(g); } }
 
 /* run log */
 ACT.addLog = function(){ var j=curJob(); var pc=(j.pendingChanges||[]).map(changeText).join("; ");
@@ -2047,6 +2367,7 @@ document.addEventListener("keydown", function(e){
   if(e.key==="Escape" && state.modal){ closeModal(); return; }
   var t=e.target;
   if(e.key==="Enter" && t.classList && t.classList.contains("jobcard")){ ACT.openJob(t); return; }
+  if((e.key==="Enter"||e.key===" ") && t.classList && t.classList.contains("arr-cell") && t.hasAttribute("data-id")){ e.preventDefault(); ACT.arrTap(t); return; }
   if(e.key==="Enter" && t.hasAttribute && t.hasAttribute("data-fval")){
     e.preventDefault(); var all=Array.prototype.slice.call(document.querySelectorAll("[data-fval]")); var nx=all[all.indexOf(t)+1]; if(nx){ nx.focus(); nx.select && nx.select(); } else t.blur();
   }
@@ -2094,6 +2415,7 @@ $("inPhotoCam").addEventListener("change", function(){ addPhotos(this.files); th
 $("inPhotoLib").addEventListener("change", function(){ addPhotos(this.files); this.value=""; });
 $("inPhotoFiles").addEventListener("change", function(){ var all=Array.prototype.slice.call(this.files); this.value=""; var imgs=all.filter(function(f){ return /^image\//.test(f.type) || /\.(jpe?g|png|webp|gif)$/i.test(f.name||""); }); if(imgs.length<all.length) showToast("Skipped "+(all.length-imgs.length)+" non-image file(s). Use Scan for PDFs."); addPhotos(imgs); });
 ["inScanCam","inScanImg","inScanPdf","inScanFiles"].forEach(function(id){ $(id).addEventListener("change", function(){ var f=Array.prototype.slice.call(this.files); this.value=""; runScanFiles(f); }); });
+$("inReplace").addEventListener("change", function(){ var f=this.files[0]; this.value=""; if(f) arrReplaceFile(f); });
 $("inImport").addEventListener("change", function(){ var f=this.files[0]; this.value=""; if(f) importFile(f); });
 $("inLogo").addEventListener("change", function(){ var f=this.files[0]; this.value=""; if(!f) return; compressLogo(f).then(function(u){ state.meta.brand=state.meta.brand||{}; state.meta.brand.logo=u; if(saveMeta()!==false){ render(); showToast("Logo saved ("+fmtBytes(Math.round(u.length*0.75))+")"); } }).catch(function(e){ showToast("Logo failed: "+(e.message||e), {err:true}); }); });
 window.addEventListener("resize", debounce(function(){ if(state.route.view==="print") fitSheet(); }, 150));

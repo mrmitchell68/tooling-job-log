@@ -8,10 +8,20 @@ manifest.webmanifest   PWA manifest (name, short_name "Job Log", start_url ./, s
 sw.js                  service worker: caches the app shell + CDN libs (OCR, pdf.js, fonts) for offline use
 icons/                 icon-192.png, icon-512.png, icon-maskable-512.png, apple-touch-icon.png, favicon-64.png
 shots/                 412×915 phone screenshots
-tests/                 Playwright end-to-end test (tests/test.py) + fixture generator
+tests/                 Playwright end-to-end tests (test.py, test_refsheet.py, test_arrange.py) + fixture generator
 ```
 
 All URLs are relative, so it runs from any path: `https://<user>.github.io/<repo>/`, a subfolder, or localhost.
+
+## What's new in 2.2.0 — Arrange photos
+
+A full-screen **Arrange photos** screen for putting photos in the exact order they print on the reference sheet. Open it from **↕ Arrange** in the job's Photos section, or **↕ Arrange photos** on the Print screen.
+- The grid matches the sheet: 4 across, the same rows (a short last row is centered), big position numbers and labels, and a dashed **✂ Page 2** divider after photo 12 (then every 20).
+- **Drag and drop:** on a phone, press and hold a photo for about ¼ s, then drag it. A dashed "Drop here" slot shows where it will land. The page scrolls on its own near the top and bottom edges, and a quick swipe still scrolls normally. With a mouse, just drag.
+- **Tap a photo** for big buttons: Move first / last / earlier / later, **Move to position…** (tap a number 1–N), **Change label** (template views or your own text), **Replace picture** (camera, gallery or Google Drive / Files; the label and position stay), **Rotate 90°** (saves a rotated, compressed JPEG), View full size, and **Delete**.
+- **⇅ Preset order** sorts photos into the template view order: mold front (A), rear (B), side left, side right, top, bottom, insert detail, side profile, then finished part top, bottom and front edge. Other photos keep their order after those.
+- Every change saves immediately. **↶ Undo** (bottom bar, top bar, or UNDO on the toast) steps back through the changes made on this screen. **✓ Done** returns to where you came from. The job's Photos grid and the printed sheet follow the new order.
+- The old ⇄ Reorder mode has been replaced by this screen. ◀ / ▶ in the photo viewer still work.
 
 ## What's new in 2.1.0 — Mold / Job Reference Sheet
 
@@ -20,7 +30,7 @@ All URLs are relative, so it runs from any path: `https://<user>.github.io/<repo
   - Temps and pressures show as a compact **Process** strip, but only when they have values.
 - **Print → Process sheet**: the older layout (specs, temps, pressures, setup steps, recent runs) is still one tap away.
 - New job sections: Mold / part information (part #, description, color, part weight, machine cycle time, parts/hr, machine, work order, date, revision), Required for the job (supplies) table, Carton / packaging, Packaging description, Operator work instructions, Quality checks, Notes / comments. Older jobs get the missing sections added automatically. Nothing is deleted or overwritten.
-- Photo labels now match the template views (mold front / rear / side / top / bottom, insert detail, side profile, finished part views). To change the order photos print in, use **⇄ Reorder** in Photos, or ◀ / ▶ in the photo viewer.
+- Photo labels now match the template views (mold front / rear / side / top / bottom, insert detail, side profile, finished part views). To change the order photos print in, use **↕ Arrange** in Photos (2.2.0), or ◀ / ▶ in the photo viewer.
 - Settings → **Company branding**: company name, tagline, slogans, footer text and an optional logo (compressed and stored on the phone).
 - Scan-to-fill also reads Part Number, Description, Color, Part/Shot Weight (lbs), Avg./Machine Cycle Time, Parts Per Hour, Machine, Work Order, Date, Revision, Carton Size, Qty per Carton, Pallet Size and Cartons per Layer.
 
@@ -81,6 +91,8 @@ The service worker needs http(s) or localhost. If you open the file with `file:/
 python3 -m venv .venv && . .venv/bin/activate && pip install playwright pillow
 python tests/make_fixtures.py        # generates sheet.png + scan2p.pdf in the current dir
 python tests/test.py                 # expects the server on :8766; fixture paths are at the top of the script
+python tests/test_refsheet.py        # reference sheet, branding, migration
+python tests/test_arrange.py         # Arrange photos: touch long-press drag, mouse drag, auto-scroll, action sheet, undo, print order
 ```
 It covers:
 - service worker registration, control and caching; manifest; icon sizes
@@ -104,4 +116,6 @@ Chrome's `Page.getInstallabilityErrors` reports no errors, so the app is install
 - Share PDF goes through the print dialog ("Save as PDF"). There's no one-tap PDF file share. There's no QR code, only a printed Job ID label.
 - Data lives only on this phone. Chrome's "Clear site data", or uninstalling the app, deletes it. Back up regularly (the app reminds you after 14 days). There's no automatic sync between devices.
 - The backup JSON embeds photos as base64, so files get large with hundreds of photos.
+- Arrange photos: Undo history covers the current visit to the screen only. It's cleared when you tap Done, and pictures that were replaced, rotated or deleted are removed from storage then. If you close the app while on the Arrange screen, those old pictures stay in phone storage unused. They take up space but are never shown or backed up.
+- Drag and drop has been tested in desktop Chrome with emulated Android touch (CDP touch events), not yet on a physical phone. If a long-press ever doesn't pick a photo up, tap it and use Move to position.
 - Fonts (Barlow) load from Google Fonts and are cached by the service worker. On a first load with no connection they fall back to system fonts.
