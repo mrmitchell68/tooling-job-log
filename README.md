@@ -5,13 +5,37 @@ An offline-first PWA for building mold/job reference sheets on the injection mol
 ```
 index.html             the whole app (HTML + CSS + JS, no build step)
 manifest.webmanifest   PWA manifest (name, short_name "Job Log", start_url ./, standalone, navy theme)
-sw.js                  service worker: caches the app shell + CDN libs (OCR, pdf.js, fonts) for offline use
+sw.js                  service worker: caches the app shell + CDN libs (OCR, pdf.js, fonts) for offline use,
+                       plus the background-removal model in its own runtime cache (not precached)
+bgworker.js            Web Worker that loads @imgly/background-removal on first use and returns the cutout mask
 icons/                 icon-192.png, icon-512.png, icon-maskable-512.png, apple-touch-icon.png, favicon-64.png
 shots/                 412×915 phone screenshots
-tests/                 Playwright end-to-end tests (test.py, test_refsheet.py, test_arrange.py) + fixture generator
+tests/                 Playwright end-to-end tests (test.py, test_refsheet.py, test_arrange.py, test_cleanup.py) + fixture generators
 ```
 
 All URLs are relative, so it runs from any path: `https://<user>.github.io/<repo>/`, a subfolder, or localhost.
+
+## What's new in 2.3.0 — ✨ Clean up (photo editor)
+
+A full-screen **✨ Clean up** editor for one photo: remove the background, put the part on a clean backdrop, and touch it up. It works in light and dark mode. It has four tabs:
+- **Background.** **Remove background** runs *on the phone*. Photos are never uploaded anywhere. Backdrops: None (transparent), White, Light gray, Studio (soft light gradient), Company navy, a Custom color picker, and **Photo…** (pick any picture, with optional Blur). Other options: **Soft shadow** under the part, and **Center & fit**, which centers the part with padding when a new background is used.
+- **Touch up.** **Auto enhance** (levels, white balance, gamma), plus Brightness, Contrast, Sharpness and a **Straighten** slider (±15°). There are also ⟲ / ⟳ 90° buttons.
+- **Crop.** Free, 1:1 or 4:3. Drag the corners, or drag inside the box to move it.
+- **Brush.** Fixes the cutout by hand. **Erase** removes leftover background, **Restore** paints the part back, and there's a brush-size slider, stroke Undo and **Auto cutout** (reset to the model's mask). Zoom with two fingers or the + / − buttons, and pan with two fingers.
+- **Before / after:** hold the ◐ button to see the original, or tap it quickly to toggle.
+- **Save** replaces the job's photo in the same position with the same label. **Cancel** throws the edits away.
+
+Where to find it:
+- **After adding photos:** a toast asks "✨ Clean up this photo?" (Clean up / Skip). For several photos it asks "Clean up N new photos?" (One by one / Skip all). The one-by-one editor shows "Photo 2 of 5" and a Skip rest button. To turn this off, go to ⚙️ → **Offer cleanup after adding photos**.
+- **Arrange photos → tap a photo → ✨ Clean up** (and **↺ Revert to original**). Both can be undone.
+- **Photo viewer:** the ✨ Clean up / ↺ Revert to original buttons are under the picture.
+- **Batch:** **✂️ Remove background from all N photos…** at the bottom of the Arrange screen. Pick one backdrop (white / gray / studio / navy / transparent) with Auto enhance, Shadow and Center & fit options. It shows progress and can be cancelled, and the whole run is one Undo step.
+
+How it works:
+- **Model:** [@imgly/background-removal](https://github.com/imgly/background-removal-js) 1.7.0 (ISNet, quantized `isnet_quint8`, ONNX Runtime Web / WASM) runs in a Web Worker. It downloads the **first time you tap Remove background, about 54 MB** (44 MB model + 12 MB WASM runtime + ~0.5 MB JS). The download shows progress and can be cancelled. The service worker keeps it in a separate cache (`tjl-bgmodel-v1`), so after that it **works offline** and survives app updates. It is not part of the app-shell precache. If the phone is offline on first use, you get a clear message. ⚙️ shows whether the remover is downloaded and lets you delete it. The model works on objects, not just people. The library is AGPL-3.0 licensed, which fits this open, public repo.
+- The model looks at a 1024 px version of the photo. Its mask is scaled back up to the working size (up to 1280 px), cleaned up (firmer edges, stray specks dropped) and applied. The worker is shut down right after each cutout to give memory back.
+- **Output:** with a backdrop, the photo is flattened and saved as JPEG q0.82 (≤1280 px), like other photos, so it prints well. With **None (transparent)**, it's saved as PNG so the transparency is kept. The print sheet shows it on white.
+- **Original kept:** the first time a photo is cleaned up, its original picture stays in IndexedDB. The photo record keeps `origId` (plus `origBytes/origW/origH/cleanedAt`). **↺ Revert to original** (viewer or Arrange) brings it back. Re-editing a cleaned photo starts from the saved result (or tap **↩ Start over from the original photo**) and keeps the same original. Backups, job export and Duplicate job include the originals, so **a cleaned photo takes about twice the space in a backup**. To free that space, use ⚙️ → **Forget kept originals** (this removes the revert option). Older data needs no migration, and bad `origId` values are dropped safely.
 
 ## What's new in 2.2.0 — Arrange photos
 
@@ -86,13 +110,16 @@ The service worker needs http(s) or localhost. If you open the file with `file:/
 - **v1 data:** On first run, jobs saved by v1 on the same origin (`toolingJobLog.v1`) are imported automatically. Photos carry over because v2 uses the same IndexedDB store.
 
 ## Tests
-`tests/test.py` runs 49 checks with headless Chrome at 412×915 and writes the screenshots:
+`tests/test.py` runs 52 checks with headless Chrome at 412×915 and writes the screenshots:
 ```bash
 python3 -m venv .venv && . .venv/bin/activate && pip install playwright pillow
 python tests/make_fixtures.py        # generates sheet.png + scan2p.pdf in the current dir
 python tests/test.py                 # expects the server on :8766; fixture paths are at the top of the script
 python tests/test_refsheet.py        # reference sheet, branding, migration
 python tests/test_arrange.py         # Arrange photos: touch long-press drag, mouse drag, auto-scroll, action sheet, undo, print order
+python tests/make_cleanup_sample.py  # synthetic "part on a busy workbench" photo + ground-truth mask (tests/fixtures/)
+python tests/test_cleanup.py         # ✨ Clean up: every entry point, REAL background removal (downloads the model), backgrounds,
+                                     # sliders, crop, rotate, brush, save/revert/cancel, print sheet, batch, offline, dark mode, setting
 ```
 It covers:
 - service worker registration, control and caching; manifest; icon sizes
@@ -110,6 +137,12 @@ It covers:
 Chrome's `Page.getInstallabilityErrors` reports no errors, so the app is installable.
 
 ## Known gaps
+- **Clean up / background removal:**
+  - Accuracy is good on a solid part against a background that's clearly different. It is weaker on **clear, translucent or shiny parts** (reflections of the bench get kept or holes get cut), on parts the same color as the background, and on **clutter touching the part** (it's often kept as part of the "object"). Use the Brush to fix these. On the synthetic test photo the cutout overlapped the true part by IoU 0.67, because touching clutter was kept. A real stapler photo came out clean.
+  - **Speed:** the model runs single-threaded WASM on the CPU, because GitHub Pages can't send the COOP/COEP headers that multi-threading needs, and WebGPU isn't used. It takes about 8–9 s per photo on a desktop CPU, and likely **15–40 s on a mid-range phone** (not measured). Batch on many photos takes a while.
+  - **Memory:** about 0.8 GB peak while the model runs (its input is fixed at 1024×1024). On phones with little RAM, Chrome might kill the tab. The worker is shut down after each photo to limit this.
+  - Tested in desktop headless Chrome with Android emulation (412×915, touch). **Not yet tried on a physical Android phone.**
+  - Rotate 90° in Arrange rotates the cleaned photo only. The kept original isn't rotated, so Revert brings back the original orientation.
 - OCR runs in the browser (Tesseract). It works well on clean printed sheets. Handwriting, glare, curled paper and complex tables are much less reliable. **Paste text from Google Lens** is the most accurate route on Android. Tabular "label / value in the next column" layouts are handled only when both sit on the same line or the value is on the next line.
 - Ordinal barrel names (front/center/rear/feed) are ambiguous from shop to shop. They're mapped to Zones 1–4 at low confidence and start unchecked.
 - The OCR engine and English data (~7 MB) have to download once before scanning works offline. Everything else works offline after the first load.

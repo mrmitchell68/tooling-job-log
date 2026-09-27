@@ -314,6 +314,57 @@ pre.raw{white-space:pre-wrap;font-size:12px;background:var(--surface-2);padding:
 .hidden-inputs{position:absolute;width:1px;height:1px;overflow:hidden;opacity:0;pointer-events:none;left:-9999px}
 .kvlist{display:grid;grid-template-columns:auto 1fr;gap:6px 12px;font-size:14.5px}
 .kvlist dt{color:var(--text-dim)} .kvlist dd{margin:0;font-weight:700}
+/* ✨ clean up editor */
+.ce{position:fixed;inset:0;z-index:95;background:var(--bg);color:var(--text);display:flex;flex-direction:column}
+.ce-top{display:flex;align-items:center;gap:8px;padding:calc(6px + env(safe-area-inset-top,0px)) 10px 6px;background:var(--surface);border-bottom:1px solid var(--border);min-height:60px}
+.ce-top .brand .title{font-size:22px}
+.ce-top .btn.primary{min-height:48px;padding:0 18px;font-size:16px}
+.ce-stage{flex:1;min-height:0;position:relative;overflow:hidden;touch-action:none;display:flex;align-items:center;justify-content:center;background:radial-gradient(circle at 50% 40%,var(--surface-2),var(--bg));user-select:none;-webkit-user-select:none}
+.ce-stage canvas{display:block;flex-shrink:0;transform-origin:center center;box-shadow:0 3px 18px rgba(0,0,0,.28);background:conic-gradient(#d4d9df 25%,#fff 0 50%,#d4d9df 0 75%,#fff 0) 0 0/18px 18px;touch-action:none}
+.ce-float{position:absolute;display:flex;gap:6px;z-index:2}
+.ce-zoom{top:8px;right:8px}
+.ce-cmp{bottom:8px;left:8px}
+.ce-fbtn{min-height:46px;min-width:46px;border-radius:999px;border:0;background:rgba(10,18,28,.74);color:#fff;font-weight:800;font-size:15px;padding:0 14px;touch-action:none;user-select:none;-webkit-user-select:none;-webkit-touch-callout:none}
+.ce-badge{position:absolute;top:10px;left:10px;z-index:2;background:var(--accent);color:#fff;font-weight:800;letter-spacing:.1em;font-size:12px;padding:5px 10px;border-radius:8px}
+.ce-busy{position:absolute;inset:0;z-index:5;background:rgba(8,14,22,.62);display:flex;align-items:center;justify-content:center;padding:18px;touch-action:auto}
+.ce-busy .box{background:var(--surface);color:var(--text);border-radius:16px;padding:18px;width:100%;max-width:380px;box-shadow:0 10px 30px rgba(0,0,0,.35)}
+.ce-busy .row{display:flex;align-items:center;gap:12px}
+.ce-tabs{display:grid;grid-template-columns:repeat(4,1fr);gap:4px;padding:6px 8px 0;background:var(--surface);border-top:1px solid var(--border)}
+.ce-tabs button{min-height:56px;border:0;border-radius:12px 12px 0 0;background:none;font-weight:800;font-size:13.5px;color:var(--text-dim);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;padding:0}
+.ce-tabs button .ic{font-size:20px;line-height:1}
+.ce-tabs button.sel{background:var(--primary-dim);color:var(--primary)}
+.ce-panel{background:var(--surface);padding:10px 12px calc(12px + env(safe-area-inset-bottom,0px));height:min(42vh,330px);overflow-y:auto;border-top:3px solid var(--primary-dim)}
+.ce-note{text-align:left;margin:8px 2px 10px;font-size:13px}
+.ce-done{display:flex;align-items:center;gap:10px;justify-content:space-between;background:var(--good-dim);color:var(--good);font-weight:800;border-radius:12px;padding:6px 6px 6px 14px;margin-bottom:10px;min-height:52px}
+.ce-sw{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin:4px 0 6px}
+.ce-sw>button,.ce-sw>label{position:relative;min-height:76px;border-radius:12px;border:2px solid var(--border);background:var(--surface);display:flex;flex-direction:column;align-items:stretch;justify-content:flex-end;padding:5px 5px 4px;font-size:12px;font-weight:700;color:var(--text);text-align:center;overflow:hidden;cursor:pointer}
+.ce-sw .sw{display:flex;align-items:center;justify-content:center;flex:1;border-radius:7px;margin-bottom:4px;border:1px solid rgba(0,0,0,.12);font-style:normal;font-size:20px;min-height:40px}
+.ce-sw .sw.chk{background:conic-gradient(#cfd5db 25%,#fff 0 50%,#cfd5db 0 75%,#fff 0) 0 0/12px 12px}
+.ce-sw .sw.studio{background:radial-gradient(circle at 50% 38%,#fff,#eef1f4 50%,#c8d0d9)}
+.ce-sw .sw.orig{background:linear-gradient(135deg,#8a6a4a,#c9a27a 40%,#5d7fa8 60%,#2f3b48)}
+.ce-sw .sw.ph{background:linear-gradient(160deg,#9fb8cf,#56738f)}
+.ce-sw .sel{border-color:var(--primary);box-shadow:0 0 0 2px var(--primary)}
+.ce-sw input[type=color]{position:absolute;inset:0;width:100%;height:100%;opacity:0;cursor:pointer;border:0;padding:0}
+.ce-tog{display:flex;align-items:center;gap:12px;min-height:50px;font-weight:700;font-size:15.5px}
+.ce-tog input{width:26px;height:26px;accent-color:var(--primary);flex-shrink:0}
+.ce-row{display:flex;align-items:center;gap:10px;min-height:52px}
+.ce-row .l{width:92px;flex-shrink:0;font-weight:700;font-size:14px;color:var(--text-dim)}
+.ce-row .v{width:52px;text-align:right;font-weight:800;font-variant-numeric:tabular-nums}
+.ce-seg{grid-template-columns:repeat(3,1fr);margin-bottom:4px}
+.ce input[type=range]{-webkit-appearance:none;appearance:none;flex:1;min-width:0;height:44px;background:transparent;touch-action:pan-x}
+.ce input[type=range]::-webkit-slider-runnable-track{height:8px;border-radius:9px;background:var(--border)}
+.ce input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:30px;height:30px;border-radius:50%;background:var(--primary);border:3px solid var(--surface);box-shadow:0 1px 5px rgba(0,0,0,.35);margin-top:-11px}
+.ce input[type=range]::-moz-range-track{height:8px;border-radius:9px;background:var(--border)}
+.ce input[type=range]::-moz-range-thumb{width:26px;height:26px;border-radius:50%;background:var(--primary);border:3px solid var(--surface)}
+.ce .btn:disabled{opacity:.4}
+.viewer .vtools{display:flex;gap:8px;padding:0 10px 8px}
+.viewer .vtools .btn{flex:1;min-height:48px}
+.toast .t2{background:transparent;border:1px solid rgba(255,255,255,.35)}
+.toast.offer{padding-left:14px;gap:6px}
+.toast.offer span{flex:1;min-width:0}
+.prefrow{display:flex;align-items:center;gap:12px;min-height:56px;font-weight:600;font-size:15.5px;border-top:1px solid var(--border);margin-top:12px;padding-top:6px}
+.prefrow input{width:28px;height:28px;accent-color:var(--primary);flex-shrink:0}
+.prefrow small{display:block;color:var(--text-faint);font-size:12.5px;font-weight:500}
 /* print sheet */
 .sheetwrap{background:#fff;color:#16222e;border-radius:6px;box-shadow:0 2px 12px rgba(0,0,0,.18);margin-top:12px;overflow:hidden}
 .ps{font-family:'Barlow',Arial,sans-serif;font-size:10.5px;line-height:1.3;color:#16222e;padding:0;width:100%}
@@ -441,11 +492,12 @@ pre.raw{white-space:pre-wrap;font-size:12px;background:var(--surface-2);padding:
   <input type="file" id="inImport" accept="application/json,.json">
   <input type="file" id="inLogo" accept="image/*">
   <input type="file" id="inReplace" accept="image/*">
+  <input type="file" id="inCleanBg" accept="image/*">
 </div>
 <script>
 (function(){
 "use strict";
-var APP_VERSION = "2.2.0";
+var APP_VERSION = "2.3.0";
 var SCHEMA = 3; // job data schema: 3 = reference-sheet sections (part info, supplies, packaging, instructions, QC)
 var K = { jobs:"tjl2.jobs", tpl:"tjl2.templates", meta:"tjl2.meta", theme:"tjl2.theme", v1:"toolingJobLog.v1" };
 var CDN = {
@@ -471,7 +523,7 @@ var state = {
   route:{view:"list"}, jobs:[], templates:[], meta:{},
   search:"", fStatus:"all", fPress:"all", sort:"recent",
   modal:null, editSec:{}, toast:null, busy:null, scanCancelled:false,
-  photoQueue:[], pendingDelete:null, swUpdate:null, arrUndo:[], arrFrom:null, arrPushed:false, arrFlash:null
+  photoQueue:[], pendingDelete:null, swUpdate:null, arrUndo:[], arrFrom:null, arrPushed:false, arrFlash:null, cleanOffer:null, batchCancel:false
 };
 
 /* ---------- utils ---------- */
@@ -630,7 +682,8 @@ function normalizeJob(j){
     if(s.type==="notes" && s.text==null) s.text="";
     if(s.type==="table"){ s.rows=(s.rows||[]).map(function(r){ return Object.assign({id:uid(), desc:"", qty:""}, r); }); }
   });
-  j.photos = Array.isArray(j.photos)? j.photos : [];
+  j.photos = (Array.isArray(j.photos)? j.photos : []).filter(function(p){ return p && p.id; });
+  j.photos.forEach(function(p){ if(p.origId!=null && (typeof p.origId!=="string" || !p.origId || p.origId===p.id)){ delete p.origId; delete p.origBytes; delete p.origW; delete p.origH; } });
   j.runLog = Array.isArray(j.runLog)? j.runLog : [];
   j.pendingChanges = Array.isArray(j.pendingChanges)? j.pendingChanges : [];
   if(!STATUSES.some(function(s){ return s.k===j.status; })) j.status = j.status==="complete" ? "done" : "active";
@@ -810,8 +863,8 @@ function duplicateJob(job){
   c.sections.forEach(function(s){ s.id=uid(); if(s.fields) s.fields.forEach(function(f){ f.id=uid(); }); if(s.items) s.items.forEach(function(it){ it.id=uid(); it.done=false; }); if(s.rows) s.rows.forEach(function(r){ r.id=uid(); }); });
   var newPhotos = [];
   var jobs = (job.photos||[]).map(function(p){
-    var np = Object.assign({}, p, {id:uid()}); newPhotos.push(np);
-    return getPhoto(p.id).then(function(b){ if(b) return putPhoto(np.id, b); });
+    var np = Object.assign({}, p, {id:uid()}); if(p.origId) np.origId=uid(); newPhotos.push(np);
+    return getPhoto(p.id).then(function(b){ if(b) return putPhoto(np.id, b); }).then(function(){ if(p.origId) return getPhoto(p.origId).then(function(b){ if(b) return putPhoto(np.origId, b); else delete np.origId; }); });
   });
   c.photos = newPhotos;
   return Promise.all(jobs).then(function(){ return c; });
@@ -1132,6 +1185,7 @@ function go(hash){ if(location.hash===hash) onRoute(); else location.hash = hash
 function onRoute(){
   var r = parseRoute();
   if(state.route.view==="setup" && r.view!=="setup") releaseWake();
+  if(CE) ceClose(false, true); // navigating away (e.g. Android back) discards an open clean-up
   if(state.route.view==="arrange" && (r.view!=="arrange" || r.id!==state.route.id)) arrLeave();
   state.route = r; state.modal=null; state.editSec={};
   if(r.id && !getJob(r.id)){ state.route={view:"list"}; history.replaceState(null,"","#/"); }
@@ -1599,18 +1653,22 @@ function viewTemplates(){
 /* ---------- settings / backup ---------- */
 function viewSettings(){
   var h = topbar(backBtn("#/","Jobs"), "Backup & settings", "Data lives only on this phone", '<button class="iconbtn" data-act="cycleTheme" aria-label="Theme">'+themeIcon()+'</button>');
-  var photos=0, bytes=0; state.jobs.forEach(function(j){ (j.photos||[]).forEach(function(p){ photos++; bytes+=p.bytes||0; }); });
+  var photos=0, bytes=0, origN=0, origB=0; state.jobs.forEach(function(j){ (j.photos||[]).forEach(function(p){ photos++; bytes+=p.bytes||0; if(p.origId){ origN++; origB+=p.origBytes||0; } }); });
   var lb = state.meta.lastBackupAt;
   h += '<div class="card"><div class="sec-hd"><h2>Backup</h2></div><div class="card-bd">';
-  h += '<dl class="kvlist"><dt>Jobs</dt><dd>'+state.jobs.length+'</dd><dt>Templates</dt><dd>'+state.templates.length+'</dd><dt>Photos</dt><dd>'+photos+' ('+fmtBytes(bytes)+')</dd><dt>Last backup</dt><dd style="color:'+(lb && Date.now()-new Date(lb)<14*DAY?'var(--good)':'var(--danger)')+'">'+(lb? esc(fmtDate(lb))+' ('+esc(ago(lb))+')' : 'Never')+'</dd><dt>Storage</dt><dd id="storageInfo">…</dd></dl><div class="sp"></div>';
+  h += '<dl class="kvlist"><dt>Jobs</dt><dd>'+state.jobs.length+'</dd><dt>Templates</dt><dd>'+state.templates.length+'</dd><dt>Photos</dt><dd>'+photos+' ('+fmtBytes(bytes)+')</dd>'+(origN? '<dt>Kept originals</dt><dd>'+origN+' ('+fmtBytes(origB)+') <small class="faint">for Revert</small></dd>' : '')+'<dt>Last backup</dt><dd style="color:'+(lb && Date.now()-new Date(lb)<14*DAY?'var(--good)':'var(--danger)')+'">'+(lb? esc(fmtDate(lb))+' ('+esc(ago(lb))+')' : 'Never')+'</dd><dt>Storage</dt><dd id="storageInfo">…</dd></dl><div class="sp"></div>';
   h += '<div class="menu"><button data-act="backupShare"><span class="ic">📤</span><span>Share backup file<small>Send to Google Drive, Gmail, etc. (jobs + photos, one .json)</small></span></button>';
   h += '<button data-act="backupDownload"><span class="ic">💾</span><span>Download backup file<small>Saves to your Downloads folder</small></span></button>';
-  h += '<button data-act="importPick"><span class="ic">📥</span><span>Import / merge a backup<small>Adds new jobs; newer copy wins for the same job</small></span></button></div>';
+  h += '<button data-act="importPick"><span class="ic">📥</span><span>Import / merge a backup<small>Adds new jobs; newer copy wins for the same job</small></span></button>';
+  if(origN) h += '<button data-act="forgetOriginals"><span class="ic">🧹</span><span>Forget kept originals ('+origN+')<small>Frees '+fmtBytes(origB)+'; cleaned-up photos can no longer be reverted</small></span></button>';
+  h += '</div>';
   h += '</div></div>';
   h += '<div class="card"><div class="sec-hd"><h2>Offline</h2></div><div class="card-bd"><p class="muted" style="margin-top:0">The app works without signal once installed. Scanning needs the OCR engine (~7 MB) downloaded once.</p><p id="ocrStatus" class="faint">Checking…</p><button class="btn ghost block" data-act="warmOcr">⬇️ Download scanning engine for offline</button>';
+  h += '<p id="bgStatus" class="faint" style="margin-top:14px">Checking background remover…</p><div id="bgStatusBtn"></div>';
   h += '<p class="faint" style="margin-bottom:0">Install: Chrome menu ⋮ → <b>Add to Home screen</b> / <b>Install app</b>.</p></div></div>';
   h += '<div class="card"><div class="sec-hd"><h2>Preferences</h2></div><div class="card-bd"><span class="fl">Default units for new jobs</span><div class="seg" style="grid-template-columns:1fr 1fr"><button class="active'+(state.meta.units!=="metric"?' sel':'')+'" data-act="setUnits" data-v="us">°F · psi</button><button class="active'+(state.meta.units==="metric"?' sel':'')+'" data-act="setUnits" data-v="metric">°C · bar</button></div><div class="sp"></div>';
-  h += '<label class="fl" for="opName">Your name (default operator in run log)</label><input id="opName" class="inp" data-meta="operator" value="'+esc(state.meta.operator||"")+'" placeholder="e.g. Allen H."></div></div>';
+  h += '<label class="fl" for="opName">Your name (default operator in run log)</label><input id="opName" class="inp" data-meta="operator" value="'+esc(state.meta.operator||"")+'" placeholder="e.g. Allen H.">';
+  h += '<label class="prefrow"><input type="checkbox" id="prefOfferClean" data-meta-bool="offerCleanup"'+(state.meta.offerCleanup===false?'':' checked')+'><span>Offer cleanup after adding photos<small>Shows “✨ Clean up?” after you take or pick photos</small></span></label></div></div>';
   var B = getBrand();
   h += '<div class="card" id="brandCard"><div class="sec-hd"><h2>Company branding</h2></div><div class="card-bd"><p class="faint" style="margin-top:0">Shown on the printed Mold / Job Reference Sheet header and footer.</p>';
   h += '<span class="fl">Logo (optional)</span><div style="display:flex;gap:10px;align-items:center;margin-bottom:12px"><div class="logoprev">'+(B.logo?'<img src="'+esc(B.logo)+'" alt="Logo">':'No logo<br>(name shown)')+'</div><div style="display:flex;flex-direction:column;gap:6px;flex:1"><button class="btn ghost" data-act="logoPick">🖼️ '+(B.logo?'Change':'Upload')+' logo</button>'+(B.logo?'<button class="btn ghost" style="color:var(--danger)" data-act="logoRemove">Remove logo</button>':'')+'</div></div>';
@@ -1631,6 +1689,9 @@ function fillSettingsStatus(){
       p.then(function(pers){ var el=$("storageInfo"); if(el) el.innerHTML = esc(fmtBytes(e.usage||0))+' used'+(pers?' · <span style="color:var(--good)">protected</span>':' · <span style="color:var(--warn)">may be cleared if phone is low on space</span>'); });
     });
   } else { var el=$("storageInfo"); if(el) el.textContent="n/a"; }
+  bgModelReady().then(function(ok){ var el=$("bgStatus"), b=$("bgStatusBtn"); if(!el) return;
+    el.innerHTML = ok? '<span style="color:var(--good);font-weight:700">✓ Background remover (✨ Clean up) is saved for offline use</span> · ~'+BG.mb+' MB' : 'Background remover (✨ Clean up) not downloaded yet — downloads once (~'+BG.mb+' MB) the first time you tap Remove background.';
+    if(b) b.innerHTML = ok? '<button class="btn ghost block" data-act="bgDelete">🗑 Delete background remover (frees ~'+BG.mb+' MB)</button>' : ''; });
   ocrCached().then(function(ok){ var el=$("ocrStatus"); if(el) el.innerHTML = ok? '<span style="color:var(--good);font-weight:700">✓ Scanning engine is saved for offline use</span>' : 'Scanning engine not downloaded yet (downloads automatically on first scan).'; });
 }
 function ocrCached(){
@@ -1725,6 +1786,8 @@ function renderModal(){
       '<div class="chipwrap">'+PHOTO_PRESETS.map(function(p){ return '<button class="chip'+(ph&&ph.label===p?' sel':'')+'" data-act="photoPreset" data-v="'+esc(p)+'">'+esc(p)+'</button>'; }).join("")+'</div>'+
       '<div class="field" style="margin-top:12px"><input class="inp" id="plCustom" placeholder="Custom label" value="'+esc(ph&&PHOTO_PRESETS.indexOf(ph.label)<0? ph.label : "")+'"></div>'+
       '<div class="actions"><button class="btn ghost" data-act="photoLabelSkip">'+(m.arr?'Cancel':'Skip')+'</button><button class="btn primary" data-act="photoLabelGo">Save</button></div>';
+  } else if(m.type==="ceBatch"){
+    h = ceBatchHtml(j, m);
   } else if(m.type==="arrPhoto" || m.type==="arrMoveTo" || m.type==="arrReplace"){
     h = arrModalHtml(j, m); if(h==null){ state.modal=null; return renderModal(); }
   } else if(m.type==="viewer"){
@@ -1732,6 +1795,7 @@ function renderModal(){
     if(!p){ state.modal=null; return renderModal(); }
     root.innerHTML = '<div class="viewer" id="viewer"><div class="vtop"><button class="iconbtn" data-act="closeModal" aria-label="Close">✕</button><div class="vl">'+esc(p.label||"Photo")+' <span style="opacity:.6;font-weight:500">'+(m.i+1)+'/'+j.photos.length+'</span></div><button class="iconbtn" data-act="photoRelabel" aria-label="Relabel">🏷</button><button class="iconbtn" data-act="photoDelete" aria-label="Delete photo">🗑</button></div>'+
       '<div class="vimg" id="vimg"><img data-pid="'+esc(p.id)+'" alt="'+esc(p.label)+'"></div>'+
+      '<div class="vtools"><button class="btn ghost" data-act="ceFromViewer">✨ Clean up</button>'+(p.origId? '<button class="btn ghost" data-act="photoRevert">↺ Revert to original</button>' : '')+'</div>'+
       (j.photos.length>1? '<div class="vmove"><button class="btn ghost" data-act="photoMove" data-i="'+m.i+'" data-d="-1"'+(m.i?'':' disabled')+'>◀ Move earlier</button><button class="btn ghost" data-act="photoMove" data-i="'+m.i+'" data-d="1"'+(m.i<j.photos.length-1?'':' disabled')+'>Move later ▶</button></div>' : '')+
       '<div class="vbot"><button class="btn ghost" style="flex:1" data-act="photoNav" data-d="-1"'+(m.i?'':' disabled')+'>‹ Prev</button><span style="opacity:.7;font-size:13px;min-width:80px;text-align:center">'+esc(fmtBytes(p.bytes||0))+'</span><button class="btn ghost" style="flex:1" data-act="photoNav" data-d="1"'+(m.i<j.photos.length-1?'':' disabled')+'>Next ›</button></div></div>';
     hydratePhotos(root); bindSwipe(); return;
@@ -1765,7 +1829,7 @@ function renderModal(){
 }
 function operators(){ var o={}; if(state.meta.operator) o[state.meta.operator]=1; state.jobs.forEach(function(j){ (j.runLog||[]).forEach(function(e){ if(e.operator) o[e.operator]=1; }); }); return Object.keys(o); }
 function openModal(m){ state.modal=m; renderModal(); }
-function closeModal(){ state.modal=null; renderModal(); }
+function closeModal(){ var prev=state.modal; state.modal=null; renderModal(); if(prev && prev.type==="photoLabel" && !prev.arr && prev.backTo==null && state.cleanOffer && !state.photoQueue.length) offerCleanup(); }
 function bindSwipe(){
   var el=$("vimg"); if(!el) return; var x0=null;
   el.addEventListener("touchstart", function(e){ if(e.touches.length===1) x0=e.touches[0].clientX; }, {passive:true});
@@ -1781,17 +1845,17 @@ function renderBusy(){
   if(!b){ root.innerHTML=""; return; }
   var existing = $("busyText");
   if(existing && root.firstChild){ existing.textContent=b.text; var pg=$("busyProg"); if(pg) pg.style.width=(b.pct||0)+"%"; return; }
-  root.innerHTML = '<div class="busy" role="status"><div class="row"><div class="spin"></div><div style="flex:1;font-weight:600" id="busyText">'+esc(b.text)+'</div>'+(b.cancel?'<button class="btn ghost" data-act="cancelScan">Stop</button>':'')+'</div><div class="prog" style="margin-top:10px"><i id="busyProg" style="width:'+(b.pct||0)+'%"></i></div></div>';
+  root.innerHTML = '<div class="busy" role="status"><div class="row"><div class="spin"></div><div style="flex:1;font-weight:600" id="busyText">'+esc(b.text)+'</div>'+(b.cancel?'<button class="btn ghost" data-act="'+(b.cancelAct||"cancelScan")+'">Stop</button>':'')+'</div><div class="prog" style="margin-top:10px"><i id="busyProg" style="width:'+(b.pct||0)+'%"></i></div></div>';
 }
 var toastTimer=null;
 function showToast(text, opts){
-  opts=opts||{}; state.toast={text:text, act:opts.act, actLabel:opts.actLabel, err:opts.err, arr:opts.arr};
+  opts=opts||{}; state.toast={text:text, act:opts.act, actLabel:opts.actLabel, act2:opts.act2, act2Label:opts.act2Label, err:opts.err, arr:opts.arr, offer:opts.offer};
   clearTimeout(toastTimer); renderToast();
   toastTimer=setTimeout(function(){ var t=state.toast; state.toast=null; renderToast(); if(t && opts.onExpire) opts.onExpire(); }, opts.ms || (opts.act? 7000 : 3200));
 }
 function renderToast(){
   var t=state.toast, root=$("toastRoot");
-  root.innerHTML = t? '<div class="toast'+(t.err?' err':'')+'" role="status"><span>'+esc(t.text)+'</span>'+(t.act?'<button data-act="toastAct">'+esc(t.actLabel||"UNDO")+'</button>':'')+'</div>' : "";
+  root.innerHTML = t? '<div class="toast'+(t.err?' err':'')+(t.offer?' offer':'')+'" role="status"><span>'+esc(t.text)+'</span>'+(t.act?'<button data-act="toastAct">'+esc(t.actLabel||"UNDO")+'</button>':'')+(t.act2?'<button class="t2" data-act="toastAct2">'+esc(t.act2Label||"SKIP")+'</button>':'')+'</div>' : "";
 }
 
 /* ---------- actions ---------- */
@@ -1846,8 +1910,9 @@ ACT.deleteJob = function(){
   state.modal=null; go("#/");
   showToast("Deleted "+jobTitle(j), {act:function(){ var pd=state.pendingDelete; if(!pd) return; state.jobs.splice(Math.min(pd.idx,state.jobs.length),0,pd.job); state.pendingDelete=null; saveJobs(); render(); }, ms:8000, onExpire:finalizeDelete});
 };
-function finalizeDelete(){ var pd=state.pendingDelete; if(!pd) return; state.pendingDelete=null; (pd.job.photos||[]).forEach(function(p){ if(!state.jobs.some(function(j){ return (j.photos||[]).some(function(q){ return q.id===p.id; }); })) delPhoto(p.id); }); }
+function finalizeDelete(){ var pd=state.pendingDelete; if(!pd) return; state.pendingDelete=null; (pd.job.photos||[]).forEach(function(p){ blobIdsOf(p).forEach(function(id){ if(!photoReferenced(id)) delPhoto(id); }); }); }
 ACT.toastAct = function(){ var t=state.toast; state.toast=null; clearTimeout(toastTimer); renderToast(); if(t && t.act) t.act(); };
+ACT.toastAct2 = function(){ var t=state.toast; state.toast=null; clearTimeout(toastTimer); renderToast(); if(t && t.act2) t.act2(); };
 ACT.duplicate = function(){ var j=curJob(); duplicateJob(j).then(function(c){ c.toolNumber=j.toolNumber; c.partName=j.partName+(j.partName?" (copy)":""); state.jobs.unshift(c); saveJobs(); state.modal=null; go("#/job/"+c.id); showToast("Duplicated — checklist and run log cleared"); }); };
 ACT.saveTemplate = function(){ openModal({type:"saveTemplate"}); };
 ACT.saveTemplateGo = function(){ var j=curJob(), name=$("tplName").value.trim()||jobTitle(j); var t=makeTemplate(j, name, false); if(!$("tplVals").checked) t.data.sections.forEach(function(s){ if(s.fields) s.fields.forEach(function(f){ f.value=""; }); }); state.templates.push(t); saveTemplates(); closeModal(); showToast("Template saved", {act:function(){ go("#/templates"); }, actLabel:"VIEW"}); };
@@ -1870,7 +1935,7 @@ function addPhotos(files){
   var list=Array.prototype.slice.call(files), ids=[];
   setBusy("Compressing "+list.length+" photo"+(list.length>1?"s":"")+"…");
   list.reduce(function(p, f){ return p.then(function(){ return compressPhoto(f).then(function(r){ var id=uid(); return putPhoto(id, r.blob).then(function(){ j.photos.push({id:id, label:"", addedAt:nowIso(), bytes:r.blob.size, w:r.w, h:r.h}); ids.push(id); }); }); }); }, Promise.resolve())
-  .then(function(){ setBusy(null); touch(j); saveJobs(); askPersist(); render(); if(ids.length){ state.photoQueue=ids.slice(1); openModal({type:"photoLabel", pid:ids[0], left:state.photoQueue.length}); } })
+  .then(function(){ setBusy(null); touch(j); saveJobs(); askPersist(); render(); if(ids.length){ state.cleanOffer = state.meta.offerCleanup===false ? null : ids.slice(); state.photoQueue=ids.slice(1); openModal({type:"photoLabel", pid:ids[0], left:state.photoQueue.length}); } })
   .catch(function(e){ setBusy(null); saveJobs(); render(); showToast("Photo failed: "+(e.message||e), {err:true}); });
 }
 function setPhotoLabel(label){ var j=curJob(), arr=state.modal && state.modal.arr; var p=j.photos.find(function(x){ return x.id===state.modal.pid; });
@@ -1884,7 +1949,7 @@ ACT.viewPhoto = function(t){ openModal({type:"viewer", i:+t.getAttribute("data-i
 ACT.photoNav = function(t){ navPhoto(+t.getAttribute("data-d")); };
 ACT.photoRelabel = function(){ var j=curJob(); var i=state.modal.i; openModal({type:"photoLabel", pid:j.photos[i].id, backTo:i}); };
 ACT.photoDelete = function(){ var j=curJob(), i=state.modal.i, p=j.photos[i]; j.photos.splice(i,1); touch(j); saveJobs(); closeModal(); render();
-  showToast("Photo deleted", {act:function(){ j.photos.splice(i,0,p); saveJobs(); render(); }, onExpire:function(){ if(!photoReferenced(p.id)) delPhoto(p.id); }}); };
+  showToast("Photo deleted", {act:function(){ j.photos.splice(i,0,p); saveJobs(); render(); }, onExpire:function(){ blobIdsOf(p).forEach(function(id){ if(!photoReferenced(id)) delPhoto(id); }); }}); };
 
 /* ---------- arrange photos (full screen, mirrors the reference-sheet grid) ---------- */
 var VIEW_ORDER = PHOTO_PRESETS.slice(0,11); // template view order: mold A, B, sides, top, bottom, insert, profile, finished top/bottom/front edge
@@ -1923,6 +1988,7 @@ function viewArrange(){
     '<button class="iconbtn" data-act="arrUndo" aria-label="Undo last change" title="Undo"'+(canUndo?'':' disabled style="opacity:.35"')+'>↶</button>');
   h += '<p class="arr-intro"><b>'+n+' photo'+(n===1?'':'s')+' · '+pages+' sheet page'+(pages>1?'s':'')+'.</b> Same order &amp; grid as the printed sheet. <b>Press &amp; hold</b> a photo to drag it, or <b>tap</b> it for move, label, replace, rotate &amp; delete.</p>';
   h += '<div class="arr-grid" id="arrGrid">'+arrGridHtml(j.photos)+'</div>';
+  if(n>1) h += '<button class="btn ghost block tall" style="margin:10px 0 4px" data-act="ceBatchOpen">✂️ Remove background from all '+n+' photos…</button>';
   h += '<div class="arrbar no-print"><button class="btn ghost" data-act="arrUndo"'+(canUndo?'':' disabled')+'>↶ Undo</button><button class="btn ghost" data-act="arrSort"'+(n>1?'':' disabled')+'>⇅ Preset order</button><button class="btn primary" data-act="arrDone">✓ Done</button></div>';
   return h;
 }
@@ -1952,14 +2018,15 @@ function arrUndo(){
   arrRerender(); showToast("Undone: "+u.label, {arr:true});
 }
 function photoReferenced(id){
-  if(state.jobs.some(function(j){ return (j.photos||[]).some(function(q){ return q.id===id; }); })) return true;
-  if(state.pendingDelete && (state.pendingDelete.job.photos||[]).some(function(q){ return q.id===id; })) return true;
-  return state.arrUndo.some(function(u){ return u.photos.some(function(q){ return q.id===id; }); });
+  var hit=function(q){ return q.id===id || q.origId===id; };
+  if(state.jobs.some(function(j){ return (j.photos||[]).some(hit); })) return true;
+  if(state.pendingDelete && (state.pendingDelete.job.photos||[]).some(hit)) return true;
+  return state.arrUndo.some(function(u){ return u.photos.some(hit); });
 }
 // leaving the arrange screen: drop undo history and delete pictures that were replaced/rotated/deleted
 function arrLeave(){
   if(arrDrag) arrAbort();
-  var ids={}; state.arrUndo.forEach(function(u){ u.photos.forEach(function(q){ ids[q.id]=1; }); });
+  var ids={}; state.arrUndo.forEach(function(u){ u.photos.forEach(function(q){ blobIdsOf(q).forEach(function(id){ ids[id]=1; }); }); });
   state.arrUndo=[]; state.arrPushed=false; state.arrFlash=null;
   Object.keys(ids).forEach(function(id){ if(!photoReferenced(id)) delPhoto(id); });
   if(state.toast && state.toast.arr){ state.toast=null; clearTimeout(toastTimer); renderToast(); }
@@ -1989,6 +2056,8 @@ function arrModalHtml(j, m){
       (n>1? '<button data-act="arrMoveTo"><span class="ic">🔢</span><span>Move to position…<small>Pick its spot 1–'+n+' on the sheet</small></span></button>' : '')+
       '<button data-act="arrLabel"><span class="ic">🏷</span><span>Change label<small>Template views or your own text</small></span></button>'+
       '<button data-act="arrReplace"><span class="ic">🔄</span><span>Replace picture<small>Camera, gallery or Drive — keeps label &amp; position</small></span></button>'+
+      '<button data-act="arrClean"><span class="ic">✨</span><span>Clean up<small>Remove background, enhance, crop, straighten</small></span></button>'+
+      (p.origId? '<button data-act="arrRevert"><span class="ic">↺</span><span>Revert to original<small>Undo the clean-up — keeps label &amp; position</small></span></button>' : '')+
       '<button data-act="arrRotate"><span class="ic">⟳</span><span>Rotate 90°<small>Clockwise, saved right away</small></span></button>'+
       '<button data-act="arrView"><span class="ic">🔍</span><span>View full size</span></button>'+
       '<button data-act="arrDelete" class="danger"><span class="ic">🗑</span><span>Delete photo<small>You can undo</small></span></button>'+
@@ -2194,7 +2263,7 @@ ACT.exportJob = function(){ var j=curJob(); closeModal(); buildBackup([j], false
 
 /* backup */
 function buildBackup(jobs, full){
-  var photos={}, ids=[]; jobs.forEach(function(j){ (j.photos||[]).forEach(function(p){ ids.push(p.id); }); });
+  var photos={}, ids=[]; jobs.forEach(function(j){ (j.photos||[]).forEach(function(p){ ids=ids.concat(blobIdsOf(p)); }); });
   setBusy("Packing "+ids.length+" photo(s)…");
   return ids.reduce(function(p,id){ return p.then(function(){ return getPhoto(id).then(function(b){ if(b) return blobToDataUrl(b).then(function(u){ photos[id]=u; }); }); }); }, Promise.resolve()).then(function(){
     setBusy(null);
@@ -2234,7 +2303,7 @@ function importFile(file){
 function mergeBackup(o){
   var r={added:0, updated:0, skipped:0, tpl:0, photos:0}, needPhotos=[];
   if(o.jobs.length){ // restoring onto a phone that only has the untouched sample data: drop the samples
-    state.jobs.filter(function(j){ return j.example && !j._touched && !o.jobs.some(function(x){ return x.id===j.id; }); }).forEach(function(j){ (j.photos||[]).forEach(function(p){ delPhoto(p.id); }); });
+    state.jobs.filter(function(j){ return j.example && !j._touched && !o.jobs.some(function(x){ return x.id===j.id; }); }).forEach(function(j){ (j.photos||[]).forEach(function(p){ blobIdsOf(p).forEach(delPhoto); }); });
     state.jobs = state.jobs.filter(function(j){ return !(j.example && !j._touched) || o.jobs.some(function(x){ return x.id===j.id; }); });
     if((o.templates||[]).some(function(t){ return t.example; })) state.templates = state.templates.filter(function(t){ return !t.example; });
   }
@@ -2249,9 +2318,14 @@ function mergeBackup(o){
   if(o.brand && typeof o.brand==="object" && !(state.meta.brand && Object.keys(state.meta.brand).length)){ state.meta.brand=o.brand; saveMeta(); }
   saveJobs(); saveTemplates();
   var ph=o.photos||{};
-  return needPhotos.reduce(function(p, meta){ return p.then(function(){ var u=ph[meta.id]; if(!u) return; return dataUrlToBlob(u).then(function(b){ revokeUrl(meta.id); return putPhoto(meta.id, b); }).then(function(){ r.photos++; }); }); }, Promise.resolve()).then(function(){ return r; });
+  return needPhotos.reduce(function(p, meta){ return p.then(function(){ var u=ph[meta.id]; if(!u) return; return dataUrlToBlob(u).then(function(b){ revokeUrl(meta.id); return putPhoto(meta.id, b); }).then(function(){ r.photos++; }); }).then(function(){
+    if(!meta.origId) return; var u2=ph[meta.origId]; if(!u2) return; return dataUrlToBlob(u2).then(function(b){ return putPhoto(meta.origId, b); }); }); }, Promise.resolve()).then(function(){ return r; });
 }
 ACT.warmOcr = function(){ warmOcr(true); };
+ACT.bgDelete = function(){ openModal({type:"confirm", title:"Delete background remover?", text:"Frees about "+BG.mb+" MB. It downloads again the next time you use ✨ Remove background (needs internet).", ok:"Delete", danger:true, onOk:function(){ (window.caches? caches.delete(BG.cache) : Promise.resolve()).then(function(){ state.meta.bgModelAt=null; saveMeta(); render(); showToast("Background remover deleted"); }); }}); };
+ACT.forgetOriginals = function(){ openModal({type:"confirm", title:"Forget kept originals?", text:"Cleaned-up photos stay as they are, but you won’t be able to revert them to the original picture.", ok:"Forget originals", danger:true, onOk:function(){
+  var ids=[]; state.jobs.forEach(function(j){ (j.photos||[]).forEach(function(p){ if(p.origId){ ids.push(p.origId); ["origId","origBytes","origW","origH"].forEach(function(k){ delete p[k]; }); } }); });
+  saveJobs(); ids.forEach(function(id){ if(!photoReferenced(id)) delPhoto(id); }); render(); showToast("Freed "+ids.length+" original photo(s)"); }}); };
 ACT.setLayout = function(t){ state.meta.printLayout=t.getAttribute("data-v"); saveMeta(); render(); };
 ACT.logoPick = function(){ $("inLogo").click(); };
 ACT.logoRemove = function(){ state.meta.brand=state.meta.brand||{}; state.meta.brand.logo=""; saveMeta(); render(); showToast("Logo removed — company name is shown instead"); };
@@ -2270,7 +2344,7 @@ function compressLogo(file){
 function getBrand(){ return Object.assign({}, BRAND_DEFAULTS, state.meta.brand||{}); }
 ACT.setUnits = function(t){ state.meta.units=t.getAttribute("data-v"); saveMeta(); render(); showToast("New jobs will use "+(state.meta.units==="metric"?"°C / bar":"°F / psi")); };
 ACT.deleteExamples = function(){ openModal({type:"confirm", title:"Remove examples?", text:"Deletes the example jobs, their photos and the example template. Your own jobs are untouched.", ok:"Remove", danger:true, onOk:function(){
-  state.jobs.filter(function(j){ return j.example; }).forEach(function(j){ (j.photos||[]).forEach(function(p){ delPhoto(p.id); }); });
+  state.jobs.filter(function(j){ return j.example; }).forEach(function(j){ (j.photos||[]).forEach(function(p){ blobIdsOf(p).forEach(delPhoto); }); });
   state.jobs=state.jobs.filter(function(j){ return !j.example; }); state.templates=state.templates.filter(function(t){ return !t.example; }); saveJobs(); saveTemplates(); render(); showToast("Examples removed"); }}); };
 
 /* ---------- scanning ---------- */
@@ -2355,6 +2429,570 @@ ACT.rvApply = function(){
   showToast(isNew? "Job created from scan ("+n+" values)" : "Applied "+n+" value"+(n===1?"":"s"));
 };
 
+/* ---------- ✨ Clean up editor: on-device background removal + touch-ups for one photo ---------- */
+// Background removal: @imgly/background-removal (ISNet, quantized "small" model) running in bgworker.js.
+// Only the model/runtime are downloaded (once; the service worker keeps them in their own cache). Photos never leave the phone.
+var BG = { data:"https://staticimgly.com/@imgly/background-removal-data/1.7.0/dist/", cache:"tjl-bgmodel-v1", mb:57 };
+var BRAND_NAVY = "#0d3f7a";
+var CE_BGS = [
+  {k:"none", t:"Original"}, {k:"transparent", t:"None"}, {k:"white", t:"White", c:"#ffffff"}, {k:"gray", t:"Light gray", c:"#e4e8ec"},
+  {k:"studio", t:"Studio"}, {k:"navy", t:"Navy", c:BRAND_NAVY}, {k:"custom", t:"Custom"}, {k:"photo", t:"Photo…"}
+];
+var CE_PREV = 1000;           // preview render: longest side (full-res only on save)
+var CE_SEG = 1024;            // segmentation input: longest side
+var CE = null, bgW = null, bgReq = null, ceTestMask = null;
+function mkCanvas(w, h){ var c=document.createElement("canvas"); c.width=Math.max(1,Math.round(w)); c.height=Math.max(1,Math.round(h)); return c; }
+function ceDefaults(){ return {bg:"none", custom:"#c9d6e3", blur:true, shadow:false, fit:true, auto:false, bri:0, con:0, sharp:0, angle:0, rot:0, crop:null, aspect:"free"}; }
+function ceDoc(img){
+  var w=img.naturalWidth||img.width, h=img.naturalHeight||img.height, s=Math.min(1, 1600/Math.max(w,h));
+  var src=mkCanvas(w*s, h*s), g=src.getContext("2d"); g.imageSmoothingQuality="high"; g.drawImage(img,0,0,src.width,src.height);
+  return {src:src, W:src.width, H:src.height, mask:null, seg:null, bgImg:null, auto:null, maskVer:0, s:ceDefaults(), cache:{}};
+}
+/* geometry: source px -> frame px (rotate 90° steps + straighten; zoom to cover only when the original background is kept) */
+function ceFrame(d){ var odd=(d.s.rot%2)!==0; return {w: odd? d.H : d.W, h: odd? d.W : d.H}; }
+function ceCut(d, force){ return !!d.mask && (d.s.bg!=="none" || !!force); }
+function ceCover(d){
+  var a=Math.abs(d.s.angle)*Math.PI/180; if(!a || (d.mask && d.s.bg!=="none")) return 1;
+  var f=ceFrame(d), c=Math.cos(a), s=Math.sin(a);
+  return Math.max((f.w*c+f.h*s)/f.w, (f.w*s+f.h*c)/f.h);
+}
+function ceMatrix(d){ var f=ceFrame(d); return new DOMMatrix().translate(f.w/2, f.h/2).rotate(d.s.rot*90 + d.s.angle).scale(ceCover(d)).translate(-d.W/2, -d.H/2); }
+/* tone: auto enhance (per-channel levels = contrast + white balance, gamma = brightness), manual brightness/contrast, unsharp mask */
+function ceAutoStats(d){
+  if(d.auto) return d.auto;
+  var sc=Math.min(1, 240/Math.max(d.W,d.H)), c=mkCanvas(d.W*sc, d.H*sc), g=c.getContext("2d"); g.drawImage(d.src,0,0,c.width,c.height);
+  var p=g.getImageData(0,0,c.width,c.height).data, n=p.length/4, hist=[new Uint32Array(256),new Uint32Array(256),new Uint32Array(256)], i, ch;
+  for(i=0;i<p.length;i+=4){ hist[0][p[i]]++; hist[1][p[i+1]]++; hist[2][p[i+2]]++; }
+  var lo=[0,0,0], hi=[255,255,255];
+  for(ch=0;ch<3;ch++){ var cum=0, cut=n*0.01; for(i=0;i<256;i++){ cum+=hist[ch][i]; if(cum>=cut){ lo[ch]=i; break; } } cum=0; for(i=255;i>=0;i--){ cum+=hist[ch][i]; if(cum>=cut){ hi[ch]=i; break; } }
+    lo[ch]=Math.min(lo[ch],70); hi[ch]=Math.max(hi[ch],175); }
+  var sum=0; for(i=0;i<p.length;i+=4){ var y=0; for(ch=0;ch<3;ch++){ var v=(p[i+ch]-lo[ch])*255/(hi[ch]-lo[ch]); y+=(v<0?0:v>255?255:v)*[0.299,0.587,0.114][ch]; } sum+=y; }
+  var mean=Math.max(20, Math.min(235, sum/n)), gamma=Math.max(0.72, Math.min(1.3, Math.log(0.47)/Math.log(mean/255)));
+  d.auto={lo:lo, hi:hi, gamma:gamma}; return d.auto;
+}
+function ceToneNeutral(s){ return !s.auto && !s.bri && !s.con && !s.sharp; }
+function ceLuts(d){
+  var s=d.s, A=s.auto? ceAutoStats(d) : null, L=[new Uint8ClampedArray(256),new Uint8ClampedArray(256),new Uint8ClampedArray(256)], cf=1+s.con/100, bo=s.bri*1.4;
+  for(var ch=0;ch<3;ch++) for(var v=0;v<256;v++){ var x=v;
+    if(A){ var y=(v-A.lo[ch])*255/Math.max(1,A.hi[ch]-A.lo[ch]); y=255*Math.pow(Math.max(0,Math.min(255,y))/255, A.gamma); x=v*0.2+y*0.8; }
+    L[ch][v]=(x-128)*cf+128+bo; }
+  return L;
+}
+function ceSharpen(p, w, h, amt){
+  var src=new Uint8ClampedArray(p), row=w*4;
+  for(var y=1;y<h-1;y++){ for(var x=1;x<w-1;x++){ var o=(y*w+x)*4;
+    for(var c=0;c<3;c++){ var k=o+c, b=(src[k-row-4]+src[k-row]+src[k-row+4]+src[k-4]+src[k]+src[k+4]+src[k+row-4]+src[k+row]+src[k+row+4])/9; p[k]=src[k]+amt*(src[k]-b); } } }
+}
+function ceApplyTone(c, d){
+  if(ceToneNeutral(d.s)) return;
+  var g=c.getContext("2d"), id=g.getImageData(0,0,c.width,c.height), p=id.data, i;
+  if(d.s.auto || d.s.bri || d.s.con){ var L=ceLuts(d); for(i=0;i<p.length;i+=4){ p[i]=L[0][p[i]]; p[i+1]=L[1][p[i+1]]; p[i+2]=L[2][p[i+2]]; } }
+  if(d.s.sharp>0) ceSharpen(p, c.width, c.height, d.s.sharp/100*1.5);
+  g.putImageData(id,0,0);
+}
+function ceTone(d, ps){
+  var s=d.s, key=[s.rot,s.angle,ceCover(d),ps,s.auto,s.bri,s.con,s.sharp].join("|");
+  if(d.cache.tk===key) return d.cache.t;
+  var f=ceFrame(d), c=mkCanvas(f.w*ps, f.h*ps), g=c.getContext("2d");
+  g.imageSmoothingQuality="high"; g.setTransform(new DOMMatrix().scale(c.width/f.w, c.height/f.h).multiply(ceMatrix(d)));
+  g.drawImage(d.src,0,0); g.setTransform(1,0,0,1,0,0);
+  ceApplyTone(c, d); d.cache.tk=key; d.cache.t=c; d.cache.sk=null; return c;
+}
+function ceSubject(d, ps){
+  var T=ceTone(d, ps), key=d.cache.tk+"|"+d.maskVer;
+  if(d.cache.sk===key) return d.cache.s;
+  var f=ceFrame(d), c=mkCanvas(T.width, T.height), g=c.getContext("2d");
+  g.imageSmoothingQuality="high"; g.setTransform(new DOMMatrix().scale(c.width/f.w, c.height/f.h).multiply(ceMatrix(d)));
+  g.drawImage(d.mask,0,0); g.setTransform(1,0,0,1,0,0);
+  g.globalCompositeOperation="source-in"; g.drawImage(T,0,0); g.globalCompositeOperation="source-over";
+  d.cache.sk=key; d.cache.s=c; return c;
+}
+function ceMaskBox(d){
+  if(d.cache.bv===d.maskVer) return d.cache.bb;
+  var sc=Math.min(1, 256/Math.max(d.W,d.H)), c=mkCanvas(d.W*sc, d.H*sc), g=c.getContext("2d"); g.drawImage(d.mask,0,0,c.width,c.height);
+  var p=g.getImageData(0,0,c.width,c.height).data, x0=1e9, y0=1e9, x1=-1, y1=-1, w=c.width;
+  for(var y=0;y<c.height;y++) for(var x=0;x<w;x++){ if(p[(y*w+x)*4+3]>100){ if(x<x0)x0=x; if(x>x1)x1=x; if(y<y0)y0=y; if(y>y1)y1=y; } }
+  d.cache.bv=d.maskVer; d.cache.bb = x1<0 ? null : {x0:x0/sc, y0:y0/sc, x1:(x1+1)/sc, y1:(y1+1)/sc}; return d.cache.bb;
+}
+// frame -> frame: center the subject and scale it to fill the frame minus 8% padding (max 3x)
+function ceFitMatrix(d){
+  var bb=ceMaskBox(d); if(!bb) return new DOMMatrix();
+  var M=ceMatrix(d), f=ceFrame(d), X0=1e9, Y0=1e9, X1=-1e9, Y1=-1e9;
+  [[bb.x0,bb.y0],[bb.x1,bb.y0],[bb.x0,bb.y1],[bb.x1,bb.y1]].forEach(function(q){ var t=M.transformPoint(new DOMPoint(q[0],q[1])); X0=Math.min(X0,t.x); X1=Math.max(X1,t.x); Y0=Math.min(Y0,t.y); Y1=Math.max(Y1,t.y); });
+  var bw=X1-X0, bh=Y1-Y0; if(bw<4 || bh<4) return new DOMMatrix();
+  var pad=0.08*Math.min(f.w,f.h), k=Math.min((f.w-2*pad)/bw, (f.h-2*pad)/bh, 3);
+  return new DOMMatrix().translate(f.w/2, f.h/2).scale(k).translate(-(X0+X1)/2, -(Y0+Y1)/2);
+}
+function cePaintBg(g, w, h, d, k){
+  if(k==="transparent") return;
+  if(k==="studio"){ var r=g.createRadialGradient(w/2,h*0.4,0,w/2,h*0.4,Math.max(w,h)*0.8); r.addColorStop(0,"#ffffff"); r.addColorStop(0.5,"#eff2f5"); r.addColorStop(1,"#c8d0d9"); g.fillStyle=r; g.fillRect(0,0,w,h); return; }
+  if(k==="photo" && d.bgImg){
+    var im=d.bgImg, sc=Math.max(w/im.width, h/im.height), dw=im.width*sc, dh=im.height*sc;
+    if(d.s.blur){ var f=24, sm=mkCanvas(Math.max(6,w/f), Math.max(6,h/f)), q=sm.width/w; sm.getContext("2d").drawImage(im,(w-dw)/2*q,(h-dh)/2*q,dw*q,dh*q); g.save(); g.imageSmoothingQuality="high"; g.drawImage(sm,0,0,w,h); g.restore(); }
+    else g.drawImage(im,(w-dw)/2,(h-dh)/2,dw,dh);
+    return;
+  }
+  var b=CE_BGS.find(function(x){ return x.k===k; });
+  g.fillStyle = k==="custom" ? d.s.custom : (b && b.c) || "#ffffff"; g.fillRect(0,0,w,h);
+}
+function ceShadow(g, S, P, o){
+  var k=Math.max(1, Math.max(S.width,S.height)/90), sm=mkCanvas(S.width/k, S.height/k), sg=sm.getContext("2d");
+  sg.drawImage(S,0,0,sm.width,sm.height); sg.globalCompositeOperation="source-in"; sg.fillStyle="#0c1622"; sg.fillRect(0,0,sm.width,sm.height);
+  var sm2=mkCanvas(sm.width/2, sm.height/2); sm2.getContext("2d").drawImage(sm,0,0,sm2.width,sm2.height);
+  g.save(); g.setTransform(new DOMMatrix().translate(0, o.height*0.022).multiply(P)); g.globalAlpha=0.45; g.imageSmoothingQuality="high";
+  g.drawImage(sm2,0,0,S.width,S.height); g.restore();
+}
+// full composition (no crop): background, optional shadow, subject (optionally centered). forceCut/noFit: brush view
+function ceCompose(d, ps, forceCut, noFit){
+  var T=ceTone(d, ps);
+  if(!ceCut(d, forceCut)) return T;
+  var S=ceSubject(d, ps), f=ceFrame(d), o=mkCanvas(T.width, T.height), g=o.getContext("2d"), sx=o.width/f.w, sy=o.height/f.h;
+  cePaintBg(g, o.width, o.height, d, d.s.bg==="none" ? "transparent" : d.s.bg);
+  var P = (d.s.fit && !noFit) ? new DOMMatrix().scale(sx,sy).multiply(ceFitMatrix(d)).multiply(new DOMMatrix().scale(1/sx,1/sy)) : new DOMMatrix();
+  if(d.s.shadow) ceShadow(g, S, P, o);
+  g.save(); g.setTransform(P); g.imageSmoothingQuality="high"; g.drawImage(S,0,0); g.restore();
+  return o;
+}
+function ceCropCanvas(O, cr){
+  if(!cr) return O;
+  var c=mkCanvas(cr.w*O.width, cr.h*O.height); c.getContext("2d").drawImage(O, cr.x*O.width, cr.y*O.height, cr.w*O.width, cr.h*O.height, 0, 0, c.width, c.height); return c;
+}
+function ceRenderFinal(d){
+  var O=ceCropCanvas(ceCompose(d, 1, false, false), d.s.crop), m=Math.max(O.width, O.height);
+  if(m>1280){ var s=1280/m, c=mkCanvas(O.width*s, O.height*s), g=c.getContext("2d"); g.imageSmoothingQuality="high"; g.drawImage(O,0,0,c.width,c.height); O=c; }
+  return O;
+}
+function ceEncode(d, O){
+  if(d.mask && d.s.bg==="transparent") return canvasBlob(O, "image/png").then(function(b){ return {blob:b, png:true}; });
+  var c=mkCanvas(O.width, O.height), g=c.getContext("2d"); g.fillStyle="#fff"; g.fillRect(0,0,c.width,c.height); g.drawImage(O,0,0); // flatten
+  return canvasBlob(c, "image/jpeg", 0.82).then(function(b){ return {blob:b, png:false}; });
+}
+function ceSegInput(d){ var s=Math.min(1, CE_SEG/Math.max(d.W,d.H)), c=mkCanvas(d.W*s, d.H*s), g=c.getContext("2d"); g.imageSmoothingQuality="high"; g.drawImage(d.src,0,0,c.width,c.height); return c; }
+// low-res alpha from the model -> upscaled (bilinear) to the working resolution
+// clean the model's alpha: firm up soft edges (drops faint "ghosts"), then keep the main object — the largest
+// connected region plus any region at least 12% of its size — so stray background objects disappear
+function ceRefineAlpha(a, w, h){
+  var n=w*h, out=new Uint8Array(n), lab=new Int32Array(n), i, v;
+  for(i=0;i<n;i++){ v=(a[i]-45)*255/165; out[i]=v<0?0:v>255?255:v; }
+  var sizes=[0], stack=new Int32Array(n), cur=0;
+  for(i=0;i<n;i++){ if(out[i]<40 || lab[i]) continue; cur++; var sp=0, cnt=0; stack[sp++]=i; lab[i]=cur;
+    while(sp){ var k=stack[--sp], x=k%w; cnt++;
+      if(x>0 && !lab[k-1] && out[k-1]>=40){ lab[k-1]=cur; stack[sp++]=k-1; }
+      if(x<w-1 && !lab[k+1] && out[k+1]>=40){ lab[k+1]=cur; stack[sp++]=k+1; }
+      if(k>=w && !lab[k-w] && out[k-w]>=40){ lab[k-w]=cur; stack[sp++]=k-w; }
+      if(k<n-w && !lab[k+w] && out[k+w]>=40){ lab[k+w]=cur; stack[sp++]=k+w; } }
+    sizes.push(cnt); }
+  var big=0; for(i=1;i<sizes.length;i++) big=Math.max(big, sizes[i]);
+  for(i=0;i<n;i++){ if(out[i] && (lab[i]===0 || sizes[lab[i]]<big*0.12)) out[i]=0; }
+  return out;
+}
+function ceApplyMask(d, m){
+  var seg=mkCanvas(m.w, m.h), g=seg.getContext("2d"), id=g.createImageData(m.w, m.h), p=id.data, al=ceRefineAlpha(m.alpha, m.w, m.h);
+  for(var i=0, n=m.w*m.h; i<n; i++){ p[i*4]=p[i*4+1]=p[i*4+2]=255; p[i*4+3]=al[i]; }
+  g.putImageData(id,0,0); d.seg=seg; ceMaskFrom(d, seg);
+}
+function ceMaskFrom(d, seg){ var mk=mkCanvas(d.W, d.H), g=mk.getContext("2d"); g.imageSmoothingQuality="high"; if(seg) g.drawImage(seg,0,0,d.W,d.H); else { g.fillStyle="#fff"; g.fillRect(0,0,d.W,d.H); } d.mask=mk; d.maskVer++; }
+
+/* worker plumbing (cancel = terminate the worker) */
+function bgKill(){ if(bgW){ try{ bgW.terminate(); }catch(e){} bgW=null; } }
+function bgCancel(){ var r=bgReq; bgReq=null; if(r && r.timer) clearTimeout(r.timer); bgKill(); if(r) r.rej({cancelled:true}); }
+function bgModelReady(){
+  if(!window.caches) return Promise.resolve(!!state.meta.bgModelAt);
+  return caches.open(BG.cache).then(function(c){ return c.match(BG.data+"resources.json"); }).then(function(r){ return !!r && !!state.meta.bgModelAt; }).catch(function(){ return false; });
+}
+function ceFakeSeg(c){ // test hook: ellipse "subject" in the middle
+  var w=c.width, h=c.height, a=new Uint8Array(w*h), o=ceTestMask||{};
+  for(var y=0;y<h;y++) for(var x=0;x<w;x++){ var dx=(x-w*(o.cx||0.5))/(w*(o.rx||0.28)), dy=(y-h*(o.cy||0.52))/(h*(o.ry||0.34)); a[y*w+x] = dx*dx+dy*dy<=1 ? 255 : 0; }
+  return {alpha:a, w:w, h:h, ms:0};
+}
+function bgSegment(c, onProg){
+  return new Promise(function(res, rej){
+    if(bgReq) bgCancel();
+    var req = bgReq = {res:res, rej:rej, onProg:onProg};
+    if(ceTestMask){
+      onProg && onProg({type:"progress", key:"compute:inference", cur:1, total:4});
+      req.timer=setTimeout(function(){ if(bgReq!==req) return; bgReq=null; res(ceFakeSeg(c)); }, ceTestMask.delay||300);
+      return;
+    }
+    canvasBlob(c, "image/jpeg", 0.92).then(function(blob){
+      if(bgReq!==req) return;
+      if(!bgW) bgW = new Worker("bgworker.js");
+      bgW.onmessage = function(e){ var m=e.data||{}; if(bgReq!==req) return;
+        if(m.type==="progress"){ if(req.onProg) req.onProg(m); }
+        else if(m.type==="mask"){ bgReq=null; res(m); }
+        else if(m.type==="error"){ bgReq=null; bgKill(); rej(new Error(m.message)); } };
+      bgW.onerror = function(ev){ if(bgReq!==req) return; bgReq=null; bgKill(); rej(new Error((ev && ev.message) || "The background remover couldn't start")); };
+      bgW.postMessage({type:"segment", blob:blob, w:c.width, h:c.height});
+    }).catch(function(e){ if(bgReq===req){ bgReq=null; rej(e); } });
+  });
+}
+function bgErrorText(e){
+  var msg=String((e && e.message) || e || "");
+  if(navigator.onLine===false || /fetch|network|resource metadata|load failed|import|module script/i.test(msg))
+    return "Couldn’t download the background remover. It needs internet once (about "+BG.mb+" MB — Wi-Fi recommended); after that it works offline. Check your connection and tap Remove background again.";
+  return "Background removal failed on this phone: "+msg;
+}
+// progress tracker -> {text, pct}; download = 0-60 %, finding the subject = 60-97 % (creeps while the model runs)
+function bgProgress(cached){
+  var bytes={}, totals={}, phase="load", t0=0;
+  return {
+    on:function(m){ if(/^fetch:/.test(m.key)){ bytes[m.key]=m.cur; totals[m.key]=m.total; } else if(/^compute:/.test(m.key) && phase!=="compute"){ phase="compute"; t0=Date.now(); } },
+    view:function(){
+      if(phase==="compute"){ var el=(Date.now()-t0)/1000; return {text:"Finding the part… (on this phone)", pct:Math.round(60+37*(1-Math.exp(-el/9)))}; }
+      var got=0, tot=0; Object.keys(totals).forEach(function(k){ got+=bytes[k]||0; tot+=totals[k]||0; });
+      var totMB=Math.max(tot/1048576, got/1048576);
+      if(!tot) return {text: cached? "Loading background remover…" : "Starting download…", pct:2};
+      return {text:(cached? "Loading background remover… " : "Downloading background remover (first time only)… ")+(got/1048576).toFixed(0)+" of "+(cached? totMB.toFixed(0) : Math.max(totMB, BG.mb-1).toFixed(0))+" MB", pct:Math.round(2+58*got/Math.max(tot, cached? tot : BG.mb*1048576*0.98))};
+    }
+  };
+}
+
+/* ---------- editor UI ---------- */
+function ceOpen(pid, opts){
+  opts=opts||{}; var j=curJob(); if(!j) return; var p=j.photos.find(function(x){ return x.id===pid; }); if(!p) return;
+  if(state.modal){ state.modal=null; renderModal(); }
+  var srcId = opts.fromOrig && p.origId ? p.origId : pid;
+  setBusy("Opening photo…");
+  getPhoto(srcId).then(function(b){ if(!b) throw new Error("picture not found"); return loadImage(b); }).then(function(img){
+    setBusy(null);
+    CE = {jobId:j.id, pid:pid, from:opts.from||"detail", viewerI:opts.viewerI, queue:opts.queue||[], qn:opts.qn||1, qi:opts.qi||1, fromOrig:!!opts.fromOrig,
+      doc:ceDoc(img), tab:"bg", z:1, px:0, py:0, ptrs:{}, brush:34, erase:true, undo:[], dirty:!!opts.fromOrig, before:false, sticky:false, raf:0};
+    ceRender();
+  }).catch(function(e){ setBusy(null); showToast("Couldn’t open photo: "+(e.message||e), {err:true}); });
+}
+function ceClose(saved, silent){
+  if(!CE) return;
+  var c=CE; CE=null; bgCancel();
+  $("ceRoot").innerHTML=""; document.body.style.overflow="";
+  if(silent) return;
+  var j=getJob(c.jobId);
+  if(c.from==="add" && c.queue.length && j){ var nx=c.queue.filter(function(id){ return arrIdx(j,id)>=0; }); if(nx.length){ ceOpen(nx[0], {from:"add", queue:nx.slice(1), qn:c.qn, qi:c.qi+1}); return; } }
+  if(c.from==="viewer" && j){ var i=arrIdx(j, c.newId||c.pid); if(i<0) i=Math.min(c.viewerI||0, j.photos.length-1); if(i>=0){ var y=window.scrollY; render(); window.scrollTo(0,y); openModal({type:"viewer", i:i}); return; } }
+  if(c.from!=="arrange"){ var y2=window.scrollY; render(); window.scrollTo(0,y2); }
+}
+function ceTabsHtml(){
+  return [["bg","🪄","Background"],["tone","☀️","Touch up"],["crop","✂️","Crop"],["brush","🖌️","Brush"]].map(function(t){
+    return '<button class="'+(CE.tab===t[0]?'sel':'')+'" data-act="ceTab" data-v="'+t[0]+'" aria-pressed="'+(CE.tab===t[0])+'"><span class="ic">'+t[1]+'</span>'+t[2]+'</button>'; }).join("");
+}
+function ceSlider(k, label, min, max, step, val, unit){
+  return '<div class="ce-row"><label class="l" for="ce_'+k+'">'+label+'</label><input type="range" id="ce_'+k+'" data-ce="'+k+'" min="'+min+'" max="'+max+'" step="'+step+'" value="'+val+'"><span class="v" id="ceV_'+k+'">'+ceFmt(k,val)+'</span></div>';
+}
+function ceFmt(k, v){ v=+v; if(k==="angle") return (v>0?"+":"")+v.toFixed(1)+"°"; if(k==="brush") return Math.round(v); if(k==="sharp") return Math.round(v); return (v>0?"+":"")+Math.round(v); }
+function cePanelHtml(){
+  var d=CE.doc, s=d.s, j=getJob(CE.jobId), p=j && j.photos.find(function(x){ return x.id===CE.pid; }), h='';
+  if(CE.tab==="bg"){
+    h += d.mask ? '<div class="ce-done"><span>✓ Background removed</span><button class="smallbtn" data-act="ceRemove">↻ Redo</button></div>'
+               : '<button class="btn primary block tall" data-act="ceRemove" id="ceRemoveBtn">✂️ Remove background</button><p class="faint ce-note">Runs on this phone — the photo is never uploaded. First use downloads the remover once (~'+BG.mb+' MB, Wi-Fi recommended), then it works offline.</p>';
+    h += '<div class="ce-sw" role="radiogroup" aria-label="Background">'+CE_BGS.map(function(b){
+      var sel=s.bg===b.k, sw;
+      if(b.k==="none") sw='<i class="sw orig"></i>'; else if(b.k==="transparent") sw='<i class="sw chk"></i>'; else if(b.k==="studio") sw='<i class="sw studio"></i>';
+      else if(b.k==="custom") sw='<i class="sw" style="background:'+esc(s.custom)+'"></i><input type="color" data-ce="custom" value="'+esc(s.custom)+'" aria-label="Custom background color">';
+      else if(b.k==="photo") sw='<i class="sw ph">'+(d.bgImg?'':'🖼️')+'</i>'; else sw='<i class="sw" style="background:'+b.c+'"></i>';
+      return b.k==="custom" ? '<label class="'+(sel?'sel':'')+'" data-bg="custom">'+sw+'<span>'+b.t+'</span></label>'
+        : '<button class="'+(sel?'sel':'')+'" data-act="ceBg" data-v="'+b.k+'" data-bg="'+b.k+'" role="radio" aria-checked="'+sel+'">'+sw+'<span>'+b.t+'</span></button>';
+    }).join("")+'</div>';
+    if(s.bg==="photo") h += '<label class="ce-tog"><input type="checkbox" data-ce="blur"'+(s.blur?' checked':'')+'> Blur background photo</label>';
+    h += '<label class="ce-tog"><input type="checkbox" data-ce="shadow"'+(s.shadow?' checked':'')+'> Soft shadow under the part</label>';
+    h += '<label class="ce-tog"><input type="checkbox" data-ce="fit"'+(s.fit?' checked':'')+'> Center &amp; fit the part (with padding)</label>';
+  } else if(CE.tab==="tone"){
+    h += '<button class="btn block tall '+(s.auto?'primary':'ghost')+'" data-act="ceAuto" aria-pressed="'+s.auto+'">'+(s.auto?'✓ Auto enhance on':'✨ Auto enhance')+'</button><div class="sp" style="height:6px"></div>';
+    h += ceSlider("bri","Brightness",-50,50,1,s.bri)+ceSlider("con","Contrast",-50,50,1,s.con)+ceSlider("sharp","Sharpness",0,100,1,s.sharp)+ceSlider("angle","Straighten",-15,15,0.5,s.angle);
+    h += '<div class="btnrow" style="margin-top:6px"><button class="btn ghost" data-act="ceRot">⟳ Rotate 90°</button><button class="btn ghost" data-act="ceToneReset">↺ Reset</button></div>';
+    if(p && p.origId && !CE.fromOrig) h += '<button class="btn ghost block" style="margin-top:8px" data-act="ceFromOrig">↩ Start over from the original photo</button>';
+  } else if(CE.tab==="crop"){
+    h += '<span class="fl">Shape</span><div class="seg ce-seg">'+[["free","Free"],["1:1","1:1 Square"],["4:3","4:3"]].map(function(a){ return '<button class="active'+(s.aspect===a[0]?' sel':'')+'" data-act="ceAspect" data-v="'+a[0]+'">'+a[1]+'</button>'; }).join("")+'</div>';
+    h += '<p class="faint ce-note">Drag the box to move it, drag a corner to resize. Pinch or use + / − to zoom.</p><button class="btn ghost block" data-act="ceCropReset">↺ Reset crop</button>';
+  } else if(CE.tab==="brush"){
+    h += '<div class="seg ce-seg" style="grid-template-columns:1fr 1fr"><button class="active'+(CE.erase?' sel':'')+'" data-act="ceBrushMode" data-v="erase">⌫ Erase</button><button class="active'+(!CE.erase?' sel':'')+'" data-act="ceBrushMode" data-v="restore">🖌️ Restore</button></div>';
+    h += ceSlider("brush","Brush size",8,90,1,CE.brush);
+    h += '<p class="faint ce-note">Paint on the photo with one finger: <b>Erase</b> removes leftover background, <b>Restore</b> brings back parts of the part. Two fingers pinch-zoom and move.</p>';
+    h += '<div class="btnrow"><button class="btn ghost" data-act="ceStrokeUndo"'+(CE.undo.length?'':' disabled')+'>↶ Undo stroke</button>'+(d.seg?'<button class="btn ghost" data-act="ceMaskReset">↺ Auto cutout</button>':'')+'</div>';
+  }
+  return h;
+}
+function ceHeadHtml(){
+  var j=getJob(CE.jobId), i=j? arrIdx(j, CE.pid) : -1, p=i>=0? j.photos[i] : null;
+  var eb = (CE.qn>1? 'Photo '+CE.qi+' of '+CE.qn+' · ' : '')+(p && p.label ? p.label : 'Photo '+(i+1));
+  return '<button class="iconbtn" data-act="ceCancel" aria-label="Cancel — discard changes">✕</button><div class="brand"><div class="eyebrow">'+esc(eb)+'</div><div class="title">✨ Clean up</div></div>'+
+    (CE.qn>1 && CE.queue.length? '<button class="smallbtn" data-act="ceSkipRest">Skip rest</button>' : '')+
+    '<button class="btn primary" data-act="ceSave" id="ceSaveBtn">✓ Save</button>';
+}
+function ceRender(){
+  var h='<div class="ce" id="ceEditor" role="dialog" aria-modal="true" aria-label="Clean up photo"><div class="ce-top">'+ceHeadHtml()+'</div>'+
+    '<div class="ce-stage" id="ceStage"><canvas id="ceCanvas" aria-label="Photo preview"></canvas>'+
+    '<div class="ce-float ce-zoom"><button class="ce-fbtn" data-act="ceZoom" data-d="-1" aria-label="Zoom out">−</button><button class="ce-fbtn" data-act="ceZoom" data-d="0" id="ceZoomLbl" aria-label="Reset zoom">100%</button><button class="ce-fbtn" data-act="ceZoom" data-d="1" aria-label="Zoom in">+</button></div>'+
+    '<div class="ce-float ce-cmp"><button class="ce-fbtn" id="ceCmp" aria-label="Hold to see the original">◐ Hold: before</button></div>'+
+    '<div class="ce-badge" id="ceBadge" hidden>BEFORE</div><div id="ceBusy"></div></div>'+
+    '<div class="ce-tabs" id="ceTabs" role="tablist">'+ceTabsHtml()+'</div><div class="ce-panel" id="cePanel">'+cePanelHtml()+'</div></div>';
+  $("ceRoot").innerHTML=h; document.body.style.overflow="hidden";
+  ceBind(); requestAnimationFrame(function(){ ceLayout(); ceSchedule(); });
+}
+function cePanel(){ if(!CE) return; var y=$("cePanel")? $("cePanel").scrollTop : 0; $("ceTabs").innerHTML=ceTabsHtml(); $("cePanel").innerHTML=cePanelHtml(); $("cePanel").scrollTop=y; }
+function ceChanged(){ if(!CE) return; CE.dirty=true; ceSchedule(); }
+function cePs(d){ var f=ceFrame(d); return Math.min(1, CE_PREV/Math.max(f.w,f.h)); }
+function ceSchedule(){ if(CE && !CE.raf) CE.raf=requestAnimationFrame(ceDraw); }
+function ceDraw(){
+  if(!CE) return; CE.raf=0; var d=CE.doc, cv=$("ceCanvas"); if(!cv) return;
+  var src, brush=CE.tab==="brush", crop=CE.tab==="crop";
+  if(CE.before) src=d.src;
+  else { var O=ceCompose(d, cePs(d), brush, brush); src = (brush||crop) ? O : ceCropCanvas(O, d.s.crop); }
+  if(cv.width!==src.width || cv.height!==src.height){ cv.width=src.width; cv.height=src.height; ceLayout(); }
+  var g=cv.getContext("2d"); g.clearRect(0,0,cv.width,cv.height); g.drawImage(src,0,0);
+  if(!CE.before && crop) ceDrawCropUI(g, cv);
+  if(!CE.before && brush && CE.cursor){ var u=cv.width/cv.getBoundingClientRect().width; g.beginPath(); g.arc(CE.cursor.x, CE.cursor.y, CE.brush*u, 0, Math.PI*2); g.lineWidth=2*u; g.strokeStyle=CE.erase?"#e0533f":"#2fa35f"; g.stroke(); g.lineWidth=u; g.strokeStyle="#fff"; g.stroke(); }
+  var bd=$("ceBadge"); if(bd) bd.hidden=!CE.before;
+  var cb=$("ceCmp"); if(cb) cb.textContent = CE.sticky ? "◑ Showing before — tap" : "◐ Hold: before";
+}
+function ceLayout(){
+  if(!CE) return; var st=$("ceStage"), cv=$("ceCanvas"); if(!st || !cv || !cv.width) return;
+  var sw=st.clientWidth-20, sh=st.clientHeight-20, ar=cv.width/cv.height, w=Math.min(sw, sh*ar);
+  cv.style.width=Math.max(10,w)+"px"; cv.style.height=Math.max(10,w/ar)+"px"; ceApplyZoom();
+}
+function ceApplyZoom(){ var cv=$("ceCanvas"); if(!cv) return; cv.style.transform="translate("+CE.px+"px,"+CE.py+"px) scale("+CE.z+")"; var zl=$("ceZoomLbl"); if(zl) zl.textContent=Math.round(CE.z*100)+"%"; }
+function ceSetZoom(z){ CE.z=Math.max(1, Math.min(6, z)); if(CE.z===1){ CE.px=0; CE.py=0; } ceApplyZoom(); ceSchedule(); }
+/* crop overlay (canvas px of the full composed frame) */
+function ceCropPx(cv){ var c=CE.doc.s.crop||{x:0,y:0,w:1,h:1}; return {x:c.x*cv.width, y:c.y*cv.height, w:c.w*cv.width, h:c.h*cv.height}; }
+function ceDrawCropUI(g, cv){
+  var r=ceCropPx(cv), u=cv.width/cv.getBoundingClientRect().width;
+  g.save(); g.fillStyle="rgba(6,12,20,.55)"; g.beginPath(); g.rect(0,0,cv.width,cv.height); g.rect(r.x,r.y,r.w,r.h); g.fill("evenodd");
+  g.strokeStyle="rgba(255,255,255,.55)"; g.lineWidth=u; for(var k=1;k<3;k++){ g.beginPath(); g.moveTo(r.x+r.w*k/3,r.y); g.lineTo(r.x+r.w*k/3,r.y+r.h); g.moveTo(r.x,r.y+r.h*k/3); g.lineTo(r.x+r.w,r.y+r.h*k/3); g.stroke(); }
+  g.strokeStyle="#fff"; g.lineWidth=2*u; g.strokeRect(r.x,r.y,r.w,r.h);
+  var L=22*u; g.lineWidth=5*u; g.strokeStyle="#ffd24a";
+  [[r.x,r.y,1,1],[r.x+r.w,r.y,-1,1],[r.x,r.y+r.h,1,-1],[r.x+r.w,r.y+r.h,-1,-1]].forEach(function(q){ g.beginPath(); g.moveTo(q[0]+q[2]*L,q[1]); g.lineTo(q[0],q[1]); g.lineTo(q[0],q[1]+q[3]*L); g.stroke(); });
+  g.restore();
+}
+function ceAspectRatio(k){ var f=ceFrame(CE.doc); if(k==="1:1") return 1; if(k==="4:3") return f.w>=f.h ? 4/3 : 3/4; return 0; }
+function ceSetAspect(k){
+  var d=CE.doc, f=ceFrame(d), ar=ceAspectRatio(k); d.s.aspect=k;
+  if(ar){ var w=f.w, h=w/ar; if(h>f.h){ h=f.h; w=h*ar; } d.s.crop={x:(1-w/f.w)/2, y:(1-h/f.h)/2, w:w/f.w, h:h/f.h}; }
+  else if(!d.s.crop) d.s.crop={x:0.05,y:0.05,w:0.9,h:0.9};
+  ceChanged();
+}
+function ceCropDrag(pt, cv){ // pt: canvas px
+  var dr=CE.cdrag, W=cv.width, H=cv.height, ar=ceAspectRatio(CE.doc.s.aspect), u=cv.width/cv.getBoundingClientRect().width, min=48*u, r;
+  if(dr.mode==="move"){ var s=dr.r0, nx=Math.max(0, Math.min(W-s.w, s.x+pt.x-dr.p0.x)), ny=Math.max(0, Math.min(H-s.h, s.y+pt.y-dr.p0.y)); r={x:nx, y:ny, w:s.w, h:s.h}; }
+  else {
+    var ox=dr.ox, oy=dr.oy, px=Math.max(0, Math.min(W, pt.x)), py=Math.max(0, Math.min(H, pt.y)), w=Math.max(min, Math.abs(px-ox)), h=Math.max(min, Math.abs(py-oy));
+    var arPx = ar ? ar*(W/ceFrame(CE.doc).w)/(H/ceFrame(CE.doc).h) : 0;
+    if(arPx){ if(w/h>arPx) w=h*arPx; else h=w/arPx; }
+    var sx=px>=ox?1:-1, sy=py>=oy?1:-1, maxW = sx>0? W-ox : ox, maxH = sy>0? H-oy : oy;
+    if(w>maxW){ w=maxW; if(arPx) h=w/arPx; } if(h>maxH){ h=maxH; if(arPx) w=h*arPx; }
+    r={x: sx>0? ox : ox-w, y: sy>0? oy : oy-h, w:w, h:h};
+  }
+  CE.doc.s.crop={x:r.x/W, y:r.y/H, w:r.w/W, h:r.h/H}; ceChanged();
+}
+/* pointer handling: 1 finger = brush / crop / pan (when zoomed), 2 fingers = pinch zoom + move */
+function ceClientToCanvas(cv, x, y){ var r=cv.getBoundingClientRect(); return {x:(x-r.left)/r.width*cv.width, y:(y-r.top)/r.height*cv.height}; }
+function ceCanvasToSrc(cv, pt){ var d=CE.doc, f=ceFrame(d), q=new DOMPoint(pt.x*f.w/cv.width, pt.y*f.h/cv.height); return ceMatrix(d).inverse().transformPoint(q); }
+function ceBrushSeg(a, b){
+  var d=CE.doc, cv=$("ceCanvas"), f=ceFrame(d), r=CE.brush*f.w/cv.getBoundingClientRect().width/ceCover(d), g=d.mask.getContext("2d");
+  g.save(); g.lineCap="round"; g.lineJoin="round"; g.lineWidth=2*r;
+  if(CE.erase){ g.globalCompositeOperation="destination-out"; g.strokeStyle=g.fillStyle="#000"; } else { g.globalCompositeOperation="source-over"; g.strokeStyle=g.fillStyle="#fff"; }
+  g.beginPath(); if(a.x===b.x && a.y===b.y){ g.arc(a.x,a.y,r,0,Math.PI*2); g.fill(); } else { g.moveTo(a.x,a.y); g.lineTo(b.x,b.y); g.stroke(); }
+  g.restore(); d.maskVer++; ceChanged();
+}
+function ceEnsureMask(){ var d=CE.doc; if(!d.mask){ ceMaskFrom(d, null); } }
+function ceDown(e){
+  if(!CE || e.target.closest(".ce-fbtn") || e.target.closest("#ceBusy .box")) return;
+  var st=$("ceStage"), cv=$("ceCanvas"); try{ st.setPointerCapture(e.pointerId); }catch(err){}
+  CE.ptrs[e.pointerId]={x:e.clientX, y:e.clientY}; var ids=Object.keys(CE.ptrs);
+  if(ids.length===2){ ceEndOne(true); var a=CE.ptrs[ids[0]], b=CE.ptrs[ids[1]]; CE.pinch={d0:Math.hypot(a.x-b.x,a.y-b.y)||1, z0:CE.z, m0:{x:(a.x+b.x)/2, y:(a.y+b.y)/2}, p0:{x:CE.px, y:CE.py}}; return; }
+  if(ids.length>2) return;
+  var pt=ceClientToCanvas(cv, e.clientX, e.clientY);
+  if(CE.tab==="brush" && !CE.before){
+    ceEnsureMask(); var mk=CE.doc.mask, snap=mkCanvas(mk.width, mk.height); snap.getContext("2d").drawImage(mk,0,0); CE.undo.push(snap); if(CE.undo.length>8) CE.undo.shift();
+    var sp=ceCanvasToSrc(cv, pt); CE.stroke={last:sp, n:0}; ceBrushSeg(sp, sp); CE.cursor=pt;
+  } else if(CE.tab==="crop" && !CE.before){
+    var r=ceCropPx(cv), u=cv.width/cv.getBoundingClientRect().width, hit=34*u, corners=[[r.x,r.y],[r.x+r.w,r.y],[r.x,r.y+r.h],[r.x+r.w,r.y+r.h]], best=-1, bd=1e9;
+    corners.forEach(function(c, i){ var dd=Math.hypot(c[0]-pt.x, c[1]-pt.y); if(dd<hit && dd<bd){ bd=dd; best=i; } });
+    if(!CE.doc.s.crop) CE.doc.s.crop={x:0,y:0,w:1,h:1};
+    if(best>=0){ var o=corners[3-best]; CE.cdrag={mode:"corner", ox:o[0], oy:o[1]}; }
+    else if(pt.x>r.x && pt.x<r.x+r.w && pt.y>r.y && pt.y<r.y+r.h) CE.cdrag={mode:"move", p0:pt, r0:r};
+    else if(CE.z>1) CE.pan={x0:e.clientX, y0:e.clientY, p0:{x:CE.px, y:CE.py}};
+  } else if(CE.z>1) CE.pan={x0:e.clientX, y0:e.clientY, p0:{x:CE.px, y:CE.py}};
+}
+function ceMove(e){
+  if(!CE) return; var cv=$("ceCanvas");
+  if(CE.ptrs[e.pointerId]) CE.ptrs[e.pointerId]={x:e.clientX, y:e.clientY};
+  var ids=Object.keys(CE.ptrs);
+  if(CE.pinch && ids.length>=2){ var a=CE.ptrs[ids[0]], b=CE.ptrs[ids[1]], dd=Math.hypot(a.x-b.x,a.y-b.y), m={x:(a.x+b.x)/2, y:(a.y+b.y)/2};
+    CE.z=Math.max(1, Math.min(6, CE.pinch.z0*dd/CE.pinch.d0)); CE.px=CE.pinch.p0.x+(m.x-CE.pinch.m0.x); CE.py=CE.pinch.p0.y+(m.y-CE.pinch.m0.y); if(CE.z===1){ CE.px=0; CE.py=0; } ceApplyZoom(); ceSchedule(); return; }
+  var pt=ceClientToCanvas(cv, e.clientX, e.clientY);
+  if(CE.stroke){ var sp=ceCanvasToSrc(cv, pt); ceBrushSeg(CE.stroke.last, sp); CE.stroke.last=sp; CE.stroke.n++; CE.cursor=pt; return; }
+  if(CE.cdrag){ ceCropDrag(pt, cv); return; }
+  if(CE.pan){ CE.px=CE.pan.p0.x+(e.clientX-CE.pan.x0); CE.py=CE.pan.p0.y+(e.clientY-CE.pan.y0); ceApplyZoom(); return; }
+  if(CE.tab==="brush" && e.pointerType==="mouse"){ CE.cursor=pt; ceSchedule(); }
+}
+function ceEndOne(){ if(!CE) return; if(CE.stroke){ CE.stroke=null; CE.cursor=null; if(CE.doc.s.bg==="none") CE.doc.s.bg="white"; cePanel(); ceSchedule(); } CE.cdrag=null; CE.pan=null; }
+function ceUp(e){ if(!CE) return; delete CE.ptrs[e.pointerId]; var n=Object.keys(CE.ptrs).length; if(CE.pinch){ if(n<2) CE.pinch=null; if(!n) ceEndOne(); return; } if(!n) ceEndOne(); }
+function ceBind(){
+  var st=$("ceStage");
+  st.addEventListener("pointerdown", ceDown); st.addEventListener("pointermove", ceMove); st.addEventListener("pointerup", ceUp); st.addEventListener("pointercancel", ceUp);
+  st.addEventListener("pointerleave", function(e){ if(CE && e.pointerType==="mouse" && !CE.stroke){ CE.cursor=null; ceSchedule(); } });
+  st.addEventListener("contextmenu", function(e){ e.preventDefault(); });
+  var cb=$("ceCmp"), t0=0;
+  cb.addEventListener("pointerdown", function(e){ e.preventDefault(); e.stopPropagation(); if(!CE) return; t0=Date.now(); CE.before=true; ceSchedule(); });
+  var rel=function(){ if(!CE || !t0) return; var quick=Date.now()-t0<300; t0=0; if(quick){ CE.sticky=!CE.sticky; CE.before=CE.sticky; } else { CE.sticky=false; CE.before=false; } ceSchedule(); };
+  cb.addEventListener("pointerup", rel); cb.addEventListener("pointercancel", rel); cb.addEventListener("pointerleave", function(){ if(t0 && Date.now()-t0>=300) rel(); });
+}
+/* busy overlay inside the editor (download / processing progress + cancel) */
+function ceBusy(b){
+  var el=$("ceBusy"); if(!el) return;
+  if(!b){ el.innerHTML=""; return; }
+  if($("ceBusyText")){ $("ceBusyText").textContent=b.text; $("ceBusyProg").style.width=(b.pct||0)+"%"; return; }
+  el.innerHTML='<div class="ce-busy" role="status"><div class="box"><div class="row"><div class="spin"></div><div id="ceBusyText" style="flex:1;font-weight:700">'+esc(b.text)+'</div></div>'+
+    '<div class="prog" style="margin-top:12px;height:12px"><i id="ceBusyProg" style="width:'+(b.pct||0)+'%"></i></div>'+(b.sub?'<p class="faint" style="margin:10px 0 0">'+esc(b.sub)+'</p>':'')+
+    (b.cancel?'<button class="btn ghost block" style="margin-top:12px" data-act="ceRemoveCancel">Cancel</button>':'')+'</div></div>';
+}
+function ceRunRemoval(){
+  if(!CE || CE.running) return; var c=CE, d=c.doc; c.running=true;
+  bgModelReady().then(function(cached){
+    if(CE!==c) return;
+    if(!cached && navigator.onLine===false){ c.running=false; openModal({type:"info", title:"You’re offline", html:esc(bgErrorText(new Error("offline")))}); return; }
+    var pr=bgProgress(cached), tick;
+    ceBusy({text:cached? "Loading background remover…" : "Starting download…", pct:1, cancel:true, sub: cached? "Runs on this phone — nothing is uploaded." : "First time only: ~"+BG.mb+" MB download, then it works offline. Your photo is never uploaded."});
+    tick=setInterval(function(){ if(CE!==c || !c.running){ clearInterval(tick); return; } ceBusy(pr.view()); }, 250);
+    return bgSegment(ceSegInput(d), function(m){ pr.on(m); }).then(function(m){
+      clearInterval(tick); c.running=false; if(CE!==c) return;
+      bgKill(); // free the model's working memory (~0.8 GB while it runs) right away; Redo reloads it from the offline cache
+      ceApplyMask(d, m); c.undo=[]; if(d.s.bg==="none") d.s.bg="white"; c.dirty=true;
+      if(!ceTestMask){ state.meta.bgModelAt=nowIso(); saveMeta(); }
+      ceBusy(null); cePanel(); ceSchedule(); showToast("Background removed ✓ — pick a background, or fix edges with 🖌️ Brush");
+    }, function(e){
+      clearInterval(tick); c.running=false; if(CE===c) ceBusy(null);
+      if(e && e.cancelled) return; console.warn(e);
+      if(CE===c) openModal({type:"info", title:"Background removal didn’t work", html:esc(bgErrorText(e))});
+    });
+  });
+}
+function ceRec(o, r){ // new photo record after cleanup: keeps label/position, remembers the ORIGINAL picture once
+  var n=Object.assign({}, o, {id:r.id, bytes:r.blob.size, w:r.w, h:r.h, cleanedAt:nowIso()});
+  if(!o.origId){ n.origId=o.id; n.origBytes=o.bytes||0; n.origW=o.w; n.origH=o.h; }
+  if(r.png) n.alpha=true; else delete n.alpha;
+  return n;
+}
+function revertRec(o){
+  var n=Object.assign({}, o, {id:o.origId, bytes:o.origBytes||o.bytes, w:o.origW||o.w, h:o.origH||o.h, revertedAt:nowIso()});
+  ["origId","origBytes","origW","origH","cleanedAt","alpha"].forEach(function(k){ delete n[k]; }); return n;
+}
+function blobIdsOf(p){ return p.origId ? [p.id, p.origId] : [p.id]; }
+
+/* actions */
+ACT.ceTab = function(t){ var v=t.getAttribute("data-v"); CE.tab=v; CE.cursor=null; if(v==="brush") ceEnsureMask(); cePanel(); ceSchedule(); };
+ACT.ceRemove = function(){ ceRunRemoval(); };
+ACT.ceRemoveCancel = function(){ bgCancel(); if(CE){ CE.running=false; ceBusy(null); } showToast("Background removal cancelled"); };
+ACT.ceBg = function(t){
+  var v=t.getAttribute("data-v"), d=CE.doc;
+  if(v==="photo"){ $("inCleanBg").click(); return; }
+  d.s.bg=v; ceChanged(); cePanel();
+  if(v!=="none" && !d.seg && !CE.running && (!d.mask || !CE.undo.length)) ceRunRemoval();
+};
+ACT.ceAuto = function(){ CE.doc.s.auto=!CE.doc.s.auto; ceChanged(); cePanel(); };
+ACT.ceRot = function(){ var s=CE.doc.s; s.rot=(s.rot+1)%4; s.crop=null; s.aspect="free"; CE.z=1; CE.px=CE.py=0; ceApplyZoom(); ceChanged(); };
+ACT.ceToneReset = function(){ var s=CE.doc.s; s.auto=false; s.bri=0; s.con=0; s.sharp=0; s.angle=0; s.rot=0; s.crop=null; s.aspect="free"; ceChanged(); cePanel(); };
+ACT.ceFromOrig = function(){ var c=CE; openModal({type:"confirm", title:"Start over from the original?", text:"Loads the original photo (before any clean-up). Your current edits in this editor are discarded.", ok:"Start over", onOk:function(){ var o={from:c.from, viewerI:c.viewerI, queue:c.queue, qn:c.qn, qi:c.qi, fromOrig:true}; ceClose(false, true); ceOpen(c.pid, o); }}); };
+ACT.ceAspect = function(t){ ceSetAspect(t.getAttribute("data-v")); cePanel(); };
+ACT.ceCropReset = function(){ CE.doc.s.crop=null; CE.doc.s.aspect="free"; ceChanged(); cePanel(); };
+ACT.ceBrushMode = function(t){ CE.erase = t.getAttribute("data-v")==="erase"; cePanel(); };
+ACT.ceStrokeUndo = function(){ var s=CE.undo.pop(); if(!s) return; var g=CE.doc.mask.getContext("2d"); g.clearRect(0,0,s.width,s.height); g.drawImage(s,0,0); CE.doc.maskVer++; ceChanged(); cePanel(); };
+ACT.ceMaskReset = function(){ var d=CE.doc; if(!d.seg) return; ceMaskFrom(d, d.seg); CE.undo=[]; ceChanged(); cePanel(); };
+ACT.ceZoom = function(t){ var dd=+t.getAttribute("data-d"); ceSetZoom(dd===0? 1 : CE.z*(dd>0? 1.5 : 1/1.5)); };
+ACT.ceCancel = function(){
+  if(!CE) return; var c=CE;
+  if(!c.dirty){ ceClose(false); return; }
+  openModal({type:"confirm", title:"Discard changes?", text:"The photo stays exactly as it was.", ok:"Discard", danger:true, onOk:function(){ if(CE===c) ceClose(false); }});
+};
+ACT.ceSkipRest = function(){ if(!CE) return; CE.queue=[]; ceClose(false); };
+ACT.ceSave = function(){
+  if(!CE || CE.saving || CE.running) return; var c=CE, d=c.doc; c.saving=true;
+  ceBusy({text:"Saving…", pct:60});
+  setTimeout(function(){
+    var O; try{ O=ceRenderFinal(d); }catch(e){ c.saving=false; ceBusy(null); showToast("Save failed: "+(e.message||e), {err:true}); return; }
+    ceEncode(d, O).then(function(r){ var id=uid(); return putPhoto(id, r.blob).then(function(){
+      r.id=id; r.w=O.width; r.h=O.height;
+      var j=getJob(c.jobId); if(!j || arrIdx(j, c.pid)<0) throw new Error("photo no longer in this job");
+      var old=j.photos[arrIdx(j, c.pid)], oldEdited = old.origId ? old.id : null; c.newId=id;
+      if(c.from==="arrange"){ ceClose(true); arrApply("Cleaned up ✨ — original kept", function(j){ var i=arrIdx(j, c.pid); if(i<0) return false; j.photos[i]=ceRec(j.photos[i], r); }, id); return; }
+      j.photos[arrIdx(j, c.pid)] = ceRec(old, r); touch(j); saveJobs();
+      if(oldEdited && !photoReferenced(oldEdited)) delPhoto(oldEdited);
+      ceClose(true); showToast("✨ Cleaned up — original kept (Revert anytime)");
+    }); }).catch(function(e){ c.saving=false; if(CE===c) ceBusy(null); showToast("Save failed: "+(e.message||e), {err:true}); });
+  }, 30);
+};
+ACT.ceFromViewer = function(){ var j=curJob(), i=state.modal && state.modal.i; if(!j || i==null || !j.photos[i]) return; ceOpen(j.photos[i].id, {from:"viewer", viewerI:i}); };
+ACT.arrClean = function(){ var pid=state.modal && state.modal.pid; if(pid) ceOpen(pid, {from:"arrange"}); };
+function confirmRevert(pid, done){
+  openModal({type:"confirm", title:"Revert to the original?", text:"Puts back the photo as it was before clean-up. Label and position stay the same.", ok:"Revert", onOk:done});
+}
+ACT.photoRevert = function(){
+  var j=curJob(), i=state.modal.i, p=j.photos[i]; if(!p || !p.origId) return;
+  confirmRevert(p.id, function(){ var k=arrIdx(j, p.id); if(k<0) return; var edited=p.id; j.photos[k]=revertRec(p); touch(j); saveJobs(); if(!photoReferenced(edited)) delPhoto(edited); var y=window.scrollY; render(); window.scrollTo(0,y); openModal({type:"viewer", i:k}); showToast("Reverted to the original photo"); });
+};
+ACT.arrRevert = function(){
+  var pid=state.modal.pid;
+  confirmRevert(pid, function(){ arrApply("Reverted to original", function(j){ var i=arrIdx(j, pid); if(i<0 || !j.photos[i].origId) return false; j.photos[i]=revertRec(j.photos[i]); }); });
+};
+/* batch: remove background from all photos with one chosen background */
+ACT.ceBatchOpen = function(){ openModal({type:"ceBatch", bg:"white", auto:true, shadow:false, fit:true}); };
+ACT.ceBatchBg = function(t){ state.modal.bg=t.getAttribute("data-v"); renderModal(); };
+ACT.ceBatchCancel = function(){ state.batchCancel=true; bgCancel(); setBusy(null); showToast("Stopped — photos done so far are kept (Undo to revert)"); };
+ACT.ceBatchGo = function(){
+  var m=state.modal, j=curJob(); if(!j) return; ["auto","shadow","fit"].forEach(function(k){ var el=$("cb_"+k); if(el) m[k]=el.checked; });
+  closeModal();
+  var list=j.photos.slice(), done=[], n=list.length; state.batchCancel=false;
+  setBusy("Photo 1 of "+n+"…", {cancel:true, cancelAct:"ceBatchCancel", pct:0});
+  var seq=Promise.resolve();
+  list.forEach(function(p, i){
+    seq=seq.then(function(){
+      if(state.batchCancel) return;
+      if(state.busy){ state.busy.text="Removing background — photo "+(i+1)+" of "+n+"…"; state.busy.pct=Math.round(i*100/n); renderBusy(); }
+      return getPhoto(p.origId||p.id).then(function(b){ if(!b) return; return loadImage(b).then(function(img){
+        var d=ceDoc(img); d.s=Object.assign(ceDefaults(), {bg:m.bg, auto:m.auto, shadow:m.shadow, fit:m.fit});
+        return bgSegment(ceSegInput(d), function(pm){ if(state.busy && /^fetch:/.test(pm.key)){ state.busy.text="Downloading background remover… "+(pm.cur/1048576).toFixed(0)+" MB"; renderBusy(); } }).then(function(mk){
+          if(state.batchCancel) return; ceApplyMask(d, mk); var O=ceRenderFinal(d);
+          return ceEncode(d, O).then(function(r){ var id=uid(); return putPhoto(id, r.blob).then(function(){ r.id=id; r.w=O.width; r.h=O.height; r.pid=p.id; done.push(r); }); });
+        });
+      }); });
+    });
+  });
+  seq.then(function(){ return null; }, function(e){ return e; }).then(function(err){
+    bgKill(); setBusy(null);
+    if(done.length){ if(!ceTestMask){ state.meta.bgModelAt=nowIso(); saveMeta(); }
+      arrApply("Background removed from "+done.length+" photo"+(done.length>1?"s":""), function(j){ done.forEach(function(r){ var k=arrIdx(j, r.pid); if(k>=0) j.photos[k]=ceRec(j.photos[k], r); }); }); }
+    if(err && !err.cancelled) openModal({type:"info", title:"Background removal stopped", html:esc(bgErrorText(err))+(done.length? "<br><br>"+done.length+" photo(s) finished and were kept." : "")});
+  });
+};
+function ceBatchHtml(j, m){
+  var n=j.photos.length;
+  return '<h3>✂️ Remove background from all</h3><p class="sub">One background for all '+n+' photos. Runs on this phone, one photo at a time — nothing is uploaded. Originals are kept: tap <b>Undo</b>, or <b>Revert to original</b> per photo.</p>'+
+    '<span class="fl">Background</span><div class="chipwrap" style="margin-bottom:10px">'+[["white","White"],["gray","Light gray"],["studio","Studio"],["navy","Navy"],["transparent","None (transparent)"]].map(function(b){ return '<button class="chip'+(m.bg===b[0]?' sel':'')+'" data-act="ceBatchBg" data-v="'+b[0]+'">'+b[1]+'</button>'; }).join("")+'</div>'+
+    '<label class="ce-tog"><input type="checkbox" id="cb_auto"'+(m.auto?' checked':'')+'> ✨ Auto enhance</label><label class="ce-tog"><input type="checkbox" id="cb_shadow"'+(m.shadow?' checked':'')+'> Soft shadow</label><label class="ce-tog"><input type="checkbox" id="cb_fit"'+(m.fit?' checked':'')+'> Center &amp; fit each part</label>'+
+    '<p class="faint">Takes a few seconds per photo on a phone. First use downloads ~'+BG.mb+' MB.</p>'+
+    '<div class="actions"><button class="btn ghost" data-act="closeModal">Cancel</button><button class="btn primary" data-act="ceBatchGo">✂️ Start ('+n+')</button></div>';
+}
+/* offer after adding photos */
+function offerCleanup(){
+  var ids=state.cleanOffer, j=curJob(); state.cleanOffer=null; if(!ids || !j || state.meta.offerCleanup===false) return;
+  ids=ids.filter(function(id){ return arrIdx(j,id)>=0; }); if(!ids.length) return;
+  var n=ids.length;
+  showToast(n===1? "✨ Clean up this photo?" : "✨ Clean up "+n+" new photos?", {act:function(){ ceOpen(ids[0], {from:"add", queue:ids.slice(1), qn:n, qi:1}); }, actLabel:n===1? "CLEAN UP" : "ONE BY ONE", act2:function(){}, act2Label:n===1? "SKIP" : "SKIP ALL", ms:9000, offer:true});
+}
+function ceInput(t, final){
+  if(!CE) return; var k=t.getAttribute("data-ce"), d=CE.doc;
+  if(k==="custom"){ d.s.custom=t.value; d.s.bg="custom"; var sw=t.parentNode.querySelector(".sw"); if(sw) sw.style.background=t.value;
+    document.querySelectorAll(".ce-sw [data-bg]").forEach(function(el){ el.classList.toggle("sel", el.getAttribute("data-bg")==="custom"); }); ceChanged();
+    if(final && !d.seg && !CE.running && !CE.undo.length) ceRunRemoval(); return; }
+  if(k==="brush"){ CE.brush=+t.value; $("ceV_brush").textContent=ceFmt(k, t.value); return; }
+  if(t.type==="checkbox"){ d.s[k]=t.checked; ceChanged(); if(k!=="blur") return; return; }
+  d.s[k]=+t.value; var v=$("ceV_"+k); if(v) v.textContent=ceFmt(k, t.value); ceChanged();
+}
+function ceBgPhoto(f){
+  if(!CE || !f) return;
+  loadImage(f).then(function(img){ var s=Math.min(1, 1280/Math.max(img.naturalWidth, img.naturalHeight)), c=mkCanvas(img.naturalWidth*s, img.naturalHeight*s); c.getContext("2d").drawImage(img,0,0,c.width,c.height);
+    CE.doc.bgImg=c; CE.doc.s.bg="photo"; ceChanged(); cePanel(); if(!CE.doc.seg && !CE.running && !CE.undo.length) ceRunRemoval(); })
+  .catch(function(e){ showToast(e.message||"Couldn't read that image", {err:true}); });
+}
+
 /* ---------- events ---------- */
 document.addEventListener("click", function(e){
   if(e.target.id==="scrim"){ closeModal(); return; }
@@ -2365,6 +3003,7 @@ document.addEventListener("click", function(e){
 });
 document.addEventListener("keydown", function(e){
   if(e.key==="Escape" && state.modal){ closeModal(); return; }
+  if(e.key==="Escape" && CE){ ACT.ceCancel(); return; }
   var t=e.target;
   if(e.key==="Enter" && t.classList && t.classList.contains("jobcard")){ ACT.openJob(t); return; }
   if((e.key==="Enter"||e.key===" ") && t.classList && t.classList.contains("arr-cell") && t.hasAttribute("data-id")){ e.preventDefault(); ACT.arrTap(t); return; }
@@ -2375,6 +3014,7 @@ document.addEventListener("keydown", function(e){
 document.addEventListener("focusin", function(e){ var t=e.target; if(t.hasAttribute && (t.hasAttribute("data-fval")||t.getAttribute("data-hdr")==="press") && t.dataset.orig==null) t.dataset.orig=t.value; });
 document.addEventListener("input", function(e){
   var t=e.target, j=curJob();
+  if(t.hasAttribute && t.hasAttribute("data-ce")){ if(t.type!=="checkbox") ceInput(t, false); return; }
   if(t.id==="searchInput"){ state.search=t.value; $("jobList").innerHTML=jobListHtml(filteredJobs()); hydratePhotos($("jobList")); return; }
   if(t.hasAttribute("data-rvval")){ state.modal.items[+t.getAttribute("data-rvval")].value=t.value; return; }
   if(t.hasAttribute("data-rvunit")){ state.modal.items[+t.getAttribute("data-rvunit")].unit=t.value; return; }
@@ -2399,6 +3039,8 @@ document.addEventListener("change", function(e){
   var t=e.target, j=curJob();
   if(t.id==="sortSel"){ state.sort=t.value; $("jobList").innerHTML=jobListHtml(filteredJobs()); hydratePhotos($("jobList")); return; }
   if(t.hasAttribute("data-rvchk")){ state.modal.items[+t.getAttribute("data-rvchk")].selected=t.checked; return; }
+  if(t.hasAttribute("data-ce")){ ceInput(t, true); return; }
+  if(t.hasAttribute("data-meta-bool")){ state.meta[t.getAttribute("data-meta-bool")]=t.checked; saveMeta(); showToast(t.checked? "Will offer ✨ Clean up after adding photos" : "Won’t offer clean-up after adding photos (still in Arrange & viewer)"); return; }
   if(!j) return;
   if(t.dataset.orig!=null && t.dataset.orig!==t.value){
     var orig=t.dataset.orig;
@@ -2416,9 +3058,10 @@ $("inPhotoLib").addEventListener("change", function(){ addPhotos(this.files); th
 $("inPhotoFiles").addEventListener("change", function(){ var all=Array.prototype.slice.call(this.files); this.value=""; var imgs=all.filter(function(f){ return /^image\//.test(f.type) || /\.(jpe?g|png|webp|gif)$/i.test(f.name||""); }); if(imgs.length<all.length) showToast("Skipped "+(all.length-imgs.length)+" non-image file(s). Use Scan for PDFs."); addPhotos(imgs); });
 ["inScanCam","inScanImg","inScanPdf","inScanFiles"].forEach(function(id){ $(id).addEventListener("change", function(){ var f=Array.prototype.slice.call(this.files); this.value=""; runScanFiles(f); }); });
 $("inReplace").addEventListener("change", function(){ var f=this.files[0]; this.value=""; if(f) arrReplaceFile(f); });
+$("inCleanBg").addEventListener("change", function(){ var f=this.files[0]; this.value=""; if(f) ceBgPhoto(f); });
 $("inImport").addEventListener("change", function(){ var f=this.files[0]; this.value=""; if(f) importFile(f); });
 $("inLogo").addEventListener("change", function(){ var f=this.files[0]; this.value=""; if(!f) return; compressLogo(f).then(function(u){ state.meta.brand=state.meta.brand||{}; state.meta.brand.logo=u; if(saveMeta()!==false){ render(); showToast("Logo saved ("+fmtBytes(Math.round(u.length*0.75))+")"); } }).catch(function(e){ showToast("Logo failed: "+(e.message||e), {err:true}); }); });
-window.addEventListener("resize", debounce(function(){ if(state.route.view==="print") fitSheet(); }, 150));
+window.addEventListener("resize", debounce(function(){ if(state.route.view==="print") fitSheet(); if(CE) ceLayout(); }, 150));
 window.addEventListener("beforeprint", function(){ if(state.route.view==="print") fitSheet(); });
 window.addEventListener("hashchange", onRoute);
 window.addEventListener("pagehide", saveJobs);
@@ -2442,7 +3085,7 @@ function registerSW(){
 /* ---------- init ---------- */
 function init(){
   applyTheme();
-  var r=document.createElement("div"); r.innerHTML='<div id="modalRoot"></div><div id="busyRoot"></div><div id="toastRoot"></div>'; while(r.firstChild) $("overlay").appendChild(r.firstChild);
+  var r=document.createElement("div"); r.innerHTML='<div id="ceRoot"></div><div id="modalRoot"></div><div id="busyRoot"></div><div id="toastRoot"></div>'; while(r.firstChild) $("overlay").appendChild(r.firstChild);
   state.jobs = (lsGet(K.jobs, [])||[]).map(normalizeJob);
   state.templates = lsGet(K.tpl, [])||[];
   state.meta = lsGet(K.meta, {})||{};
@@ -2465,7 +3108,8 @@ function init(){
     if(!state.meta.ocrWarmAt && !c.saveData && c.type!=="cellular") warmOcr(false);
   }, 8000);
 }
-window.__tjl = {state:state, parseLines:parseLines, buildReview:buildReview, render:render};
+window.__tjl = {state:state, parseLines:parseLines, buildReview:buildReview, render:render,
+  ce:function(){ return CE; }, ceTestMask:function(o){ ceTestMask=o||null; }, getPhoto:getPhoto}; // test hooks (ceTestMask: fake segmentation when no model is available)
 init();
 })();
 </script>

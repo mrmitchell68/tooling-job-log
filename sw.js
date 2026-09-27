@@ -1,7 +1,11 @@
 /* Tooling Job Log v2 service worker — offline app shell + CDN libraries. */
-const VERSION = "tjl-v2.2.0";
+const VERSION = "tjl-v2.3.0";
 const SHELL_CACHE = VERSION + "-shell";
 const LIB_CACHE = "tjl-libs-v1";           // CDN libs are version-pinned, so this cache survives app updates
+// ✨ Clean up: background-removal model + ONNX runtime (~56 MB, fetched in 4 MB chunks) are cached at RUNTIME on first use,
+// in their own version-pinned cache — never in the precache, and kept across app updates.
+const BG_CACHE = "tjl-bgmodel-v1";
+const BG_HOSTS = ["staticimgly.com"];
 const SHELL = [
   "./",
   "./index.html",
@@ -10,7 +14,8 @@ const SHELL = [
   "./icons/icon-512.png",
   "./icons/icon-maskable-512.png",
   "./icons/apple-touch-icon.png",
-  "./icons/favicon-64.png"
+  "./icons/favicon-64.png",
+  "./bgworker.js"
 ];
 // Small libs precached best-effort at install. The big OCR engine + English data
 // (~7 MB) are cached at runtime the first time OCR runs or when the app warms them.
@@ -82,7 +87,24 @@ self.addEventListener("fetch", (event) => {
     return;
   }
 
-  // Version-pinned CDN libraries, OCR engine/data and fonts: cache first.
+  // Background-removal model/runtime (version-pinned URLs): cache first, only complete 200 responses are stored.
+  if (BG_HOSTS.includes(url.hostname)) {
+    event.respondWith((async () => {
+      const cache = await caches.open(BG_CACHE);
+      const cached = await cache.match(req.url);
+      if (cached) return cached;
+      try {
+        const res = await fetch(req);
+        if (res.ok && res.status === 200) cache.put(req.url, res.clone()).catch(() => {});
+        return res;
+      } catch (e) {
+        return new Response("", { status: 504, statusText: "Offline" });
+      }
+    })());
+    return;
+  }
+
+  // Version-pinned CDN libraries (incl. the background-removal JS), OCR engine/data and fonts: cache first.
   if (CDN_HOSTS.includes(url.hostname)) {
     event.respondWith((async () => {
       const cache = await caches.open(LIB_CACHE);
