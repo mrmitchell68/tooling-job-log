@@ -294,6 +294,21 @@ body.arr-dragging{cursor:grabbing}
 .rv-loose-hd span{font-size:12.5px;color:var(--text-dim)}
 .rv.loose .rin select{flex:1;min-height:44px;font-size:15px}
 .rv .rin input.lab{font-weight:600}
+.rv .rin input.q{width:92px}
+.verrow{display:flex;align-items:center;gap:12px;flex-wrap:wrap}
+.verrow .grow{flex:1;min-width:180px}
+.verrow .vtitle{font-size:19px;font-weight:800;letter-spacing:.01em}
+.verrow .vtitle span{color:var(--primary)}
+.rv.list .rin textarea.v{flex:1;min-width:0;min-height:44px;border:1px solid var(--border);border-radius:8px;background:var(--surface-2);padding:10px;font:inherit;font-size:15px;font-weight:600;line-height:1.3;resize:vertical;color:var(--text)}
+.rv-grp{margin:14px 0 0;padding:6px 0 2px;font-size:12px;letter-spacing:.08em;text-transform:uppercase;color:var(--primary);font-weight:800;border-bottom:2px solid var(--primary)}
+.rv.conflict{background:var(--warn-dim);border-radius:10px;padding:10px 8px;margin:4px -8px;border-top:0;box-shadow:inset 4px 0 0 var(--warn)}
+.rv-conf{margin-top:6px;font-size:13px;color:var(--text)}
+.rv-opts{display:flex;flex-wrap:wrap;gap:6px;margin-top:6px}
+.rv-opt{display:flex;flex-direction:column;align-items:flex-start;min-height:44px;padding:6px 12px;border:2px solid var(--border);border-radius:10px;background:var(--surface);font-size:15px;text-align:left}
+.rv-opt small{font-size:11.5px;color:var(--text-dim);font-weight:600}
+.rv-opt.sel{border-color:var(--primary);background:var(--primary-dim,var(--surface-2));box-shadow:0 0 0 1px var(--primary)}
+.rv-mv{margin-left:auto;border:1px solid var(--border);border-radius:99px;padding:3px 10px;background:var(--surface);font-size:11px;font-weight:700;color:var(--primary);text-transform:none;letter-spacing:0;min-height:28px}
+.rv-cwarn{background:var(--warn-dim);color:var(--text)}
 .rv .src{font-size:12px;color:var(--text-faint);margin-top:2px;font-style:italic;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .conf{font-size:10.5px;font-weight:800;padding:2px 7px;border-radius:99px;letter-spacing:.03em}
 .conf.hi{background:var(--good-dim);color:var(--good)}
@@ -505,7 +520,7 @@ pre.raw{white-space:pre-wrap;font-size:12px;background:var(--surface-2);padding:
 <script>
 (function(){
 "use strict";
-var APP_VERSION = "2.3.1";
+var APP_VERSION = "2.3.2";
 var SCHEMA = 4; // job data schema: 3 = reference-sheet sections (part info, supplies, packaging, instructions, QC); 4 = scanned/custom fields reconciled to their proper homes (v2.3.1)
 var K = { jobs:"tjl2.jobs", tpl:"tjl2.templates", meta:"tjl2.meta", theme:"tjl2.theme", v1:"toolingJobLog.v1" };
 var CDN = {
@@ -943,24 +958,70 @@ function compressPhoto(file){
     return canvasBlob(c,"image/jpeg",0.72).then(function(b){ return {blob:b, w:c.width, h:c.height}; });
   });
 }
-function prepForOcr(blobOrCanvas){
-  // grayscale + contrast stretch, ~2600px longest side: small table text (e.g. "3.269 lbs" on a reference sheet) needs the extra pixels
+// Phone photos of paper forms: auto-crop the page, deskew, upscale small print, flatten uneven lighting (adaptive / local
+// background), and erase table grid lines — bold ruled tables make Tesseract drop whole rows of cells.
+function otsuT(hist, n){ var sum=0,i; for(i=0;i<256;i++) sum+=i*hist[i]; var sB=0,wB=0,best=0,t=128; for(i=0;i<256;i++){ wB+=hist[i]; if(!wB) continue; var wF=n-wB; if(!wF) break; sB+=i*hist[i]; var mB=sB/wB, mF=(sum-sB)/wF, v=wB*wF*(mB-mF)*(mB-mF); if(v>best){ best=v; t=i; } } return t; }
+function prepForOcr(blobOrCanvas, opt){
+  opt = opt||{};
   var p = blobOrCanvas instanceof HTMLCanvasElement ? Promise.resolve(blobOrCanvas) : loadImage(blobOrCanvas);
   return p.then(function(src){
-    var w=src.naturalWidth||src.width, h=src.naturalHeight||src.height, s=Math.min(1.6, (window.__ocrMax||2600)/Math.max(w,h));
-    var c=document.createElement("canvas"); c.width=Math.round(w*s); c.height=Math.round(h*s);
-    var g=c.getContext("2d"); g.drawImage(src,0,0,c.width,c.height);
+    var t0=Date.now(), W0=src.naturalWidth||src.width, H0=src.naturalHeight||src.height, i, x, y, k;
+    // --- 1. small analysis copy: page bounds + skew angle ---
+    var as=Math.min(1, 900/Math.max(W0,H0)), aw=Math.max(1,Math.round(W0*as)), ah=Math.max(1,Math.round(H0*as));
+    var ac=document.createElement("canvas"); ac.width=aw; ac.height=ah; var ag=ac.getContext("2d"); ag.drawImage(src,0,0,aw,ah);
+    var ad=ag.getImageData(0,0,aw,ah).data, g=new Uint8Array(aw*ah), hist=new Uint32Array(256);
+    for(i=0;i<aw*ah;i++){ g[i]=(ad[i*4]*0.299+ad[i*4+1]*0.587+ad[i*4+2]*0.114)|0; hist[g[i]]++; }
+    var otsu=otsuT(hist, g.length), bright=Math.max(90, otsu);
+    var rowFrac=function(yy){ var n=0; for(var xx=0;xx<aw;xx++) if(g[yy*aw+xx]>bright) n++; return n/aw; };
+    var colFrac=function(xx){ var n=0; for(var yy=0;yy<ah;yy++) if(g[yy*aw+xx]>bright) n++; return n/ah; };
+    var top=0, bot=ah-1, lef=0, rig=aw-1;
+    if(opt.crop!==false){ // trim dark borders (table top, black scan edges) — rows/cols that aren't mostly paper
+      while(top<ah*0.3 && rowFrac(top)<0.6) top++; while(bot>ah*0.7 && rowFrac(bot)<0.6) bot--;
+      while(lef<aw*0.3 && colFrac(lef)<0.6) lef++; while(rig>aw*0.7 && colFrac(rig)<0.6) rig--;
+      top=Math.min(ah-1,top+2); lef=Math.min(aw-1,lef+2); bot=Math.max(top,bot-2); rig=Math.max(lef,rig-2);
+    }
+    var angle=0, pts=[], lt=Math.min(otsu,150)-10;
+    for(y=top;y<=bot;y++) for(x=lef;x<=rig;x+=2) if(g[y*aw+x]<lt) pts.push(x-aw/2, y-ah/2);
+    if(pts.length>400 && opt.deskew!==false){ // projection profile: text rows are sharpest at the right angle
+      var nb=ah*2, bestS=-1;
+      var score=function(a){ var r=a*Math.PI/180, sn=Math.sin(r), cs=Math.cos(r), bins=new Float64Array(nb), q, v=0; for(q=0;q<pts.length;q+=2){ var yy=(-pts[q]*sn+pts[q+1]*cs+ah)|0; if(yy>=0&&yy<nb) bins[yy]++; } for(q=1;q<nb;q++){ var dd=bins[q]-bins[q-1]; v+=dd*dd; } return v; };
+      var a, sc; for(a=-4;a<=4.001;a+=0.5){ sc=score(a); if(sc>bestS){ bestS=sc; angle=a; } }
+      var a0=angle; for(a=a0-0.4;a<=a0+0.401;a+=0.1){ sc=score(a); if(sc>bestS){ bestS=sc; angle=a; } }
+      if(Math.abs(angle)<0.15) angle=0;
+    }
+    // --- 2. crop + rotate + scale: page width ~2400 px (small print ≈ 2x a phone photo), capped for phone memory ---
+    var cw=(rig-lef+1)/as, ch=(bot-top+1)/as, target=window.__ocrMax||opt.target||2400;
+    var s=Math.min(2.5, target/cw), maxPx=opt.maxPx||8e6; if(cw*s*ch*s>maxPx) s=Math.sqrt(maxPx/(cw*ch));
+    var ow=Math.max(1,Math.round(cw*s)), oh=Math.max(1,Math.round(ch*s));
+    var c=document.createElement("canvas"); c.width=ow; c.height=oh; var og=c.getContext("2d");
+    og.fillStyle="#fff"; og.fillRect(0,0,ow,oh); og.imageSmoothingQuality="high";
+    og.translate(ow/2,oh/2); og.rotate(-angle*Math.PI/180); og.scale(s,s); og.drawImage(src, -(lef/as+cw/2), -(top/as+ch/2)); og.setTransform(1,0,0,1,0,0);
+    c._prep={angle:angle, crop:[Math.round(lef/as),Math.round(top/as),Math.round(cw),Math.round(ch)], scale:+s.toFixed(3), w:ow, h:oh};
     try{
-      var id=g.getImageData(0,0,c.width,c.height), d=id.data, hist=new Uint32Array(256), i, n=d.length/4;
-      for(i=0;i<d.length;i+=4){ var y=(d[i]*0.299+d[i+1]*0.587+d[i+2]*0.114)|0; d[i]=y; hist[y]++; }
-      var lo=0, hi=255, cum=0, cut=n*0.01;
-      for(i=0;i<256;i++){ cum+=hist[i]; if(cum>=cut){ lo=i; break; } } cum=0;
-      for(i=255;i>=0;i--){ cum+=hist[i]; if(cum>=cut){ hi=i; break; } }
-      lo=Math.min(lo,110); hi=Math.max(hi,170); // mostly-white pages: don't blow up JPEG noise
-      var sc = hi>lo ? 255/(hi-lo) : 1;
-      for(i=0;i<d.length;i+=4){ var v=(d[i]-lo)*sc; v=v<0?0:v>255?255:v; d[i]=d[i+1]=d[i+2]=v; }
-      g.putImageData(id,0,0);
-    }catch(e){}
+      var id=og.getImageData(0,0,ow,oh), d=id.data, N=ow*oh, G=new Uint8Array(N), B=new Uint8Array(N), M=new Uint8Array(N);
+      for(i=0;i<N;i++) G[i]=(d[i*4]*0.299+d[i*4+1]*0.587+d[i*4+2]*0.114)|0;
+      // --- 3. adaptive threshold (Bradley, integral image): ink vs local paper level ---
+      var ii=new Uint32Array((ow+1)*(oh+1)), r=Math.max(8,Math.round(ow/40)), T=0.15;
+      for(y=0;y<oh;y++){ var rs=0, o1=(y+1)*(ow+1), o0=y*(ow+1); for(x=0;x<ow;x++){ rs+=G[y*ow+x]; ii[o1+x+1]=ii[o0+x+1]+rs; } }
+      for(y=0;y<oh;y++){ var y0=Math.max(0,y-r), y1=Math.min(oh-1,y+r);
+        for(x=0;x<ow;x++){ var x0=Math.max(0,x-r), x1=Math.min(ow-1,x+r), cnt=(x1-x0+1)*(y1-y0+1), pi=y*ow+x;
+          var sum=ii[(y1+1)*(ow+1)+x1+1]-ii[y0*(ow+1)+x1+1]-ii[(y1+1)*(ow+1)+x0]+ii[y0*(ow+1)+x0];
+          M[pi]=sum/cnt; B[pi]=(G[pi]*cnt < sum*(1-T) && G[pi]<235) ? 1 : 0; } }
+      ii=null;
+      // --- 4. table lines: long horizontal / vertical ink runs (+1 px halo) are erased ---
+      if(opt.lines!==false){
+        var LH=Math.max(60,Math.round(ow/22)), LV=Math.max(60,Math.round(oh/35)), E=new Uint8Array(N), s0;
+        for(y=0;y<oh;y++){ x=0; while(x<ow){ if(!B[y*ow+x]){ x++; continue; } s0=x; while(x<ow && (B[y*ow+x] || (x+1<ow && B[y*ow+x+1]))) x++; if(x-s0>=LH) for(k=s0;k<x;k++) E[y*ow+k]=1; } }
+        for(x=0;x<ow;x++){ y=0; while(y<oh){ if(!B[y*ow+x]){ y++; continue; } s0=y; while(y<oh && (B[y*ow+x] || (y+1<oh && B[(y+1)*ow+x]))) y++; if(y-s0>=LV) for(k=s0;k<y;k++) E[k*ow+x]=1; } }
+        for(y=1;y<oh-1;y++) for(x=1;x<ow-1;x++){ k=y*ow+x; if(E[k]===1){ var nbh=[k-1,k+1,k-ow,k+ow]; for(var q2=0;q2<4;q2++) if(!E[nbh[q2]]) E[nbh[q2]]=2; } }
+        var lineN=0; for(i=0;i<N;i++) if(E[i]){ B[i]=0; G[i]=255; lineN++; }
+        c._prep.linePx=lineN;
+      }
+      // --- 5. flatten lighting: divide by local background; keep anti-aliased letter edges (reads better than hard B/W) ---
+      for(i=0;i<N;i++){ var gv=(G[i]/Math.max(M[i],40)-0.45)*510; if(!B[i] && gv<225) gv=225; d[i*4]=d[i*4+1]=d[i*4+2]=gv<0?0:gv>255?255:gv; d[i*4+3]=255; }
+      og.putImageData(id,0,0);
+    }catch(e){ c._prep.err=String(e&&e.message||e); }
+    c._prep.ms=Date.now()-t0;
     return c;
   });
 }
@@ -995,7 +1056,12 @@ function linesFromWords(words){
     return {t:String(w.text).trim(), x0:w.bbox.x0, x1:w.bbox.x1, y0:w.bbox.y0, y1:w.bbox.y1, h:Math.max(1,w.bbox.y1-w.bbox.y0), c:(w.confidence||0)/100};
   });
   // drop low-confidence specks ("Fu", "~") — usually photo texture or broken glyphs
-  ws = ws.filter(function(w){ return !(w.c<0.4 && w.t.replace(/[^a-z0-9]/gi,"").length<=2 && !/^\d+$/.test(w.t)); });
+  ws = ws.filter(function(w){ return !(w.c<0.4 && w.t.replace(/[^a-z0-9]/gi,"").length<=2 && !/^\d/.test(w.t)); });
+  // "5 ½"" in a size: Tesseract has no ½ glyph and reads it as 52" / 5%" / 54" with ~0 confidence
+  ws.forEach(function(w){ var m=w.t.match(/^(\d{1,2})[2%4½]["”]$/); if(m && w.c<0.3) w.t=m[1]+' 1/2"'; });
+  // leftovers of table borders: "|", "[", "—", "_" glued to a cell edge
+  ws.forEach(function(w){ if(/[a-z0-9]/i.test(w.t)) w.t = w.t.replace(/^[|\[\]{}_]+(?=\S)/,"").replace(/(\S)[|\[\]{}_]+$/,"$1"); });
+  ws = ws.filter(function(w){ return w.t==="|" || !/^[|\[\]{}_~=©®«»—]+$/.test(w.t); });
   // Tesseract sometimes reads the same spot twice in two blocks ("Material:" + "terial:"): keep the more confident one
   ws.sort(function(a,b){ return b.c-a.c; });
   var kept=[];
@@ -1021,23 +1087,33 @@ function linesFromWords(words){
     r.y0=sy0[n>>1]; r.y1=sy1[n>>1]; // median band: one tall box doesn't swallow the next line
   });
   rows.sort(function(a,b){ return (a.y0+a.y1)-(b.y0+b.y1); });
+  var pw = ws.reduce(function(m,w){ return Math.max(m,w.x1); }, 1);
   return rows.map(function(r){
     r.ws.sort(function(a,b){ return a.x0-b.x0; });
-    var txt="", prev=null, cs=0;
-    r.ws.forEach(function(w){ if(prev){ var gap=w.x0-prev.x1; txt += gap > mh*1.3 ? "   " : " "; } txt += w.t; prev=w; cs+=w.c; });
-    return {text:txt, conf:cs/r.ws.length};
+    var txt="", prev=null, cs=0, cells=[], cell=null;
+    r.ws.forEach(function(w, wi){
+      var t=w.t;
+      // "save | part" — a lone bar between two lower-case words is a misread "1"
+      if(t==="|"){ var nx=r.ws[wi+1]; if(prev && nx && /[a-z]$/.test(prev.t) && /^[a-z]/.test(nx.t) && w.x0-prev.x1<mh*1.3 && nx.x0-w.x1<mh*1.3) t="1"; else return; }
+      var colGap = prev && (w.x0-prev.x1) > mh*1.3;
+      if(prev) txt += colGap ? "   " : " ";
+      if(!cell || colGap){ cell={t:t, x0:w.x0, x1:w.x1}; cells.push(cell); } else { cell.t += " "+t; cell.x1=w.x1; }
+      txt += t; prev=w; cs+=w.c;
+    });
+    return {text:txt, conf:cs/Math.max(1,r.ws.length), cells:cells, pw:pw, y:(r.y0+r.y1)/2, h:mh};
   }).filter(function(l){ return l.text.trim(); });
 }
 function ocrCanvas(canvas, label){
   return tessWorker().then(function(w){
-    // PSM 11 (sparse text): finds words in table cells / multi-column sheets; lines are rebuilt from word boxes below
-    return w.setParameters({tessedit_pageseg_mode:"11"}).then(function(){ return w.recognize(canvas); }).then(function(r){
+    // PSM 6 on the cleaned page (grid lines removed): reads small print in forms/columns more completely than sparse mode
+    // (PSM 11 dropped whole table rows on phone photos). Lines are rebuilt from word boxes below either way.
+    return w.setParameters({tessedit_pageseg_mode:window.__ocrPsm||"6"}).then(function(){ return w.recognize(canvas); }).then(function(r){
       var data = r.data||{};
       // Rebuild lines from word boxes: keeps a label and its value on one line even when Tesseract splits a table into
       // blocks, and marks column gaps with 3 spaces (like the PDF text layer) so values don't run into the next column.
       var lines = linesFromWords(data.words) || (data.lines||[]).map(function(l){ return {text:String(l.text||"").replace(/\s+$/,""), conf:(l.confidence||0)/100}; }).filter(function(l){ return l.text.trim(); });
       if(!lines.length && data.text) lines = data.text.split(/\n/).filter(function(t){ return t.trim(); }).map(function(t){ return {text:t, conf:(data.confidence||60)/100}; });
-      return {lines:lines, conf:(data.confidence||0)/100, label:label, kind:"ocr"};
+      return {lines:lines, conf:(data.confidence||0)/100, label:label, kind:"ocr", prep:canvas._prep||null};
     });
   });
 }
@@ -1060,20 +1136,25 @@ function pdfTextLines(page){
 var FIELD_DEFS = [
   {key:"toolNumber", label:"Tool #", header:true, syn:["tool number","tool no","tool #","tool#","tool id","mold number","mold no","mold #","mold#","mold id","mould number","mould no","mould #","tool/mold #","mold/tool #","tooling #","die #","~tool","~mold","~mould"]},
   {key:"partName", label:"Part name", header:true, syn:["part name","part description","part desc","~part"]},
-  {key:"customer", label:"Customer", header:true, syn:["customer name","customer","cust","client","account"]},
+  {key:"customer", label:"Customer", header:true, syn:["customer:job","customer/job","customer job","customer name","customer","cust","client","account"]},
   {key:"press", label:"Press", header:true, syn:["press number","press no","press #","press#","~press"]},
-  {key:"part_no", label:"Part number", section:"Mold / part information", syn:["part number","part no","part num","part #","part#","p/n","pn","item number","item no","item #","part id","part code"]},
-  {key:"description", label:"Description", section:"Mold / part information", syn:["description","desc"]},
+  {key:"part_no", label:"Part number", section:"Mold / part information", syn:["item name/number","item name","part number","part no","part num","part #","part#","p/n","pn","item number","item no","item #","part id","part code","assembly number","assembly no","assy #","assy no"]},
+  {key:"qty_req", label:"Quantity required", section:"Mold / part information", syn:["quantity required","qty required","qty req","order quantity","order qty","build quantity","build qty","qty to run"]},
+  {key:"description", label:"Description", section:"Mold / part information", syn:["display name/code","display name","item description","description","desc"]},
   {key:"color", label:"Color", section:"Mold / part information", syn:["part color","part colour","material color","material colour","resin color","resin colour","color code","colour code","color","colour"]},
   {key:"part_wt", label:"Part weight", section:"Mold / part information", unitType:"weight", syn:["part weight","part wt","part wgt","part wght","piece weight","piece wt","pc weight","pc wt","part mass","unit weight","weight per part","wt per part","weight/part","net part weight"]},
-  {key:"mach_cycle", label:"Machine cycle time", section:"Mold / part information", unitType:"time", syn:["machine cycle time","machine cycle","mach cycle"]},
-  {key:"pph", label:"Parts per hour", section:"Mold / part information", numeric:true, syn:["parts per hour","parts per hr","parts/hr","parts / hr","pcs per hour","pieces per hour","pcs/hr","pph"]},
+  {key:"mach_cycle", label:"Machine cycle time", section:"Mold / part information", unitType:"time", syn:["machine cycle time","tool cycle time","machine cycle","mach cycle"]},
+  {key:"pph", label:"Parts per hour", section:"Mold / part information", numeric:true, syn:["quoted parts per hour","quoted parts per hr","quoted pph","parts per hour","parts per hr","parts/hr","parts / hr","pcs per hour","pieces per hour","pcs/hr","pph"]},
   {key:"machine", label:"Machine", section:"Mold / part information", syn:["machine number","machine no","machine #","machine#","mach #","machine"]},
   {key:"work_order", label:"Work order", section:"Mold / part information", syn:["work order number","work order no","work order #","work order","wo #","wo#","w/o","~wo"]},
   {key:"date", label:"Date", section:"Mold / part information", syn:["~date"]},
   {key:"revision", label:"Revision", section:"Mold / part information", syn:["revision","rev level","rev #","rev no","~rev"]},
-  {key:"carton_size", label:"Carton size", section:"Carton / packaging", syn:["carton size","carton dimensions","carton dims","box size"]},
-  {key:"qty_carton", label:"Quantity per carton", section:"Carton / packaging", syn:["quantity per carton","qty per carton","qty/carton","qty / carton","parts per carton","pcs per carton","pieces per carton","qty per box","parts per box","pack qty"]},
+  {key:"carton_size", label:"Carton size", section:"Carton / packaging", syn:["carton size","carton type","carton dimensions","carton dims","box size","box type"]},
+  {key:"qty_carton", label:"Quantity per carton", section:"Carton / packaging", syn:["quantity per carton","qty per carton","qty/carton","qty / carton","parts per carton","pcs per carton","pieces per carton","qty per box","parts per box","pack qty","case quantity","case qty"]},
+  {key:"parts_layer", label:"Parts per layer", section:"Carton / packaging", syn:["parts per layer","pieces per layer","pcs per layer","parts/layer"]},
+  {key:"layers_carton", label:"Layers per carton", section:"Carton / packaging", syn:["layers per carton","layers per box","layers/carton"]},
+  {key:"layer1", label:"Parts on 1st layer", section:"Carton / packaging", syn:["parts on 1st layer","parts on first layer","1st layer"]},
+  {key:"layer2", label:"Parts on 2nd layer", section:"Carton / packaging", syn:["parts on 2nd layer","parts on second layer","2nd layer"]},
   {key:"pallet_size", label:"Pallet size", section:"Carton / packaging", syn:["pallet size","pallet dimensions","pallet"]},
   {key:"cartons_layer", label:"Cartons per layer", section:"Carton / packaging", syn:["cartons per layer","boxes per layer","cartons/layer","cartons / layer"]},
   {key:"material", label:"Material", section:"Mold / part information", syn:["material type","type of material","resin type","type of resin","material/resin","base resin","raw material","material","resin","matl","mat'l","polymer","plastic","compound"]},
@@ -1114,7 +1195,7 @@ var FIELD_DEFS = [
 ];
 var DEF_BY_KEY = {}; FIELD_DEFS.forEach(function(d){ DEF_BY_KEY[d.key]=d; });
 var UNIT_TYPE = {"°F":"temp","°C":"temp","psi":"press","bar":"press","MPa":"press","s":"time","min":"time","hr":"time","rpm":"rpm","g":"weight","kg":"weight","oz":"weight","lb":"weight","%":"pct","mm":"length","in":"length","cc":"length","in³":"length","in/s":"speed","mm/s":"speed","ton":"ton"};
-var OCR_TOL = {i:"[i1l|!]", l:"[l1i|]", o:"[o0]", s:"[s5]", g:"[gq9]"};
+var OCR_TOL = {i:"[i1l|!]", l:"[l1i|]", o:"[o0]", s:"[s5]", g:"[gq9]", e:"[ec]", y:"[yv]"};
 function synPattern(s){
   var tol = s.replace(/[^a-z]/gi,"").length>=5;
   var p = s.split("").map(function(ch){
@@ -1238,7 +1319,7 @@ function parseLines(lines, job, baseConf){
     var found = foundBy[li];
     if(!found.length){
       var gm = text.match(/^\s*([A-Za-z][A-Za-z0-9 #\/().'&%-]{1,32}?)\s*[:=]\s*(.{1,80})$/);
-      if(gm && cleanVal(gm[2]) && looksReal(gm[1]) && looksReal(text)) extras.push({label:gm[1].trim(), value:cleanVal(gm[2]), conf:(L.conf||baseConf)*0.6, lineConf:(L.conf==null?baseConf:L.conf), ocr:L.kind==="ocr", src:text, li:li});
+      if(gm && cleanVal(gm[2]) && looksReal(gm[1]) && looksReal(text)) extras.push({label:gm[1].trim(), value:cleanVal(gm[2]), conf:(L.conf||baseConf)*0.6, lineConf:(L.conf==null?baseConf:L.conf), ocr:L.kind==="ocr", src:L.srcText||text, li:li});
       return;
     }
     found.forEach(function(f, fi){
@@ -1253,7 +1334,7 @@ function parseLines(lines, job, baseConf){
       var sepQ = (f.tableVal!=null || (/^\s*[:=#-]/.test(rawSeg) || /^\s*[.;,]\s/.test(rawSeg) || (fi===0 && /^[\s•·*\-–—\d.)(]*$/.test(text.slice(0,f.st)) && /^\s{3,}\S/.test(rawSeg))) || f.inheritSep) ? 1 : 0.9;
       // a label in the middle of a sentence ("Ensure color is consistent") is probably not a label
       if(fi===0 && f.st>0 && sepQ<1){ var pre=text.slice(0,f.st); if(!/(\s{2,}|\||\t)$/.test(pre) && !/^[\s•·*\-–—\d.)(]*$/.test(pre)) q*=0.5; }
-      if(sepQ<1 && /(^|\s{3,})\d{1,2}[.)]?\s+$/.test(text.slice(0,f.st))) q*=0.5; // "5   Material Blender" — a numbered list / table row, not a label
+      if(sepQ<1 && fi===0 && /(^|\s{3,})\d{1,2}[.)]?\s+$/.test(text.slice(0,f.st))) q*=0.5; // "5   Material Blender" — a numbered list / table row, not a label
       if(sepQ<1 && fi>0 && found[fi-1].bare) q*=0.5; // "Material Dryer 1" — two label words in a row are a phrase (supplies list), not label + value
       if(sepQ<1 && !cleanVal(rawSeg) && next) f.bare=true;
       if(sepQ<1 && /^\s*\)/.test(rawSeg)) q*=0.5; // "(540-ton machine) 1" — a word inside parentheses, not a label
@@ -1264,7 +1345,7 @@ function parseLines(lines, job, baseConf){
       var nextLineUsed=false;
       if(!val && !next && lines[li+1] && !used[li+1] && lines[li+1].text.trim().length<48 && !foundBy[li+1].length){ val = isText? trimBleed(lines[li+1].text) : cleanVal(lines[li+1].text); nextLineUsed=true; q*=0.8; lineConf=Math.min(lineConf, lines[li+1].conf==null?baseConf:lines[li+1].conf); }
       if(!val || !/[a-z0-9]/i.test(val)) return;
-      var out = {def:d, value:"", unit:"", src:text+(nextLineUsed? " ⏎ "+lines[li+1].text.trim() : "")+(f.tableVal!=null && lines[li+1]? " ⏎ "+lines[li+1].text.trim() : ""), li:li};
+      var out = {def:d, value:"", unit:"", src:(L.srcText||text)+(nextLineUsed? " ⏎ "+lines[li+1].text.trim() : "")+(f.tableVal!=null && lines[li+1]? " ⏎ "+lines[li+1].text.trim() : ""), li:li};
       var wantsNum = d.numeric || !!d.unitType;
       if(wantsNum){
         var pn = parseNumber(val, d.unitType);
@@ -1320,6 +1401,285 @@ function parseLines(lines, job, baseConf){
   });
   return {best:best, extras:extras.filter(function(x){ return !used[x.li]; }).slice(0,20), unmatched:unmatched.slice(0,30)};
 }
+/* ---------- document structure (v2.3.2): real forms — ruled tables, label rows with values underneath (NetSuite),
+   REQUIREMENT / METHOD tables, packaging blocks with several cartons, BOM item lists; then per-document merge ---------- */
+function lineCells(L){
+  if(L.cells && L.cells.length) return L.cells;
+  var t=String(L.text||"").replace(/\t/g,"   "), out=[], re=/\S+(?:\s{1,2}\S+)*/g, m;
+  while((m=re.exec(t))) out.push({t:m[0], x0:m.index, x1:m.index+m[0].length});
+  return out;
+}
+function cellClean(t){ return String(t||"").replace(/^[^A-Za-z0-9#(½"$]+/,"").replace(/[^A-Za-z0-9)%."#½]+$/,"").replace(/\s{2,}/g," ").trim(); }
+function isCaps(t){ var l=String(t||"").replace(/[^A-Za-z]/g,""); return l.length>=3 && l.replace(/[^A-Z]/g,"").length/l.length>=0.9 && !/\d/.test(t); }
+function titleCaseWords(t){ return String(t).split(/\s+/).map(function(w){ return (/\d/.test(w) || w.length<=2) ? w.toUpperCase() : w.charAt(0).toUpperCase()+w.slice(1).toLowerCase(); }).join(" "); }
+var HEADING_RE = /^(packaging|packing)\s+(information|description|instructions?|notes?|requirements?)$|^production\s+history$|^notes?\s*\/?\s*(and\s+)?comments?$|^notes?$|^comments?$|^see\s+photos\b|^quality\s+(checks?|requirements?|control)$|^operator\s+work\s+instructions?$|^(primary|other)\s+information$|^classification$/i;
+function isHeadingLine(tx){ var t=cellClean(tx).replace(/\s+/g," "); return HEADING_RE.test(t) || (isCaps(t) && t.split(" ").length<=4 && t.length<=40 && !/[:\/]/.test(t) && !/^(visual|manual)/i.test(t)); }
+var METHOD_RE = /^(visual|manual|gauge|gage|go\s*\/?\s*no|caliper|scale|weigh|measure|check|inspect|automatic|auto|sample|each|every|per\s)/i;
+function looksMethod(c){ c=String(c||"").trim(); return c.length<=32 && (METHOD_RE.test(c) || /\/\s*(1[0o]{2}\s*[%°º]|every|each|hr|hour|shift|lot|pc|piece|part|sample)/i.test(c)); }
+function cleanMethod(m){ return String(m||"").replace(/(\d)\s*[°º]$/,"$1%").replace(/\s*\/\s*/g," / ").replace(/1[oO]{2}\s*%/,"100%").replace(/\s{2,}/g," ").trim(); }
+function cleanStep(t){ var s=String(t||"").replace(/^[\s|•·*\-–—"“'‘]+/,"").replace(/[\s|_"”]+$/,"").replace(/([a-z,]) \| ([a-z])/g,"$1 1 $2").replace(/\b([a-z]{3,})\. (?=[a-z])/g,"$1, ").replace(/\s{2,}/g," ").trim();
+  if(/^[(\[{]/.test(s) && (s.match(/[(\[{]/g)||[]).length>(s.match(/[)\]}]/g)||[]).length) s=s.slice(1).trim(); return s; }
+function stepRole(req, method){ return (/^(no|verify|check|inspect|ensure|confirm|measure)\b/i.test(req) || /\binspect/i.test(req) || /^(visual|gauge|gage|caliper|measure|go\b)/i.test(method)) ? "quality" : "instructions"; }
+// labels in label-over-value rows (NetSuite item record, BOM header)
+var ROW_LABEL_ALIAS = {"assembly":"part_no","customer job":"customer","customer:job":"customer","qty required":"qty_req","quantity required":"qty_req","item":"","units":"","unit":"","options":"","inventory detail":"","customer assigned":"","machine rate":"","case quantity":"qty_carton","packaging requirements":"","id":""};
+var FORM_IGNORE_RE = /^(internal id|primary\b|vendor\b|subitem|upc\b|subsidiary|division|location|include children|class|industry|exclude\b|preferred stock|re?c?order point|reorder|hazmat|hormat|customer (assigned|portal)|machine rate|ce?ase quantity\s*$)/;
+var LABEL_SQUASH = null;
+function formLabel(t){
+  var c=cellClean(t).replace(/:$/,""); if(!c || c.length>44) return null;
+  if(/\d/.test(c.replace(/\b(1st|2nd|3rd)\b/gi,""))) return null;
+  var nk=normKey(c.replace(/\([^)]*\)/g," ").replace(/[()]/g," "));
+  if(!nk) return null;
+  if(Object.prototype.hasOwnProperty.call(ROW_LABEL_ALIAS, nk)) return ROW_LABEL_ALIAS[nk]? {key:ROW_LABEL_ALIAS[nk]} : {ignore:true};
+  if(FORM_IGNORE_RE.test(nk)) return {ignore:true};
+  var d=defForLabel(c); if(d) return {key:d.key};
+  if(!LABEL_SQUASH){ defForLabel("x"); LABEL_SQUASH={}; Object.keys(LABEL_INDEX).forEach(function(k){ LABEL_SQUASH[k.replace(/ /g,"")]=LABEL_INDEX[k]; }); }
+  d=LABEL_SQUASH[labelKey(c).replace(/ /g,"")]; if(d) return {key:d.key};
+  return null;
+}
+function docKind(lines){
+  var all=lines.map(function(l){ return l.text||""; }).join("\n");
+  if(/operator\s+work\s+instruction/i.test(all) || (/\brequirements?\b/i.test(all) && /\bmethod\b/i.test(all))) return "Work instructions";
+  if(/bill\s+of\s+materials?/i.test(all) || (/qty\.?\s*required/i.test(all) && /\bitem\b/i.test(all))) return "Bill of materials";
+  if(/netsuite|non-?inventory\s+item|item\s+name\s*\/?\s*number/i.test(all)) return "NetSuite item";
+  return "";
+}
+var NOISE_RE = /netsuite|https?:\/\/|\bapp\.\w+\.com|convert\s*to\s*inventory|generate\s*insight|sticky\s*notes|non-?inventory\s+item\s+for\s+resale|^\W*(edit|back)\W+(back|convert)|hazmat|dangerous\s+goods|^\W*signature\W*$/i;
+
+function extractDocMeta(lines, skip, st){
+  var dateDone=false;
+  for(var li=0; li<Math.min(lines.length, 14); li++){
+    if(skip[li]) continue;
+    var tx=String(lines[li].text||"");
+    var m=tx.match(/#\s*W\s*[O0Q]\.?\s*#?\s*([A-Za-z0-9\/]{2,12}(?:\s[0-9\/]{1,6})?)/) || tx.match(/\b(?:W\/O|WO)\s*#\s*([A-Za-z0-9\/]{2,12})/i);
+    if(m){
+      var v=fixOcrDigits(m[1]).replace(/\s+/g,"");
+      if(/^\d{3,7}$/.test(v)) st.direct.push({def:DEF_BY_KEY.work_order, value:v, unit:"", conf:0.8*(lines[li].conf||0.9), src:tx, sep:true});
+      else st.unmatched.push({text:"Work order: "+m[1].trim()+"  (handwritten? — check)", li:-1, conf:0.5});
+      skip[li]=true;
+    }
+    var dm=!dateDone && tx.match(/(?:^|\s)(\d{1,2}\/\d{1,2}\/(?:\d{4}|\d{2}))(?:\s|$)/);
+    if(dm && lineCells(lines[li]).length<=2 && !/[a-z]{3,}\s*:/i.test(tx)){ st.direct.push({def:DEF_BY_KEY.date, value:dm[1], unit:"", conf:Math.max(0.75, 0.9*(lines[li].conf||0.9)), src:tx, sep:true}); dateDone=true; if(cellClean(tx)===dm[1]) skip[li]=true; }
+  }
+}
+function extractReqTable(lines, skip, st){
+  for(var li=0; li<lines.length; li++){
+    if(skip[li]) continue;
+    var t=cellClean(lines[li].text);
+    if(!((/\bREQUIREMENTS?\b/i.test(t) && /\b(METHOD|FREQUENCY)\b/i.test(t)) || /^(quality|inspection)\s+(requirements?|checks?)\s*(\/\s*method)?$/i.test(t))) continue;
+    skip[li]=true;
+    for(var lj=li+1; lj<lines.length; lj++){
+      if(skip[lj]) continue;
+      var L=lines[lj], tx=String(L.text||"").trim(); if(!tx) continue;
+      if(isHeadingLine(tx)) break;
+      var cells=lineCells(L).map(function(c){ return cellClean(c.t); }).filter(Boolean), method="";
+      if(cells.length>=2 && looksMethod(cells[cells.length-1])) method=cleanMethod(cells.pop());
+      else if(cells.length===1 && looksMethod(cells[0])){ method=cleanMethod(cells.pop()); }
+      var req=cleanStep(cells.join(" "));
+      skip[lj]=true;
+      if(!req){ var pv=st.steps[st.steps.length-1]; if(method && pv && !pv.method){ pv.method=method; pv.value=pv.req+" — "+method; pv.src+=" ⏎ "+tx; } continue; }
+      if(req.length<6 || !looksReal(req)) continue;
+      st.steps.push({req:req, method:method, value:req+(method? " — "+method : ""), role:stepRole(req, method), src:tx, conf:(L.conf==null?0.9:L.conf)});
+    }
+    break;
+  }
+}
+var CARTON_KEYS = ["carton_size","qty_carton","parts_layer","layers_carton","layer1","layer2","cartons_layer","pallet_size"];
+function extractPackaging(lines, skip, st){
+  var cIdx = buildSynIndex([]).filter(function(e){ return CARTON_KEYS.indexOf(e.def.key)>=0 && !(e.def.key==="pallet_size" && e.syn==="pallet"); });
+  function cartonLabels(tx){ var found=[]; cIdx.forEach(function(e){ e.re.lastIndex=0; var m; while((m=e.re.exec(tx))){ var s0=m.index, e0=s0+m[0].length; if(!found.some(function(f){ return s0<f.en && e0>f.st; })) found.push({st:s0, en:e0, e:e}); if(!m[0].length) e.re.lastIndex++; } }); return found.sort(function(a,b){ return a.st-b.st; }); }
+  function hasCartonSoon(li){ for(var k=li+1, n=0; k<lines.length && n<2; k++){ if(skip[k] || !String(lines[k].text||"").trim()) continue; n++; if(cartonLabels(lines[k].text).length) return true; } return false; }
+  var comp=null;
+  for(var li=0; li<lines.length; li++){
+    if(skip[li]) continue;
+    var L=lines[li], tx=String(L.text||""), ct=cellClean(tx).replace(/\s+/g," ");
+    if(/^(packaging|packing)\s+information$/i.test(ct)){ skip[li]=true; comp=null; continue; }
+    if(/^(packaging|packing)\s+(description|instructions?|notes?)$/i.test(ct)){
+      skip[li]=true; comp=null; var parts=[], srcs=[];
+      for(var lj=li+1; lj<lines.length && parts.length<4; lj++){
+        if(skip[lj]) continue; var t2=String(lines[lj].text||"").trim(); if(!t2) continue;
+        if(isHeadingLine(t2)) break;
+        var c2=cleanStep(lineCells(lines[lj]).map(function(c){ return cellClean(c.t); }).filter(Boolean).join(" "));
+        skip[lj]=true; if(c2.length>=3 && /[a-z]{3}/i.test(c2)){ parts.push(c2); srcs.push(t2); }
+      }
+      if(parts.length){
+        var txt=parts.join(" "); st.packaging.push({value:txt, src:srcs.join(" ⏎ "), conf:0.9});
+        var pm=txt.match(/pallets?\b[^0-9]{0,24}(\d{2,3}\s*[x×]\s*\d{2,3}(?:\s*[x×]\s*\d{2,3})?(?:\s*\([^)]{1,20}\))?)/i);
+        if(pm) st.direct.push({def:DEF_BY_KEY.pallet_size, value:pm[1], unit:"", conf:0.85, src:srcs.join(" ⏎ "), sep:true});
+      }
+      continue;
+    }
+    var found=cartonLabels(tx);
+    if(found.length){
+      var any=false;
+      found.forEach(function(f, fi){
+        var nx=found[fi+1], v=cleanVal(tx.slice(f.en, nx? nx.st : tx.length)).replace(/^[:.\-=]+\s*/,"");
+        if(!v || !/[a-z0-9]/i.test(v)) return;
+        var d=f.e.def; any=true;
+        st.direct.push(comp ? {def:{key:"", label:comp+" — "+d.label, section:"Carton / packaging", custom:true}, value:v, unit:"", conf:0.92*(L.conf==null?0.9:L.conf), src:tx, sep:true, comp:comp}
+                            : {def:d, value:v, unit:"", conf:0.92*(L.conf==null?0.9:L.conf), src:tx, sep:true});
+      });
+      if(any) skip[li]=true;
+      continue;
+    }
+    // "FP 124   SMALL BOX BACK" — a component title right above carton rows
+    var letters=ct.replace(/[^A-Za-z]/g,"");
+    if(letters.length>=4 && letters.replace(/[^A-Z]/g,"").length/letters.length>=0.9 && !/:/.test(ct) && ct.split(" ").length<=7 && !HEADING_RE.test(ct) && hasCartonSoon(li)){ comp=titleCaseWords(ct); skip[li]=true; continue; }
+    if(isHeadingLine(tx)) comp=null;
+  }
+}
+var RESIN_RE = /\b(pvc|abs|pp|hdpe|ldpe|lldpe|hips|pc|pa6?6?|nylon|pet|pbt|pom|acetal|tpu|tpe|tpo|san|asa|pmma|acrylic|polypropylene|polyethylene|polycarbonate|polystyrene|resin|injection grade)\b/i;
+function simKey(a){ return String(a||"").toLowerCase().replace(/[^a-z0-9]/g,""); }
+function similar(a,b){ var x=simKey(a), y=simKey(b); if(!x || !y) return false; if(x===y || (Math.min(x.length,y.length)>=6 && (x.indexOf(y)>=0 || y.indexOf(x)>=0))) return true;
+  var ta=normKey(a).split(" ").filter(function(w){ return w.length>=2; }), tb=normKey(b).split(" ").filter(function(w){ return w.length>=2; }); if(ta.length<3 || tb.length<3) return false;
+  var hit=ta.filter(function(w){ return tb.indexOf(w)>=0; }).length; return hit/Math.min(ta.length, tb.length)>=0.7; }
+function extractBom(lines, skip, st){
+  var hi=-1, li;
+  for(li=0; li<lines.length; li++){ if(!skip[li] && /\bqty\.?\s*required\b/i.test(lines[li].text) && /\bitem\b/i.test(lines[li].text)){ hi=li; break; } }
+  if(hi<0) return;
+  skip[hi]=true;
+  var items=[], cur=null, block=1;
+  for(var lj=hi+1; lj<lines.length; lj++){
+    if(skip[lj]) continue;
+    var L=lines[lj], tx=String(L.text||"").trim(); if(!tx) continue;
+    if(/^quantity\s+item\b/i.test(tx) || /\bassembly\s+required\b/i.test(tx)){ block=2; skip[lj]=true; cur=null; continue; }
+    if(/^signature/i.test(tx)) break;
+    var cells=lineCells(L).map(function(c){ return cellClean(c.t); }).filter(Boolean);
+    if(block===2 && cells.length>1 && /^(n[oe0]|yes)$/i.test(cells[cells.length-1])) cells.pop();
+    var q0=cells[0] && fixOcrDigits(cells[0]).replace(/\s/g,"");
+    var q = q0 && /^\d{1,3}(?:,\d{3})*(?:\.\d+)?$/.test(q0) ? (cells.shift(), q0) : null;
+    if(block===1){
+      if(q!==null && cells.length){ cur={qty:q, name:cells.join(" "), desc:"", src:tx, conf:(L.conf==null?0.9:L.conf), n:0}; items.push(cur); skip[lj]=true; }
+      else if(cur && q===null && cells.length && cur.n<2){ cur.desc=(cur.desc? cur.desc+" " : "")+cells.join(" "); cur.src+=" ⏎ "+tx; cur.n++; skip[lj]=true; }
+      else if(!/[a-z0-9]{2}/i.test(tx)) skip[lj]=true;
+    } else {
+      var nm=cells.join(" ");
+      if(!nm){ skip[lj]=true; continue; }
+      if(items.some(function(it){ return similar(nm, it.name) || similar(nm, it.desc) || similar(it.name, nm.split(/\s{2,}/)[0]); }) || /^fp\s*\d+$/i.test(nm) || /^\d{3}-\d{4}-\d{2}$/.test(nm)) skip[lj]=true;
+      else if(/^[a-z][a-z .\-]+\s\d+\s*x\s*\d+$/i.test(nm) && items.some(function(it){ return similar(nm.replace(/\s*\d.*$/,""), it.name.replace(/\s*\d.*$/,"")); })) skip[lj]=true; // "Label - Carton 4 x 6" reprinted
+    }
+  }
+  items.forEach(function(it){
+    var name=it.name.replace(/\s{2,}/g," ").trim(), desc=it.desc.replace(/\s{2,}/g," ").trim();
+    var full = name + (desc && simKey(desc)!==simKey(name) && simKey(name).indexOf(simKey(desc))<0 ? " ("+desc+")" : "");
+    var row={kind:"supply", value:full, qty:it.qty, match:"", src:it.src, conf:it.conf};
+    var sq=name.replace(/\s/g,""), nk=(name+" "+desc).toLowerCase();
+    if(/^\d{3}-\d{4}-\d{2}$/.test(sq)){ row.match="Tooling"; row.value="Tooling — "+full; }
+    else if(/^\d{1,2}-\d{2,4}$/.test(sq) && /ton/.test(nk) && /machine|press/.test(nk)){
+      row.match="Machine"; row.value="Machine — "+full;
+      st.direct.push({def:DEF_BY_KEY.machine, value:sq, unit:"", conf:0.85*it.conf, src:it.src, sep:true});
+      var tm=(desc+" "+name).match(/(\d{2,4})\s*-?\s*ton/i); if(tm) st.direct.push({def:DEF_BY_KEY.clamp, value:tm[1], unit:"ton", conf:0.85*it.conf, src:it.src, sep:true});
+    }
+    else if(/tooling\s*set\s*-?up/i.test(name)) row.match="Tooling setup";
+    else if(/operator\s*labou?r/i.test(name)) row.match="Operator labor";
+    else if(RESIN_RE.test(nk)){
+      st.direct.push({def:DEF_BY_KEY.material, value:name, unit:"", conf:0.8*it.conf, src:it.src, sep:true, soft:true});
+      st.direct.push({def:DEF_BY_KEY.grade, value:desc||name, unit:"", conf:0.8*it.conf, src:it.src, sep:true});
+    }
+    st.supplies.push(row);
+  });
+}
+// Label row with the values on the next line, lined up by column (NetSuite record, BOM header "Customer:Job  Assembly  Qty. Required")
+function pairLabelRows(lines, skip, st, capsForm){
+  var pend=[];
+  lines.forEach(function(L, li){
+    if(skip[li]) return;
+    var cells=lineCells(L).map(function(c){ return {t:cellClean(c.t), x0:c.x0, x1:c.x1}; }).filter(function(c){ return c.t; });
+    if(!cells.length) return;
+    var labs=cells.map(function(c){ var f=formLabel(c.t); if(!f && capsForm && isCaps(c.t)) f={unknown:true}; return f; });
+    var nKnown=labs.filter(function(f){ return f && (f.key || f.ignore); }).length;
+    if(labs.every(Boolean) && (cells.length>=2 ? (capsForm || nKnown===cells.length) : (capsForm && nKnown===1))){
+      pend = pend.filter(function(p){ return !p.used && li-p.li<=2; }).concat(cells.map(function(c,i){ return {t:c.t, x0:c.x0, li:li, f:labs[i]}; }));
+      skip[li]=true; return;
+    }
+    if(!pend.length) return;
+    var pw=L.pw||st.pw, tol=Math.max(2, pw*0.07), paired=0, rest=[], newLabs=[];
+    var lastLi=pend[pend.length-1].li, prevRow=pend.filter(function(p){ return !p.used && p.li===lastLi; });
+    var byIndex = !L.cells && prevRow.length===cells.length && nKnown===0;
+    cells.forEach(function(c, ci){
+      if(labs[ci] && (labs[ci].key || labs[ci].ignore) && !(byIndex)){ newLabs.push({t:c.t, x0:c.x0, li:li, f:labs[ci]}); return; }
+      var best=null, bd=1e9;
+      if(byIndex) best=prevRow[ci];
+      else pend.forEach(function(p){ if(p.used) return; var dx=Math.abs(p.x0-c.x0); if(dx<=tol){ var sc=dx+(li-p.li-1)*tol; if(sc<bd){ bd=sc; best=p; } } });
+      if(best){ best.used=true; paired++; if(!best.f.ignore) st.synth.push({text:(best.f.key && DEF_BY_KEY[best.f.key]? DEF_BY_KEY[best.f.key].label : best.t.replace(/:$/,""))+": "+c.t, conf:L.conf, kind:L.kind, srcText:best.t+" ⏎ "+c.t}); }
+      else rest.push(c);
+    });
+    if(paired){ skip[li]=true; if(rest.length) st.synth.push({text:rest.map(function(c){ return c.t; }).join("   "), conf:L.conf, kind:L.kind}); }
+    pend = pend.filter(function(p){ return !p.used && li-p.li<=1; }).concat(newLabs);
+    if(!paired && !newLabs.length) pend=[];
+  });
+}
+function normMachine(v){ var s=String(v||"").replace(/^#\s*/,"").trim(), m=s.match(/^(\d{1,2})\s*[.\-–—~:,]\s*(\d{2,4})$/); return m? m[1]+"-"+m[2] : s; }
+// one page / document → candidates, list items, loose lines
+function parseDoc(pageLines, job, baseConf, fileLabel){
+  var lines = pageLines.map(function(l){ return Object.assign({}, l); });
+  var st = {synth:[], steps:[], supplies:[], packaging:[], direct:[], unmatched:[], kind:docKind(lines), pw:1};
+  st.pw = lines.reduce(function(m,l){ return Math.max(m, l.pw || String(l.text||"").length); }, 1);
+  var skip = {};
+  lines.forEach(function(l, li){ if(NOISE_RE.test(l.text||"")) skip[li]=true; });
+  var capsRows = lines.filter(function(l){ var c=lineCells(l).map(function(x){ return cellClean(x.t); }).filter(Boolean); return c.length>=2 && c.every(isCaps); }).length;
+  extractDocMeta(lines, skip, st);
+  extractReqTable(lines, skip, st);
+  if(capsRows<3) extractPackaging(lines, skip, st);
+  extractBom(lines, skip, st);
+  pairLabelRows(lines, skip, st, capsRows>=3);
+  var rest = lines.filter(function(l, li){ return !skip[li]; }).concat(st.synth.map(function(s){ return Object.assign({kind:(lines[0]||{}).kind}, s); }));
+  var parsed = parseLines(rest, job, baseConf);
+  var score = function(c){ return c.conf + (c.sep? 0.15 : 0); };
+  st.direct.forEach(function(c){ var k=c.def.key || ("c:"+normKey(c.def.label)); if(!parsed.best[k] || score(c)>=score(parsed.best[k]) || (c.comp && !parsed.best[k].comp)) parsed.best[k]=c; });
+  // clean-ups: "2.250" → "2-250"; part/tool codes with one misread character repaired from a clean copy on the same page
+  var allText = lines.map(function(l){ return l.text||""; }).join("\n"), codes = allText.match(/\b\d{3}-\d{4}-\d{2}\b/g)||[];
+  Object.keys(parsed.best).forEach(function(k){
+    var c=parsed.best[k], v=String(c.value||"");
+    if(k==="machine" || k==="press") c.value = k==="press" ? v : normMachine(v);
+    if(/^(part_no|toolNumber)$/.test(k) && /^\S{3}-\S{4}-\S{2}$/.test(v) && !/^\d{3}-\d{4}-\d{2}$/.test(v)){
+      var fix=codes.find(function(cd){ var d=0; for(var i=0;i<cd.length;i++) if(cd[i]!==v[i]) d++; return d<=1; }); if(fix) c.value=fix;
+    }
+    if(c.def && c.def.numeric && /^[lI|!]$/.test(v)) c.value="1";
+  });
+  parsed.unmatched = (parsed.unmatched||[]).filter(function(u){ return !NOISE_RE.test(u.text); }).concat(st.unmatched);
+  parsed.steps=st.steps; parsed.supplies=st.supplies; parsed.packaging=st.packaging; parsed.kind=st.kind;
+  parsed.label = st.kind || fileLabel || "Scan";
+  return parsed;
+}
+function valNorm(v){ return String(v||"").toLowerCase().replace(/^#\s*/,"").replace(/[^a-z0-9.\-\/]+/g,"").replace(/\.+$/,""); }
+function sameVal(a, b){
+  var x=valNorm(a.value), y=valNorm(b.value); if(x===y) return true;
+  if(x.replace(/[^a-z0-9]/g,"")===y.replace(/[^a-z0-9]/g,"")) return true;
+  if(/^-?[\d.]+$/.test(x) && /^-?[\d.]+$/.test(y)) return parseFloat(x)===parseFloat(y) && (a.unit||"")===(b.unit||"") || (parseFloat(x)===parseFloat(y) && (!a.unit || !b.unit));
+  var s=x.length<y.length? x : y, l=x.length<y.length? y : x;
+  return !!s && l.indexOf(s)===0 && /[^a-z0-9]/.test(l.charAt(s.length)); // "2" vs "2-250"
+}
+// Several documents → one job: never let a blank or a weaker copy overwrite, flag real disagreements
+function mergeDocs(docs){
+  var byKey={}, order=[], score=function(c){ return c.conf + (c.sep? 0.15 : 0); };
+  docs.forEach(function(d){ Object.keys(d.best).forEach(function(k){ var c=d.best[k]; if(!String(c.value==null?"":c.value).trim()) return; (byKey[k]=byKey[k]||[]).push(Object.assign({}, c, {doc:d.label})); if(order.indexOf(k)<0) order.push(k); }); });
+  var best={};
+  order.forEach(function(k){
+    var cs=byKey[k], hard=cs.filter(function(c){ return !c.soft; }); if(hard.length) cs=hard;
+    var groups=[];
+    cs.slice().sort(function(a,b){ return score(b)-score(a); }).forEach(function(c){ var g=groups.find(function(g){ return sameVal(g[0], c); }); if(g) g.push(c); else groups.push([c]); });
+    var reps=groups.map(function(g){
+      var r=Object.assign({}, g.slice().sort(function(a,b){ return (String(b.value).length-String(a.value).length) || (score(b)-score(a)); })[0]);
+      r.conf=Math.max.apply(null, g.map(function(c){ return c.conf; })); r.docs=g.map(function(c){ return c.doc; }).filter(function(x,i,a){ return a.indexOf(x)===i; });
+      if(!r.unit) r.unit=(g.find(function(c){ return c.unit; })||{}).unit||"";
+      return r;
+    }).sort(function(a,b){ return (b.docs.length-a.docs.length) || (score(b)-score(a)); });
+    var top=reps[0]; top.doc=top.docs.join(", ");
+    if(reps.length>1) top.options=reps.map(function(r){ return {value:r.value, unit:r.unit||"", doc:r.docs.join(", "), src:r.src, conf:r.conf}; });
+    best[k]=top;
+  });
+  // part name ⇄ description: fill whichever is missing
+  if(best.partName && !best.description) best.description=Object.assign({}, best.partName, {def:DEF_BY_KEY.description, options:null, derived:true});
+  if(best.description && !best.partName) best.partName=Object.assign({}, best.description, {def:DEF_BY_KEY.partName, options:null, derived:true});
+  function uniq(list, keyf){ var seen={}; return list.filter(function(x){ var k=keyf(x); if(seen[k]) return false; seen[k]=1; return true; }); }
+  var all=function(f){ var out=[]; docs.forEach(function(d){ (d[f]||[]).forEach(function(x){ out.push(Object.assign({doc:d.label}, x)); }); }); return out; };
+  return {best:best,
+    extras: all("extras"), unmatched: all("unmatched"),
+    steps: uniq(all("steps"), function(x){ return simKey(x.req||x.value); }),
+    supplies: uniq(all("supplies"), function(x){ return simKey(x.value); }),
+    packaging: uniq(all("packaging"), function(x){ return simKey(x.value); }),
+    docs: docs.map(function(d){ return d.label; })};
+}
 // Where a field belongs on the job: the role section for part info / carton, otherwise the section titled like def.section
 function homeSection(job, sectionName){
   var role = normKey(sectionName)===normKey(ROLE_TITLES.partinfo) ? "partinfo" : normKey(sectionName)===normKey(ROLE_TITLES.carton) ? "carton" : null;
@@ -1334,35 +1694,54 @@ function existingFor(job, d){
   return h;
 }
 function reviewItem(job, d, value, unit, conf, src){
-  var prev="", isNew=false, label=d.label;
+  var prev="", isNew=false, label=d.label, clearUnit=false;
   if(d.header){ prev = job[d.key]||""; }
   else {
     var h = existingFor(job, d);
-    if(h){ prev = h.f.value||""; label=h.f.label; if(!unit && /^-?[\d.]+$/.test(String(value).trim())) unit=h.f.unit||""; }
+    // a bare number takes the field's unit — except weights: "Part Wt. 0.288" could be g, lb or oz, so don't claim grams
+    if(h){ prev = h.f.value||""; label=h.f.label; if(!unit && /^-?[\d.]+$/.test(String(value).trim())){ if(d.unitType==="weight" && !String(h.f.value||"").trim()) clearUnit=true; else unit=h.f.unit||""; } }
     else isNew = true;
   }
-  return {id:uid(), header:!!d.header, key:d.key||"", label:label, section:d.section||"Specs", value:value, unit:unit||"", prev:prev, conf:conf, src:src||"", isNew:isNew, selected:conf>=0.55};
+  return {id:uid(), header:!!d.header, key:d.key||"", label:label, section:d.section||"Specs", value:value, unit:unit||"", prev:prev, conf:conf, src:src||"", isNew:isNew, clearUnit:clearUnit, selected:conf>=0.55};
 }
 function buildReview(job, parsed){
   var items=[];
   Object.keys(parsed.best).forEach(function(k){
     var c = parsed.best[k];
     var it = reviewItem(job, c.def, c.value, c.unit, c.conf, c.src);
-    if(String(it.prev).trim()===String(c.value).trim()) return;
+    it.doc = c.doc||""; if(c.comp) it.comp=c.comp;
+    if(c.options && c.options.length>1){ it.options=c.options.map(function(o){ return {value:String(o.value), unit:o.unit||(it.unit||""), doc:o.doc||"", src:o.src||""}; }); it.conflict=true; if(!it.unit && it.options[0].unit) it.unit=it.options[0].unit; }
+    if(!it.conflict && (String(it.prev).trim()===String(c.value).trim() || (String(it.prev).trim() && simKey(it.prev)===simKey(c.value) && (it.unit||"")===(c.unit||it.unit||"")))) return; // "Group Dekko Inc." = "Group Dekko Inc"
+    if(c.derived && String(it.prev).trim()) return; // part name ⇄ description copies never replace what the job has
     items.push(it);
   });
   var order = {toolNumber:0, partName:1, customer:2, press:3};
-  items.sort(function(a,b){ var oa=a.header?order[a.key]:10, ob=b.header?order[b.key]:10; if(oa!==ob) return oa-ob; return 0; });
+  var grp = function(r){ return r.header? order[r.key] : normKey(r.section)===normKey(ROLE_TITLES.partinfo)? 10 : normKey(r.section)===normKey(ROLE_TITLES.carton)? 30 : 20; };
+  items.sort(function(a,b){ return grp(a)-grp(b); });
+  // list content: quality checks / work instructions (requirement + method), supplies with quantities, packaging description
+  var norm = function(t){ return simKey(t); };
+  ["quality","instructions"].forEach(function(role){ (parsed.steps||[]).filter(function(x){ return x.role===role; }).forEach(function(x){
+    var sec=secByRole(job, x.role); if(sec && (sec.items||[]).some(function(it){ return norm(it.text)===norm(x.value); })) return;
+    items.push({id:uid(), kind:"step", role:x.role, label:ROLE_TITLES[x.role], value:x.value, src:x.src||"", doc:x.doc||"", conf:x.conf==null?0.9:x.conf, selected:true});
+  }); });
+  (parsed.supplies||[]).forEach(function(x){
+    var sup=secByRole(job,"supplies"); if(sup && (sup.rows||[]).some(function(r){ return norm(r.desc)===norm(x.value) && String(r.qty||"")===String(x.qty||""); })) return;
+    items.push({id:uid(), kind:"supply", label:"Supply", value:x.value, qty:x.qty||"", match:x.match||"", src:x.src||"", doc:x.doc||"", conf:x.conf==null?0.9:x.conf, selected:true});
+  });
+  (parsed.packaging||[]).forEach(function(x){
+    var pk=secByRole(job,"packaging"); if(pk && norm(pk.text).indexOf(norm(x.value))>=0) return;
+    items.push({id:uid(), kind:"pack", label:ROLE_TITLES.packaging, value:x.value, src:x.src||"", doc:x.doc||"", conf:x.conf==null?0.9:x.conf, selected:true});
+  });
   (parsed.extras||[]).forEach(function(x){
     var h=findField(job,null,x.label);
     if(h){ if(String(h.f.value)===x.value) return; items.push({id:uid(), header:false, key:h.f.key, label:h.f.label, section:h.sec.title, value:x.value, unit:h.f.unit, prev:h.f.value, conf:0.7, src:x.src, isNew:false, selected:true}); return; }
     // unknown "Label: value" → kept as an "Other spec" (prints on both sheets); pick a field to map it instead
     var wordy = /^[A-Za-z][A-Za-z .#\/()&'%-]*$/.test(x.label) && x.label.split(/\s+/).every(function(w){ return w.length>=2 || /[#%&\/]/.test(w); }) && /[aeiou]/i.test(x.label);
-    items.push({id:uid(), header:false, key:"", label:x.label, section:"Specs", value:x.value, unit:"", prev:"", conf:x.conf, src:x.src, isNew:true, extra:true, loose:true, target:"other", selected: wordy && !x.ocr && x.lineConf>=0.8});
+    items.push({id:uid(), header:false, key:"", label:x.label, section:"Specs", value:x.value, unit:"", prev:"", conf:x.conf, src:x.src, doc:x.doc||"", isNew:true, extra:true, loose:true, target:"other", selected: wordy && !x.ocr && x.lineConf>=0.8});
   });
   (parsed.unmatched||[]).forEach(function(u){
     var m = u.text.match(/^(.{2,40}?)\s*[:=]\s*(.+)$/);
-    items.push({id:uid(), header:false, key:"", label:m? cleanVal(m[1]) : "", section:"Specs", value:m? cleanVal(m[2]) : cleanVal(u.text), unit:"", prev:"", conf:u.conf*0.4, src:u.text, isNew:true, loose:true, unmatched:true, target:"", selected:false});
+    items.push({id:uid(), header:false, key:"", label:m? cleanVal(m[1]) : "", section:"Specs", value:m? cleanVal(m[2]) : cleanVal(u.text), unit:"", prev:"", conf:u.conf*0.4, src:u.text, doc:u.doc||"", isNew:true, loose:true, unmatched:true, target:"", selected:false});
   });
   return items;
 }
@@ -1375,12 +1754,38 @@ function retargetItem(job, r, target){
   var v = r.value, u = r.unit;
   if(d.numeric || d.unitType){ var pn = parseNumber(String(v), d.unitType); if(pn){ v = pn.num; u = pn.unit || u; } }
   var it = reviewItem(job, d, v, u, 0.9, r.src);
-  ["header","key","label","section","value","unit","prev","isNew"].forEach(function(k){ r[k]=it[k]; });
+  ["header","key","label","section","value","unit","prev","isNew","clearUnit"].forEach(function(k){ r[k]=it[k]; });
+}
+function applyListItem(job, r){
+  if(r.kind==="step"){
+    var sec=secByRole(job, r.role); if(!sec){ sec=roleSection(r.role); sec.items=[]; var ni=job.sections.indexOf(secByRole(job,"notes")); if(ni>=0) job.sections.splice(ni,0,sec); else job.sections.push(sec); }
+    if(!sec._scanClean){ // first scanned item replaces the untouched stock list / blank rows
+      var txt=(sec.items||[]).map(function(it){ return String(it.text||"").trim(); });
+      if(r.role==="quality" && txt.length===DEFAULT_QC.length && txt.every(function(t,i){ return t===DEFAULT_QC[i]; }) && !(sec.items||[]).some(function(it){ return it.done; })) sec.items=[];
+      sec.items=(sec.items||[]).filter(function(it){ return String(it.text||"").trim(); }); sec._scanClean=true;
+    }
+    var v=String(r.value||"").trim(); if(!v || sec.items.some(function(it){ return simKey(it.text)===simKey(v); })) return false;
+    sec.items.push({id:uid(), text:v, done:false}); return true;
+  }
+  if(r.kind==="supply"){
+    var sup=secByRole(job,"supplies"); if(!sup){ sup=roleSection("supplies"); sup.rows=[]; job.sections.push(sup); }
+    var d=String(r.value||"").trim(), q=String(r.qty||"").trim(); if(!d && !q) return false;
+    var row = (r.match && sup.rows.find(function(x){ return normKey(x.desc)===normKey(r.match) && !String(x.qty||"").trim(); })) || sup.rows.find(function(x){ return simKey(x.desc)===simKey(d); });
+    if(row){ row.desc=d; if(q) row.qty=q; } else sup.rows.push({id:uid(), desc:d, qty:q});
+    return true;
+  }
+  if(r.kind==="pack"){
+    var pk=secByRole(job,"packaging"); if(!pk){ pk=roleSection("packaging"); job.sections.push(pk); }
+    var t=String(r.value||"").trim(); if(!t || simKey(pk.text).indexOf(simKey(t))>=0) return false;
+    pk.text = (String(pk.text||"").trim()? pk.text.replace(/\s+$/,"")+"\n" : "")+t; return true;
+  }
+  return false;
 }
 function applyReview(job, items){
   var n=0;
   items.forEach(function(r){
     if(!r.selected) return;
+    if(r.kind){ if(applyListItem(job, r)) n++; return; }
     if(r.loose && !r.target) return;
     var v = String(r.value||"").trim();
     if(!v && !r.header) return;
@@ -1389,11 +1794,14 @@ function applyReview(job, items){
     var h = r.key ? bestField(job, r.key) : null;
     if(!h && !(r.loose && r.target==="other")) h = findField(job, r.key, r.label);
     if(!h && r.loose && r.target==="other") h = findField(job, null, r.label);
-    if(h){ recordChange(job, h.f.label, h.f.value, v, r.unit||h.f.unit); h.f.value=v; if(r.unit) h.f.unit=r.unit; if(r.key && !h.f.key) h.f.key=r.key; return; }
+    if(h){ var wasEmpty=!String(h.f.value||"").trim(); recordChange(job, h.f.label, h.f.value, v, r.unit||(r.clearUnit&&wasEmpty? "" : h.f.unit)); h.f.value=v; if(r.unit) h.f.unit=r.unit; else if(r.clearUnit && wasEmpty) h.f.unit=""; if(r.key && !h.f.key) h.f.key=r.key; return; }
     var sec = homeSection(job, r.section) || job.sections.find(function(s){ return s.type==="fields" && !s.role; }) || job.sections.find(function(s){ return s.type==="fields"; });
     if(!sec){ sec={id:uid(), type:"fields", title:r.section||"Specs", fields:[]}; job.sections.unshift(sec); }
     sec.fields.push(F(r.label, r.unit, r.key, v));
   });
+  // several cartons/components ("Small Box Back", "Front Plate"): their labeled rows replace the empty single-carton fields
+  if(items.some(function(r){ return r.selected && r.comp; })){ var car=secByRole(job,"carton"); if(car) car.fields=car.fields.filter(function(f){ return String(f.value||"").trim() || ["carton_size","qty_carton","cartons_layer"].indexOf(f.key)<0; }); }
+  (job.sections||[]).forEach(function(s){ delete s._scanClean; });
   touch(job);
   return n;
 }
@@ -1935,6 +2343,8 @@ function viewSettings(){
   var h = topbar(backBtn("#/","Jobs"), "Backup & settings", "Data lives only on this phone", '<button class="iconbtn" data-act="cycleTheme" aria-label="Theme">'+themeIcon()+'</button>');
   var photos=0, bytes=0, origN=0, origB=0; state.jobs.forEach(function(j){ (j.photos||[]).forEach(function(p){ photos++; bytes+=p.bytes||0; if(p.origId){ origN++; origB+=p.origBytes||0; } }); });
   var lb = state.meta.lastBackupAt;
+  h += '<div class="card" id="versionCard"><div class="card-bd verrow"><div class="grow"><div class="vtitle">App version <span id="appVersion">'+esc(APP_VERSION)+'</span></div><div class="faint" id="updStatus">'+(state.swUpdate? '<span style="color:var(--warn);font-weight:700">A new version is downloaded and ready to install.</span>' : 'Tooling Job Log · updates install automatically when you reopen the app')+'</div></div>'+
+    '<button class="btn '+(state.swUpdate?'primary':'ghost')+'" data-act="checkUpdate" id="checkUpdBtn">'+(state.swUpdate? '⬇️ Install update' : '🔄 Check for update')+'</button></div></div>';
   h += '<div class="card"><div class="sec-hd"><h2>Backup</h2></div><div class="card-bd">';
   h += '<dl class="kvlist"><dt>Jobs</dt><dd>'+state.jobs.length+'</dd><dt>Templates</dt><dd>'+state.templates.length+'</dd><dt>Photos</dt><dd>'+photos+' ('+fmtBytes(bytes)+')</dd>'+(origN? '<dt>Kept originals</dt><dd>'+origN+' ('+fmtBytes(origB)+') <small class="faint">for Revert</small></dd>' : '')+'<dt>Last backup</dt><dd style="color:'+(lb && Date.now()-new Date(lb)<14*DAY?'var(--good)':'var(--danger)')+'">'+(lb? esc(fmtDate(lb))+' ('+esc(ago(lb))+')' : 'Never')+'</dd><dt>Storage</dt><dd id="storageInfo">…</dd></dl><div class="sp"></div>';
   h += '<div class="menu"><button data-act="backupShare"><span class="ic">📤</span><span>Share backup file<small>Send to Google Drive, Gmail, etc. (jobs + photos, one .json)</small></span></button>';
@@ -1991,23 +2401,34 @@ function warmOcr(manual){
 function renderOverlay(){ renderModal(); renderBusy(); renderToast(); }
 function sheet(inner){ return '<div class="scrim" id="scrim"><div class="sheet" role="dialog" aria-modal="true"><div class="grab"></div>'+inner+'</div></div>'; }
 var RV_GROUPS = [["Job header",["toolNumber","partName","customer","press"]],
-  ["Mold / part information",["part_no","description","material","color","cavities","part_wt","shot_wt","cycle","mach_cycle","pph","machine","work_order","date","revision"]],
+  ["Mold / part information",["part_no","description","material","color","cavities","part_wt","shot_wt","cycle","mach_cycle","pph","machine","work_order","date","revision","qty_req"]],
   ["Material & process",["grade","colorant","ldr","regrind","dryer","clamp","shot_size","barrel","nozzle","zone1","zone2","zone3","zone4","mold_temp","mold_a","mold_b","inj_press","inj_speed","inj_time","hold_press","hold_time","back_press","rpm","cool_time","transfer","cushion","runner","gate","shrink"]],
-  ["Carton / packaging",["carton_size","qty_carton","pallet_size","cartons_layer"]]];
+  ["Carton / packaging",["carton_size","qty_carton","parts_layer","layers_carton","layer1","layer2","pallet_size","cartons_layer"]]];
 function rvTargetSelect(r, i){
   var h='<select class="inp rv-tgt" data-rvtarget="'+i+'" aria-label="Assign to field"><option value=""'+(r.target===""?' selected':'')+'>— Ignore this line —</option><option value="other"'+(r.target==="other"?' selected':'')+'>Other spec (keep label)</option>';
   RV_GROUPS.forEach(function(g){ h+='<optgroup label="'+esc(g[0])+'">'+g[1].map(function(k){ return '<option value="'+k+'"'+(r.target===k?' selected':'')+'>'+esc(DEF_BY_KEY[k].label)+'</option>'; }).join("")+'</optgroup>'; });
   return h+'</select>';
 }
+function rvGroup(r){ return r.kind==="step"? ROLE_TITLES[r.role] : r.kind==="supply"? ROLE_TITLES.supplies : r.kind==="pack"? ROLE_TITLES.packaging : r.header? "Job header" : normKey(r.section)===normKey(ROLE_TITLES.carton)? ROLE_TITLES.carton : normKey(r.section)===normKey(ROLE_TITLES.partinfo)? ROLE_TITLES.partinfo : "Material, process & other specs"; }
+function rvListRowHtml(r, i){
+  var head = r.kind==="step" ? (r.role==="quality"? "Quality check" : "Work instruction")+' <button class="rv-mv" data-act="rvRole" data-i="'+i+'">move to '+(r.role==="quality"? "Work instructions" : "Quality checks")+'</button>'
+    : r.kind==="supply" ? 'Supply'+(r.match? ' <span class="newtag">fills “'+esc(r.match)+'” row</span>' : ' <span class="newtag">new row</span>')
+    : 'Packaging description';
+  var h = '<div class="rv list" data-rvrow="'+i+'" data-kind="'+esc(r.kind)+'"><input type="checkbox" data-rvchk="'+i+'"'+(r.selected?' checked':'')+' aria-label="Apply '+esc(r.value)+'"><div class="rb"><div class="rk">'+head+'</div>';
+  h += '<div class="rin"><textarea class="v" rows="'+Math.max(1, Math.min(4, Math.ceil(String(r.value).length/(r.kind==="supply"? 26 : 34))))+'" data-rvval="'+i+'" aria-label="'+(r.kind==="supply"?"Description":"Text")+'">'+esc(r.value)+'</textarea>'+(r.kind==="supply"? '<input class="u q" data-rvqty="'+i+'" value="'+esc(r.qty)+'" placeholder="qty" aria-label="Quantity" inputmode="decimal">' : '')+'</div>';
+  return h + '<div class="src">'+(r.doc? '<b>'+esc(r.doc)+'</b> · ' : '')+'“'+esc(r.src)+'”</div></div></div>';
+}
 function rvRowHtml(r, i){
+  if(r.kind) return rvListRowHtml(r, i);
   var pc=Math.round(r.conf*100), cls = pc>=80?"hi":pc>=55?"md":"lo";
   var head = r.loose
     ? '<div class="rk">'+(r.unmatched?'Unmatched line':'Unknown label')+(r.target? ' → '+esc(r.target==="other"? "Other spec" : DEF_BY_KEY[r.target].label) : '')+'</div>'
     : '<div class="rk">'+esc(r.label)+' <span class="conf '+cls+'">'+pc+'%</span>'+(r.isNew?' <span class="newtag">new field</span>':'')+(r.header?' <span class="newtag">header</span>':'')+'</div>';
-  var h = '<div class="rv'+(r.loose?' loose':'')+'" data-rvrow="'+i+'"><input type="checkbox" data-rvchk="'+i+'"'+(r.selected?' checked':'')+' aria-label="Apply '+esc(r.label||r.src)+'"><div class="rb">'+head;
+  var h = '<div class="rv'+(r.loose?' loose':'')+(r.conflict?' conflict':'')+'" data-rvrow="'+i+'"'+(r.key?' data-key="'+esc(r.key)+'"':'')+'><input type="checkbox" data-rvchk="'+i+'"'+(r.selected?' checked':'')+' aria-label="Apply '+esc(r.label||r.src)+'"><div class="rb">'+head;
+  if(r.conflict) h += '<div class="rv-conf"><b>⚠ The documents disagree — tap the right value</b><div class="rv-opts">'+r.options.map(function(o, oi){ var on=String(o.value)===String(r.value) && (o.unit||"")===(r.unit||""); return '<button class="rv-opt'+(on?' sel':'')+'" data-act="rvPick" data-i="'+i+'" data-o="'+oi+'" aria-pressed="'+on+'"><b>'+esc(o.value+(o.unit?" "+o.unit:""))+'</b><small>'+esc(o.doc||"")+'</small></button>'; }).join("")+'</div></div>';
   if(r.loose) h += '<div class="rin">'+rvTargetSelect(r, i)+'</div>'+(r.target==="other"? '<div class="rin"><input class="v lab" data-rvlabel="'+i+'" value="'+esc(r.label)+'" placeholder="Label" aria-label="Label"></div>' : '');
   if(!r.loose || r.target) h += '<div class="rin"><input class="v" data-rvval="'+i+'" value="'+esc(r.value)+'" aria-label="Value">'+(r.header || (!r.unit && isNaN(parseFloat(r.value)))?'':'<input class="u" data-rvunit="'+i+'" list="unitList" value="'+esc(r.unit)+'" placeholder="unit" aria-label="Unit">')+'</div>';
-  h += (r.prev? '<div class="was">currently: '+esc(r.prev)+'</div>' : '')+(r.src? '<div class="src">“'+esc(r.src)+'”</div>' : '')+'</div></div>';
+  h += (r.prev? '<div class="was">currently: '+esc(r.prev)+'</div>' : '')+(r.src? '<div class="src">'+(r.doc && !r.conflict? '<b>'+esc(r.doc)+'</b> · ' : '')+'“'+esc(r.src)+'”</div>' : '')+'</div></div>';
   return h;
 }
 function renderModal(){
@@ -2061,8 +2482,10 @@ function renderModal(){
       var unchecked = main.filter(function(i){ return !items[i].selected; }).length;
       h += '<div class="btnrow" style="margin-bottom:6px"><button class="btn ghost" data-act="rvAll" data-v="1">Select all</button><button class="btn ghost" data-act="rvAll" data-v="0">Select none</button></div>';
       h += '<p class="faint" style="margin:4px 0">Fix any misread values here. <span class="conf hi">High</span> <span class="conf md">Check</span> <span class="conf lo">Low</span> = match confidence. Low ones start unchecked.</p>';
+      if(m.conflicts) h += '<p class="rv-warn rv-cwarn" id="rvConflicts">⚠ '+m.conflicts+' value'+(m.conflicts>1?'s differ':' differs')+' between the documents — pick the right one'+(m.conflicts>1?' for each':'')+' (marked ⚠ below). The most-agreed value is pre-selected.</p>';
       if(unchecked) h += '<p class="rv-warn" id="rvWarn">⚠ '+unchecked+' value'+(unchecked>1?'s are':' is')+' unchecked and won’t be saved — check '+(unchecked>1?'them':'it')+' if correct.</p>';
-      main.forEach(function(i){ h += rvRowHtml(items[i], i); });
+      var lastG=null;
+      main.forEach(function(i){ var g=rvGroup(items[i]); if(g!==lastG){ h += '<div class="rv-grp">'+esc(g)+'</div>'; lastG=g; } h += rvRowHtml(items[i], i); });
       if(loose.length){
         h += '<div class="rv-loose-hd" id="rvLoose"><b>Not matched to a field ('+loose.length+')</b><span>Pick a field to use a line, or “Other spec” to keep it with its own label — it prints on the sheet under Other specs.</span></div>';
         loose.forEach(function(i){ h += rvRowHtml(items[i], i); });
@@ -2167,7 +2590,34 @@ ACT.clearFilters = function(){ state.search=""; state.fStatus="all"; state.fPres
 ACT.fStatus = function(t){ state.fStatus=t.getAttribute("data-v"); render(); };
 ACT.fPress = function(t){ state.fPress=t.getAttribute("data-v"); render(); };
 ACT.snoozeBackup = function(){ state.meta.backupSnooze = Date.now()+3*DAY; saveMeta(); render(); };
-ACT.applyUpdate = function(){ if(state.swUpdate) state.swUpdate.postMessage("skipWaiting"); };
+ACT.applyUpdate = function(){ applySwUpdate(); };
+// ---- updates: Settings → Check for update (reg.update → wait for the new worker → skipWaiting → reload) ----
+function updSay(t){ var el=$("updStatus"); if(el) el.innerHTML=t; }
+function waitInstalled(w){ return new Promise(function(res){ if(w.state==="installed" || w.state==="activated") return res(); w.addEventListener("statechange", function(){ if(w.state==="installed" || w.state==="activated" || w.state==="redundant") res(); }); }); }
+function applySwUpdate(){
+  var w=state.swUpdate; saveJobs(); state.updating=true;
+  if(!w || w.state==="activated" || w.state==="redundant"){ location.reload(); return; }
+  w.postMessage("skipWaiting"); // → controllerchange → reload (below); fallback reload if the event never comes
+  setTimeout(function(){ location.reload(); }, 5000);
+}
+function onlineVersion(){ return fetch("sw.js?v="+Date.now(), {cache:"no-store"}).then(function(r){ return r.ok? r.text() : ""; }).then(function(t){ var m=String(t).match(/VERSION\s*=\s*"tjl-v([^"]+)"/); return m? m[1] : ""; }); }
+ACT.checkUpdate = function(){
+  if(!("serviceWorker" in navigator) || location.protocol==="file:"){ updSay("Updates need the installed / online app."); return; }
+  if(state.swUpdate){ updSay("Installing the update — the app will restart…"); applySwUpdate(); return; }
+  var b=$("checkUpdBtn"); if(b) b.disabled=true;
+  updSay("Checking for a new version…");
+  navigator.serviceWorker.getRegistration().then(function(reg){
+    if(!reg){ updSay("Offline copy not set up yet — reload the page once while online."); return; }
+    return reg.update().then(function(){
+      var w = reg.installing || reg.waiting;
+      if(w){ updSay("Downloading the new version…"); return waitInstalled(w).then(function(){ state.swUpdate = reg.waiting || w; updSay("Update downloaded — restarting…"); applySwUpdate(); }); }
+      return onlineVersion().then(function(v){
+        if(v && v!==APP_VERSION){ updSay("Version "+esc(v)+" is online — reloading to get it…"); state.updating=true; setTimeout(function(){ location.reload(); }, 800); }
+        else updSay('<span style="color:var(--good);font-weight:700">✓ You have the latest version ('+esc(APP_VERSION)+').</span>');
+      });
+    });
+  }).catch(function(e){ updSay("Couldn’t check — are you offline? You have "+esc(APP_VERSION)+"."); }).then(function(){ var b2=$("checkUpdBtn"); if(b2) b2.disabled=false; });
+};
 ACT.openJob = function(t){ go("#/job/"+encodeURIComponent(t.getAttribute("data-id"))); };
 ACT.pin = function(t, e){ e.stopPropagation(); var j=getJob(t.getAttribute("data-id")); if(!j) return; j.pinned=!j.pinned; saveJobs(); render(); showToast(j.pinned?"Pinned to top":"Unpinned"); };
 ACT.newJobMenu = function(){ openModal({type:"newJob"}); };
@@ -2719,11 +3169,22 @@ function runScanFiles(files){
 function finishScan(pages, summary){
   setBusy(null); ocrProgressCb=null;
   var job = scanJob(); if(!job){ showToast("Job not found", {err:true}); return; }
-  var lines=[]; pages.forEach(function(p){ lines = lines.concat(p.lines.map(function(l){ return Object.assign({kind:p.kind}, l); })); });
-  var parsed = parseLines(lines, job, 0.9);
+  // each page/file is read as its own document (work instructions, BOM, item record…), then merged into one job
+  var docs = pages.map(function(p, pi){ var ls=p.lines.map(function(l){ return Object.assign({kind:p.kind}, l); }); var d=parseDoc(ls, job, 0.9, p.label || ("Page "+(pi+1))); d.raw=ls.map(function(l){ return l.text; }).join("\n"); return d; });
+  var cnt={}; docs.forEach(function(d){ cnt[d.label]=(cnt[d.label]||0)+1; }); var seen={};
+  docs.forEach(function(d, di){ if(cnt[d.label]>1){ seen[d.label]=(seen[d.label]||0)+1; d.label += " "+seen[d.label]; } });
+  var parsed = mergeDocs(docs);
   var items = buildReview(job, parsed);
-  openModal({type:"review", items:items, raw:lines.map(function(l){ return l.text; }).join("\n"), summary:summary+" · "+items.length+" value"+(items.length===1?"":"s")+" found"});
+  var nConf = items.filter(function(i){ return i.conflict; }).length;
+  var raw = docs.length>1 ? docs.map(function(d){ return "— "+d.label+" —\n"+d.raw; }).join("\n\n") : (docs[0]? docs[0].raw : "");
+  window.__lastScan = {docs:docs.map(function(d){ return {label:d.label, kind:d.kind, raw:d.raw}; }), pages:pages.map(function(p){ return {label:p.label||"", kind:p.kind, conf:p.conf, prep:p.prep||null}; })};
+  openModal({type:"review", items:items, raw:raw, docs:parsed.docs, conflicts:nConf, summary:(docs.length>1? docs.length+" documents ("+parsed.docs.join(", ")+") · " : (docs[0] && docs[0].kind? docs[0].kind+" · " : ""))+summary+" · "+items.filter(function(i){ return !i.loose; }).length+" value"+(items.length===1?"":"s")+" found"+(nConf? " · "+nConf+" conflict"+(nConf>1?"s":"") : "")});
 }
+ACT.rvPick = function(t){ var r=state.modal.items[+t.getAttribute("data-i")], o=r && r.options[+t.getAttribute("data-o")]; if(!o) return; r.value=o.value; r.unit=o.unit||""; r.selected=true; r.picked=true; rvRerender(); };
+ACT.rvRole = function(t){ var r=state.modal.items[+t.getAttribute("data-i")]; if(!r) return; r.role = r.role==="quality"? "instructions" : "quality"; r.label=ROLE_TITLES[r.role];
+  var rank=function(x){ return x.loose? 9 : x.kind==="step"? (x.role==="quality"? 1 : 2) : x.kind==="supply"? 3 : x.kind==="pack"? 4 : 0; };
+  state.modal.items = state.modal.items.map(function(x, xi){ return {x:x, i:xi}; }).sort(function(a,b){ return rank(a.x)-rank(b.x) || a.i-b.i; }).map(function(o){ return o.x; });
+  rvRerender(); };
 ACT.rvAll = function(t){ var v=t.getAttribute("data-v")==="1"; state.modal.items.forEach(function(i){ i.selected = v && (!i.loose || !!i.target); }); rvRerender(); };
 function rvRerender(){ var sh=document.querySelector("#modalRoot .sheet"), y=sh? sh.scrollTop : 0; renderModal(); sh=document.querySelector("#modalRoot .sheet"); if(sh) sh.scrollTop=y; }
 ACT.rvApply = function(){
@@ -3327,6 +3788,7 @@ document.addEventListener("input", function(e){
   if(t.id==="searchInput"){ state.search=t.value; $("jobList").innerHTML=jobListHtml(filteredJobs()); hydratePhotos($("jobList")); return; }
   if(t.hasAttribute("data-rvval")){ state.modal.items[+t.getAttribute("data-rvval")].value=t.value; return; }
   if(t.hasAttribute("data-rvunit")){ state.modal.items[+t.getAttribute("data-rvunit")].unit=t.value; return; }
+  if(t.hasAttribute("data-rvqty")){ state.modal.items[+t.getAttribute("data-rvqty")].qty=t.value; return; }
   if(t.hasAttribute("data-rvlabel")){ state.modal.items[+t.getAttribute("data-rvlabel")].label=t.value; return; }
   if(t.hasAttribute("data-meta")){ state.meta[t.getAttribute("data-meta")]=t.value.trim(); saveMeta(); return; }
   if(t.hasAttribute("data-brand")){ state.meta.brand=state.meta.brand||{}; state.meta.brand[t.getAttribute("data-brand")]=t.value; saveMeta(); return; }
@@ -3383,14 +3845,20 @@ function askPersist(){ try{ if(navigator.storage && navigator.storage.persist &&
 /* ---------- service worker ---------- */
 function registerSW(){
   if(!("serviceWorker" in navigator) || location.protocol==="file:") return;
-  navigator.serviceWorker.register("./sw.js").then(function(reg){
-    function watch(w){ w.addEventListener("statechange", function(){ if(w.state==="installed" && navigator.serviceWorker.controller){ state.swUpdate=w; if(state.route.view==="list") render(); else showToast("Update ready", {act:function(){ w.postMessage("skipWaiting"); }, actLabel:"RELOAD", ms:15000}); } }); }
-    if(reg.waiting && navigator.serviceWorker.controller){ state.swUpdate=reg.waiting; }
+  navigator.serviceWorker.register("./sw.js", {updateViaCache:"none"}).then(function(reg){
+    function ready(w){ state.swUpdate=w; if(state.route.view==="list" || state.route.view==="settings") render(); else showToast("Update ready", {act:applySwUpdate, actLabel:"RELOAD", ms:15000}); }
+    function watch(w){ w.addEventListener("statechange", function(){ if(w.state==="installed" && navigator.serviceWorker.controller) ready(w); }); }
+    if(reg.waiting && navigator.serviceWorker.controller) ready(reg.waiting);
     if(reg.installing) watch(reg.installing);
     reg.addEventListener("updatefound", function(){ if(reg.installing) watch(reg.installing); });
+    // an installed app can stay open for days: look for a new version whenever it comes back to the foreground, and hourly
+    var last=Date.now();
+    var check=function(){ if(Date.now()-last<60000) return; last=Date.now(); reg.update().catch(function(){}); };
+    document.addEventListener("visibilitychange", function(){ if(document.visibilityState==="visible") check(); });
+    setInterval(function(){ last=0; check(); }, 3600000);
   }).catch(function(e){ console.warn("SW registration failed", e); });
   var reloading=false;
-  navigator.serviceWorker.addEventListener("controllerchange", function(){ if(state.swUpdate && !reloading){ reloading=true; location.reload(); } });
+  navigator.serviceWorker.addEventListener("controllerchange", function(){ if((state.swUpdate || state.updating) && !reloading){ reloading=true; location.reload(); } });
 }
 
 /* ---------- init ---------- */

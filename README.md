@@ -15,6 +15,34 @@ tests/                 Playwright end-to-end tests (test.py, test_refsheet.py, t
 
 All URLs are relative, so it runs from any path: `https://<user>.github.io/<repo>/`, a subfolder, or localhost.
 
+## What's new in 2.3.2 — Real job forms fill in from a scan
+
+**Why scans of real forms came out empty before:** phone photos of the paper forms
+have heavy table grid lines, uneven light and a little skew. Tesseract dropped whole
+tables (the Work Instructions header came back empty), and the parser only understood
+simple "Label value" lines. It could not read tables, packaging blocks, BOM item lists,
+NetSuite printouts (ALL-CAPS labels with the value on the next line), or several documents at once.
+
+- **Better OCR for phone photos:** the page is auto-cropped, deskewed (±4°), scaled up to about 2400 px,
+  put through an adaptive threshold, and the table grid lines are removed before OCR. Tesseract then runs in block mode (PSM 6).
+  This takes about 0.5 s of preprocessing plus a few seconds of OCR per page.
+- **Understands the real layouts:**
+  - **Operator Work Instructions:** 4-column header table (two label/value pairs per row, "Part Wt. 0.288" in one cell),
+    REQUIREMENT / METHOD rows (split into Quality checks and Operator work instructions, each with its method),
+    PACKAGING INFORMATION with several components (e.g. *FP 124 Small Box Back* and *FP 124 Front Plate*, each with its own carton rows),
+    packaging description and pallet, and Tool # / Machine # from the notes.
+  - **Bill of Materials:** WO#, date, customer, assembly, qty required, machine + tonnage, material, and supply lines with quantities
+    (these go into *Required for the job*).
+  - **NetSuite item printout:** column labels with values on the next line (item number, display name, customer, machine,
+    tool number, cavities, tool cycle time).
+- **Several documents → one job:** each photo/file is parsed on its own and then merged. A good value is never replaced by a blank.
+  When the documents disagree (for example Tool # 134-4004-02 vs 134-4003-00), the review screen shows an amber
+  **"⚠ The documents disagree — tap the right value"** row with one button per value. The value most documents agree on is pre-selected.
+- Handwriting is usually not readable. It shows up as an unmatched line you can assign or skip, instead of turning into garbage values.
+- **Version is easy to find:** Settings now opens with an **App version 2.3.2** card and a **🔄 Check for update** button.
+  The button checks GitHub Pages, installs the new version and reloads. The app also checks for updates when it comes back
+  to the foreground and every hour, and `sw.js` is never served from a cache.
+
 ## What's new in 2.3.1 — Scanned values now print on the Reference Sheet
 
 **Bug fixed:** part weight, shot weight, material, color and other molding values that came from a scan or paste were saved on the job but were missing from the printed **Mold / Job Reference Sheet**. The causes:
@@ -153,6 +181,7 @@ python tests/test_refsheet.py        # reference sheet, branding, migration
 python tests/test_arrange.py         # Arrange photos: touch long-press drag, mouse drag, auto-scroll, action sheet, undo, print order
 python tests/make_cleanup_sample.py  # synthetic "part on a busy workbench" photo + ground-truth mask (tests/fixtures/)
 python tests/make_scan_fixtures.py   # sample mold sheet PDF (text layer) + PNG (for OCR) in tests/fixtures/
+python tests/test_realforms.py       # 2.3.2 the 3 real phone-photo forms (tests/fixtures), merge/conflicts, apply, detail, sheet, update flow
 python tests/test_scanfields.py      # 2.3.1 scan labels/units, review + assign, apply, detail, both print layouts, page 2, migration
 python tests/test_cleanup.py         # ✨ Clean up: every entry point, REAL background removal (downloads the model), backgrounds,
                                      # sliders, crop, rotate, brush, save/revert/cancel, print sheet, batch, offline, dark mode, setting

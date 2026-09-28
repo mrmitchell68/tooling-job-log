@@ -1,5 +1,5 @@
 /* Tooling Job Log v2 service worker — offline app shell + CDN libraries. */
-const VERSION = "tjl-v2.3.1";
+const VERSION = "tjl-v2.3.2";
 const SHELL_CACHE = VERSION + "-shell";
 const LIB_CACHE = "tjl-libs-v1";           // CDN libs are version-pinned, so this cache survives app updates
 // ✨ Clean up: background-removal model + ONNX runtime (~56 MB, fetched in 4 MB chunks) are cached at RUNTIME on first use,
@@ -59,6 +59,8 @@ self.addEventListener("fetch", (event) => {
   const req = event.request;
   if (req.method !== "GET") return;
   const url = new URL(req.url);
+  // the worker script itself (update checks / "Check for update" version peek) always goes to the network
+  if (url.origin === self.location.origin && url.pathname.endsWith("/sw.js")) return;
 
   // App navigation: serve cached shell instantly, refresh it in the background.
   if (req.mode === "navigate" && url.origin === self.location.origin) {
