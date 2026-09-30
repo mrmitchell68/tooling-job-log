@@ -327,6 +327,13 @@ pre.raw{white-space:pre-wrap;font-size:12px;background:var(--surface-2);padding:
 .toast{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(92px + env(safe-area-inset-bottom,0px));z-index:130;background:#1d2833;color:#fff;border-radius:12px;padding:6px 6px 6px 16px;min-height:52px;display:flex;align-items:center;gap:10px;box-shadow:0 8px 24px rgba(0,0,0,.3);max-width:calc(100% - 24px);width:max-content;font-weight:600;font-size:15px}
 .toast.err{background:var(--danger)}
 .toast button{border:0;background:rgba(255,255,255,.15);color:#fff;border-radius:8px;min-height:40px;padding:0 14px;font-weight:800;letter-spacing:.04em}
+.toast a.tlink{color:#fff;background:rgba(255,255,255,.15);border-radius:8px;min-height:40px;padding:8px 14px;font-weight:800;text-decoration:none;display:inline-flex;align-items:center}
+.drivebox{margin:12px 0 4px;padding:12px;border:1px solid var(--border);border-radius:14px;background:var(--surface-2)}
+.drivebox p{margin:4px 0 10px;font-size:13.5px;color:var(--text-dim)}
+#driveSaveBtn{display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:58px;line-height:1.25;font-weight:800}
+#driveSaveBtn small{display:block;font-weight:650;font-size:12.5px;opacity:.9}
+.menu #driveSaveBtn{display:flex;flex-direction:row;align-items:center;justify-content:flex-start;min-height:58px;font-weight:600}
+.menu #driveSaveBtn small{font-weight:500;opacity:1}
 .busy{position:fixed;left:12px;right:12px;bottom:calc(12px + env(safe-area-inset-bottom,0px));z-index:125;background:var(--surface);border:1px solid var(--border);border-radius:16px;padding:14px;box-shadow:0 10px 30px rgba(0,0,0,.3)}
 .busy .row{display:flex;align-items:center;gap:12px}
 .spin{width:26px;height:26px;border-radius:50%;border:3px solid var(--primary-dim);border-top-color:var(--primary);animation:sp 0.9s linear infinite;flex-shrink:0}
@@ -520,7 +527,16 @@ pre.raw{white-space:pre-wrap;font-size:12px;background:var(--surface-2);padding:
 <script>
 (function(){
 "use strict";
-var APP_VERSION = "2.3.2";
+var APP_VERSION = "2.3.3";
+// Public OAuth client id (not a secret). Web client, authorized JavaScript origins:
+//   https://mrmitchell68.github.io   and   http://localhost:8766
+// Leave empty until that client exists — Save-to-Drive is hidden and the button uses the Android share sheet.
+var GOOGLE_CLIENT_ID = "";
+var GOOGLE_API_KEY = ""; // optional Picker key. Empty: if drive.file cannot see the folder, ask once for Drive access.
+try{ if(typeof window.__TJL_GOOGLE_CLIENT_ID==="string" && window.__TJL_GOOGLE_CLIENT_ID) GOOGLE_CLIENT_ID = window.__TJL_GOOGLE_CLIENT_ID; }catch(e){}
+var DRIVE_FOLDER_HINT = "17H6NaqOz34DgtE3jnYIZsS341ZiahRVe";
+var DRIVE_SCOPE_FILE = "https://www.googleapis.com/auth/drive.file";
+var DRIVE_SCOPE_FULL = "https://www.googleapis.com/auth/drive";
 var SCHEMA = 4; // job data schema: 3 = reference-sheet sections (part info, supplies, packaging, instructions, QC); 4 = scanned/custom fields reconciled to their proper homes (v2.3.1)
 var K = { jobs:"tjl2.jobs", tpl:"tjl2.templates", meta:"tjl2.meta", theme:"tjl2.theme", v1:"toolingJobLog.v1" };
 var CDN = {
@@ -713,6 +729,7 @@ function normalizeJob(j){
   if(!STATUSES.some(function(s){ return s.k===j.status; })) j.status = j.status==="complete" ? "done" : "active";
   ["toolNumber","partName","customer","press"].forEach(function(k){ if(j[k]==null) j[k]=""; });
   if((j.schema||0) < SCHEMA) migrateJob(j);
+  j.scanFiles = (Array.isArray(j.scanFiles)? j.scanFiles : []).filter(function(s){ return s && s.id; }).map(function(s){ return {id:s.id, name:s.name||"scan", type:s.type||"", bytes:s.bytes||0}; });
   return j;
 }
 function jobTitle(j){ return j.toolNumber || j.partName || "Untitled job"; }
@@ -941,6 +958,7 @@ function duplicateJob(job){
     return getPhoto(p.id).then(function(b){ if(b) return putPhoto(np.id, b); }).then(function(){ if(p.origId) return getPhoto(p.origId).then(function(b){ if(b) return putPhoto(np.origId, b); else delete np.origId; }); });
   });
   c.photos = newPhotos;
+  c.scanFiles = []; // originals stay with the job they were scanned into
   return Promise.all(jobs).then(function(){ return c; });
 }
 
@@ -2345,6 +2363,9 @@ function viewSettings(){
   var lb = state.meta.lastBackupAt;
   h += '<div class="card" id="versionCard"><div class="card-bd verrow"><div class="grow"><div class="vtitle">App version <span id="appVersion">'+esc(APP_VERSION)+'</span></div><div class="faint" id="updStatus">'+(state.swUpdate? '<span style="color:var(--warn);font-weight:700">A new version is downloaded and ready to install.</span>' : 'Tooling Job Log · updates install automatically when you reopen the app')+'</div></div>'+
     '<button class="btn '+(state.swUpdate?'primary':'ghost')+'" data-act="checkUpdate" id="checkUpdBtn">'+(state.swUpdate? '⬇️ Install update' : '🔄 Check for update')+'</button></div></div>';
+  h += '<div class="card" id="driveCard"><div class="sec-hd"><h2>Google Drive copy</h2></div><div class="card-bd"><p class="muted" id="driveSetupNote" style="margin-top:0">'+(GOOGLE_CLIENT_ID
+    ? 'Scans can be saved straight into <b>DCT / Building Material</b>. The first time, Google asks you to sign in. If this app cannot see that folder yet, choose <b>Building Material</b> once.'
+    : 'Drive save needs a one-time Google setup. Until then, <b>Share to Google Drive</b> uses the Android share sheet so you can drop the scan in DCT / Building Material today.')+'</p></div></div>';
   h += '<div class="card"><div class="sec-hd"><h2>Backup</h2></div><div class="card-bd">';
   h += '<dl class="kvlist"><dt>Jobs</dt><dd>'+state.jobs.length+'</dd><dt>Templates</dt><dd>'+state.templates.length+'</dd><dt>Photos</dt><dd>'+photos+' ('+fmtBytes(bytes)+')</dd>'+(origN? '<dt>Kept originals</dt><dd>'+origN+' ('+fmtBytes(origB)+') <small class="faint">for Revert</small></dd>' : '')+'<dt>Last backup</dt><dd style="color:'+(lb && Date.now()-new Date(lb)<14*DAY?'var(--good)':'var(--danger)')+'">'+(lb? esc(fmtDate(lb))+' ('+esc(ago(lb))+')' : 'Never')+'</dd><dt>Storage</dt><dd id="storageInfo">…</dd></dl><div class="sp"></div>';
   h += '<div class="menu"><button data-act="backupShare"><span class="ic">📤</span><span>Share backup file<small>Send to Google Drive, Gmail, etc. (jobs + photos, one .json)</small></span></button>';
@@ -2455,6 +2476,7 @@ function renderModal(){
       '<button data-act="shareText"><span class="ic">📤</span>Share as text</button>'+
       '<button data-act="go" data-hash="#/job/'+esc(j.id)+'/print"><span class="ic">🖨️</span>Print sheet / Save PDF</button>'+
       (rescanText(j)? '<button data-act="rescanNotes"><span class="ic">🔁</span>Re-check notes / saved scan<small>Finds part weight, material, color… in Notes text so you can assign them</small></button>' : '')+
+      ((j.scanFiles||[]).length? '<button data-act="saveDrive" id="driveSaveBtn"><span class="ic">☁️</span><span>'+(GOOGLE_CLIENT_ID?'Save a copy to Drive':'Share to Google Drive')+'<small>'+j.scanFiles.length+' original scan file'+(j.scanFiles.length>1?'s':'')+' → DCT / Building Material</small></span></button><button data-act="skipDrive" id="driveSkipBtn"><span class="ic">⏭️</span><span>Skip Drive copy<small>Remove the stored scan files from this phone</small></span></button>' : '')+
       '<button data-act="saveTemplate"><span class="ic">📑</span>Save as mold template</button>'+
       '<button data-act="duplicate"><span class="ic">⧉</span>Duplicate job<small>Copies sheet & photos, clears checklist & log</small></button>'+
       '<button data-act="exportJob"><span class="ic">💾</span>Export this job (.json)</button>'+
@@ -2494,6 +2516,7 @@ function renderModal(){
     h += '<label style="display:flex;gap:10px;align-items:center;margin-top:10px;min-height:44px"><input type="checkbox" id="rvNotes" style="width:24px;height:24px"'+(items.length?'':' checked')+'> Also save the scanned text in Notes</label>';
     if(m.raw) h += '<details><summary class="linkbtn" style="display:flex;align-items:center">Show scanned text</summary><pre class="raw">'+esc(m.raw)+'</pre></details>';
     h += datalists();
+    if((m.scanFiles||[]).length) h += driveBoxHtml();
     h += '<div class="actions"><button class="btn ghost" data-act="closeModal">Cancel</button><button class="btn primary" data-act="rvApply">'+(state.scanTarget && state.scanTarget.newJob? 'Create job' : 'Apply selected')+'</button></div>';
   } else if(m.type==="addField"){
     h = '<h3>Add field</h3><div class="field"><label class="fl" for="nfLabel">Label</label><input class="inp" id="nfLabel" placeholder="e.g. Cushion, Clamp tonnage, Ejector stroke"></div>'+
@@ -2552,7 +2575,12 @@ function renderModal(){
 }
 function operators(){ var o={}; if(state.meta.operator) o[state.meta.operator]=1; state.jobs.forEach(function(j){ (j.runLog||[]).forEach(function(e){ if(e.operator) o[e.operator]=1; }); }); return Object.keys(o); }
 function openModal(m){ state.modal=m; renderModal(); }
-function closeModal(){ var prev=state.modal; state.modal=null; renderModal(); if(prev && prev.type==="photoLabel" && !prev.arr && prev.backTo==null && state.cleanOffer && !state.photoQueue.length) offerCleanup(); }
+function closeModal(){
+  if(state.driveBusy){ showToast("Wait for the Drive save to finish"); return; }
+  var prev=state.modal; state.modal=null; renderModal();
+  if(prev && prev.type==="review" && prev.scanFiles && prev.scanFiles.length){ dropScanMetas(prev.scanFiles); prev.scanFiles=[]; }
+  if(prev && prev.type==="photoLabel" && !prev.arr && prev.backTo==null && state.cleanOffer && !state.photoQueue.length) offerCleanup();
+}
 function bindSwipe(){
   var el=$("vimg"); if(!el) return; var x0=null;
   el.addEventListener("touchstart", function(e){ if(e.touches.length===1) x0=e.touches[0].clientX; }, {passive:true});
@@ -2572,13 +2600,14 @@ function renderBusy(){
 }
 var toastTimer=null;
 function showToast(text, opts){
-  opts=opts||{}; state.toast={text:text, act:opts.act, actLabel:opts.actLabel, act2:opts.act2, act2Label:opts.act2Label, err:opts.err, arr:opts.arr, offer:opts.offer};
+  opts=opts||{}; state.toast={text:text, act:opts.act, actLabel:opts.actLabel, act2:opts.act2, act2Label:opts.act2Label, err:opts.err, arr:opts.arr, offer:opts.offer, link:opts.link||"", linkLabel:opts.linkLabel||""};
   clearTimeout(toastTimer); renderToast();
-  toastTimer=setTimeout(function(){ var t=state.toast; state.toast=null; renderToast(); if(t && opts.onExpire) opts.onExpire(); }, opts.ms || (opts.act? 7000 : 3200));
+  toastTimer=setTimeout(function(){ var t=state.toast; state.toast=null; renderToast(); if(t && opts.onExpire) opts.onExpire(); }, opts.ms || (opts.link? 9000 : opts.act? 7000 : 3200));
 }
 function renderToast(){
   var t=state.toast, root=$("toastRoot");
-  root.innerHTML = t? '<div class="toast'+(t.err?' err':'')+(t.offer?' offer':'')+'" role="status"><span>'+esc(t.text)+'</span>'+(t.act?'<button data-act="toastAct">'+esc(t.actLabel||"UNDO")+'</button>':'')+(t.act2?'<button class="t2" data-act="toastAct2">'+esc(t.act2Label||"SKIP")+'</button>':'')+'</div>' : "";
+  var link = t && t.link ? '<a class="tlink" href="'+esc(t.link)+'" target="_blank" rel="noopener">'+esc(t.linkLabel||"Open")+'</a>' : "";
+  root.innerHTML = t? '<div class="toast'+(t.err?' err':'')+(t.offer?' offer':'')+'" role="status"><span>'+esc(t.text)+'</span>'+link+(t.act?'<button data-act="toastAct">'+esc(t.actLabel||"UNDO")+'</button>':'')+(t.act2?'<button class="t2" data-act="toastAct2">'+esc(t.act2Label||"SKIP")+'</button>':'')+'</div>' : "";
 }
 
 /* ---------- actions ---------- */
@@ -2660,7 +2689,7 @@ ACT.deleteJob = function(){
   state.modal=null; go("#/");
   showToast("Deleted "+jobTitle(j), {act:function(){ var pd=state.pendingDelete; if(!pd) return; state.jobs.splice(Math.min(pd.idx,state.jobs.length),0,pd.job); state.pendingDelete=null; saveJobs(); render(); }, ms:8000, onExpire:finalizeDelete});
 };
-function finalizeDelete(){ var pd=state.pendingDelete; if(!pd) return; state.pendingDelete=null; (pd.job.photos||[]).forEach(function(p){ blobIdsOf(p).forEach(function(id){ if(!photoReferenced(id)) delPhoto(id); }); }); }
+function finalizeDelete(){ var pd=state.pendingDelete; if(!pd) return; state.pendingDelete=null; (pd.job.photos||[]).forEach(function(p){ blobIdsOf(p).forEach(function(id){ if(!photoReferenced(id)) delPhoto(id); }); }); (pd.job.scanFiles||[]).forEach(function(s){ delPhoto(s.id); }); }
 ACT.toastAct = function(){ var t=state.toast; state.toast=null; clearTimeout(toastTimer); renderToast(); if(t && t.act) t.act(); };
 ACT.toastAct2 = function(){ var t=state.toast; state.toast=null; clearTimeout(toastTimer); renderToast(); if(t && t.act2) t.act2(); };
 ACT.duplicate = function(){ var j=curJob(); duplicateJob(j).then(function(c){ c.toolNumber=j.toolNumber; c.partName=j.partName+(j.partName?" (copy)":""); state.jobs.unshift(c); saveJobs(); state.modal=null; go("#/job/"+c.id); showToast("Duplicated — checklist and run log cleared"); }); };
@@ -3123,6 +3152,7 @@ function runScanFiles(files){
   var list = Array.prototype.slice.call(files); if(!list.length) return;
   state.scanCancelled=false; var pages=[], total=0;
   setBusy("Preparing…", {cancel:true, pct:2});
+  var storeP = rememberScanFiles(list);
   ocrProgressCb = function(m){
     if(!state.busy) return;
     var map={"loading tesseract core":"Loading OCR engine…","loading language traineddata":"Loading English data…","initializing api":"Starting OCR…","recognizing text":"Reading text"};
@@ -3159,16 +3189,20 @@ function runScanFiles(files){
     var ocrP = pages.filter(function(p){ return p.kind==="ocr"; });
     var avg = ocrP.length? Math.round(ocrP.reduce(function(a,p){ return a+p.conf; },0)/ocrP.length*100) : null;
     var summary = pages.length+" page"+(pages.length>1?"s":"")+" · "+(kinds.indexOf("pdf-text")>=0? "PDF text layer" + (ocrP.length?" + OCR":"") : "OCR")+(avg!=null? " · avg OCR confidence "+avg+"%" : "");
-    finishScan(pages, summary);
+    return storeP.then(function(metas){
+      if(state.scanCancelled){ dropScanMetas(metas); return; }
+      finishScan(pages, summary, metas);
+    });
   }).catch(function(e){
     setBusy(null); ocrProgressCb=null;
+    storeP.then(function(metas){ if(!metas._handed) dropScanMetas(metas); }).catch(function(){});
     if(e && e.cancelled) return;
     console.warn(e); showToast((e && e.message) || "Scan failed — try Paste text", {err:true, ms:6000});
   });
 }
-function finishScan(pages, summary){
+function finishScan(pages, summary, scanFiles){
   setBusy(null); ocrProgressCb=null;
-  var job = scanJob(); if(!job){ showToast("Job not found", {err:true}); return; }
+  var job = scanJob(); if(!job){ if(scanFiles) dropScanMetas(scanFiles); showToast("Job not found", {err:true}); return; }
   // each page/file is read as its own document (work instructions, BOM, item record…), then merged into one job
   var docs = pages.map(function(p, pi){ var ls=p.lines.map(function(l){ return Object.assign({kind:p.kind}, l); }); var d=parseDoc(ls, job, 0.9, p.label || ("Page "+(pi+1))); d.raw=ls.map(function(l){ return l.text; }).join("\n"); return d; });
   var cnt={}; docs.forEach(function(d){ cnt[d.label]=(cnt[d.label]||0)+1; }); var seen={};
@@ -3178,7 +3212,8 @@ function finishScan(pages, summary){
   var nConf = items.filter(function(i){ return i.conflict; }).length;
   var raw = docs.length>1 ? docs.map(function(d){ return "— "+d.label+" —\n"+d.raw; }).join("\n\n") : (docs[0]? docs[0].raw : "");
   window.__lastScan = {docs:docs.map(function(d){ return {label:d.label, kind:d.kind, raw:d.raw}; }), pages:pages.map(function(p){ return {label:p.label||"", kind:p.kind, conf:p.conf, prep:p.prep||null}; })};
-  openModal({type:"review", items:items, raw:raw, docs:parsed.docs, conflicts:nConf, summary:(docs.length>1? docs.length+" documents ("+parsed.docs.join(", ")+") · " : (docs[0] && docs[0].kind? docs[0].kind+" · " : ""))+summary+" · "+items.filter(function(i){ return !i.loose; }).length+" value"+(items.length===1?"":"s")+" found"+(nConf? " · "+nConf+" conflict"+(nConf>1?"s":"") : "")});
+  if(scanFiles) scanFiles._handed = true;
+  openModal({type:"review", items:items, raw:raw, docs:parsed.docs, conflicts:nConf, scanFiles:scanFiles||[], summary:(docs.length>1? docs.length+" documents ("+parsed.docs.join(", ")+") · " : (docs[0] && docs[0].kind? docs[0].kind+" · " : ""))+summary+" · "+items.filter(function(i){ return !i.loose; }).length+" value"+(items.length===1?"":"s")+" found"+(nConf? " · "+nConf+" conflict"+(nConf>1?"s":"") : "")});
 }
 ACT.rvPick = function(t){ var r=state.modal.items[+t.getAttribute("data-i")], o=r && r.options[+t.getAttribute("data-o")]; if(!o) return; r.value=o.value; r.unit=o.unit||""; r.selected=true; r.picked=true; rvRerender(); };
 ACT.rvRole = function(t){ var r=state.modal.items[+t.getAttribute("data-i")]; if(!r) return; r.role = r.role==="quality"? "instructions" : "quality"; r.label=ROLE_TITLES[r.role];
@@ -3189,14 +3224,330 @@ ACT.rvAll = function(t){ var v=t.getAttribute("data-v")==="1"; state.modal.items
 function rvRerender(){ var sh=document.querySelector("#modalRoot .sheet"), y=sh? sh.scrollTop : 0; renderModal(); sh=document.querySelector("#modalRoot .sheet"); if(sh) sh.scrollTop=y; }
 ACT.rvApply = function(){
   var job=scanJob(), m=state.modal, isNew=!!(state.scanTarget && state.scanTarget.newJob);
-  if(!job) return;
+  if(!job || !m) return;
+  if(state.driveBusy){ showToast("Wait for the Drive save to finish"); return; }
   var n = applyReview(job, m.items);
   if(isNew) job.pendingChanges=[];
   if($("rvNotes") && $("rvNotes").checked && m.raw){ var ns=secByRole(job,"notes") || job.sections.find(function(s){ return s.type==="notes" && !s.role; }); if(!ns){ ns=roleSection("notes"); job.sections.push(ns); } ns.text = (ns.text? ns.text+"\n\n" : "") + "— Scanned "+todayStr()+" —\n"+m.raw.trim(); }
+  var scans=(m.scanFiles||[]).map(function(s){ return {id:s.id, name:s.name||"scan", type:s.type||"", bytes:s.bytes||0}; });
+  m.scanFiles=[];
+  if(scans.length) job.scanFiles=(job.scanFiles||[]).concat(scans);
   if(isNew){ state.jobs.unshift(job); }
   state.scanTarget=null; saveJobs(); askPersist(); closeModal();
   if(isNew) go("#/job/"+job.id); else render();
   showToast(isNew? "Job created from scan ("+n+" values)" : "Applied "+n+" value"+(n===1?"":"s"));
+};
+
+/* ---------- Save a copy of original scans to Google Drive (DCT / Building Material) ---------- */
+function dropScanMetas(metas){ (metas||[]).forEach(function(m){ if(m && m.id) delPhoto(m.id); }); }
+function rememberScanFiles(files){
+  var metas=[];
+  return (files||[]).reduce(function(p, file){
+    return p.then(function(){
+      var id="scn"+uid();
+      var meta={id:id, name:file.name||"scan", type:file.type||"", bytes:file.size||0};
+      return putPhoto(id, file).then(function(){ metas.push(meta); }).catch(function(){ meta._blob=file; metas.push(meta); });
+    });
+  }, Promise.resolve()).then(function(){ return metas; });
+}
+function getScanBlob(meta){
+  if(meta && meta._blob) return Promise.resolve(meta._blob);
+  return getPhoto(meta.id).then(function(b){ if(!b) throw new Error("The original scan file is no longer on this phone."); return b; });
+}
+function driveBoxHtml(){
+  var label = GOOGLE_CLIENT_ID ? "Save a copy to Drive" : "Share to Google Drive";
+  var sub = "DCT / Building Material";
+  return '<div class="drivebox" id="driveBox"><div class="dlab" style="font-weight:800">Original scan file'+(state.modal.scanFiles.length>1?"s":"")+'</div><p>Only these scan files are sent — not the rest of the job. They stay on this phone until you save or skip.</p>'+
+    '<button class="btn primary block" id="driveSaveBtn" data-act="saveDrive"><span>'+label+'</span><small>'+sub+'</small></button>'+
+    '<button class="btn ghost block" id="driveSkipBtn" data-act="skipDrive" style="margin-top:8px">Skip Drive copy</button></div>';
+}
+function driveStamp(){
+  var d=new Date(); function z(n){ return (n<10?"0":"")+n; }
+  return d.getFullYear()+"-"+z(d.getMonth()+1)+"-"+z(d.getDate())+" "+z(d.getHours())+z(d.getMinutes())+z(d.getSeconds());
+}
+function scanExt(meta){
+  var m=String(meta.name||"").match(/\.([a-z0-9]{1,8})$/i);
+  if(m) return m[1].toLowerCase();
+  var t=(meta.type||"").toLowerCase();
+  if(t.indexOf("pdf")>=0) return "pdf";
+  if(t.indexOf("png")>=0) return "png";
+  if(t.indexOf("webp")>=0) return "webp";
+  if(t.indexOf("jpeg")>=0 || t.indexOf("jpg")>=0) return "jpg";
+  return "";
+}
+function scanDocType(meta){
+  var n=(meta.name||"").toLowerCase(), t=(meta.type||"").toLowerCase();
+  if(t.indexOf("pdf")>=0 || /\.pdf$/.test(n)) return "PDF";
+  if(t.indexOf("image")>=0 || /\.(jpe?g|png|webp|gif|heic|heif)$/.test(n)) return "Photo";
+  return "Document";
+}
+function driveBaseName(job, modal){
+  var part="", tool="", pname="";
+  var items=(modal && modal.items) || [];
+  items.forEach(function(i){
+    if(!i || i.loose) return;
+    if(i.key==="part_no" && i.value) part = part || String(i.value).trim();
+    if(i.key==="toolNumber" && i.value) tool = tool || String(i.value).trim();
+    if(i.key==="partName" && i.value) pname = pname || String(i.value).trim();
+  });
+  if(job){
+    var pf=bestField(job,"part_no");
+    part = part || (pf && String(pf.f.value||"").trim()) || "";
+    tool = tool || String(job.toolNumber||"").trim();
+    pname = pname || String(job.partName||"").trim();
+  }
+  var base = part || pname || tool || "Job";
+  base = String(base).replace(/[\\/:*?"<>|\u0000-\u001f]+/g," ").replace(/\s+/g," ").trim().slice(0,60);
+  return base || "Job";
+}
+function driveFileName(job, meta, modal){
+  var ext=scanExt(meta);
+  return driveBaseName(job, modal)+" "+scanDocType(meta)+" "+driveStamp()+(ext?"."+ext:"");
+}
+function currentScanCtx(){
+  var m=state.modal;
+  if(m && m.type==="review" && (m.scanFiles||[]).length) return {files:m.scanFiles, job:scanJob(), modal:m};
+  var j = (m && m.type==="jobMenu") ? curJob() : curJob();
+  if(j && (j.scanFiles||[]).length) return {files:j.scanFiles, job:j, modal:m};
+  return null;
+}
+function clearStoredScans(ids){
+  var set={}; ids.forEach(function(id){ set[id]=1; });
+  function strip(arr){ return (arr||[]).filter(function(s){ return s && !set[s.id]; }); }
+  if(state.modal && state.modal.scanFiles) state.modal.scanFiles = strip(state.modal.scanFiles);
+  var sj=scanJob(); if(sj && sj.scanFiles) sj.scanFiles=strip(sj.scanFiles);
+  var changed=false;
+  state.jobs.forEach(function(j){
+    if(j.scanFiles && j.scanFiles.some(function(s){ return set[s.id]; })){ j.scanFiles=strip(j.scanFiles); touch(j); changed=true; }
+  });
+  if(changed) saveJobs();
+  ids.forEach(function(id){ delPhoto(id); });
+}
+function refreshDriveUi(){
+  if(state.modal && state.modal.type==="review") rvRerender();
+  else if(state.modal) renderModal();
+  else render();
+}
+function driveProgress(text, pct){
+  window.__driveLog = window.__driveLog || [];
+  window.__driveLog.push(text);
+  setBusy(text, {pct:pct, cancel:true, cancelAct:"cancelDrive"});
+}
+function rememberedFolder(){ try{ var r=localStorage.getItem("tjl.driveFolder"); return r? JSON.parse(r) : null; }catch(e){ return null; } }
+function rememberFolder(id, name, scope){ try{ localStorage.setItem("tjl.driveFolder", JSON.stringify({id:id, name:name||"Building Material", scope:scope||"file", at:Date.now()})); }catch(e){} }
+function scopeForRemembered(){ var m=rememberedFolder(); return (m && m.scope==="full") ? DRIVE_SCOPE_FULL : DRIVE_SCOPE_FILE; }
+function loadScriptOnce(src){
+  return new Promise(function(res, rej){
+    var existing=document.querySelector('script[src="'+src+'"]');
+    if(existing && existing.getAttribute("data-loaded")==="1") return res();
+    var s=existing || document.createElement("script");
+    s.src=src; s.async=true;
+    s.onload=function(){ s.setAttribute("data-loaded","1"); res(); };
+    s.onerror=function(){ rej(new Error("Couldn't reach Google. Check your connection.")); };
+    if(!existing) document.head.appendChild(s);
+  });
+}
+function requestDriveToken(scope){
+  if(typeof window.__tjlDriveToken==="function"){
+    return Promise.resolve().then(function(){ return window.__tjlDriveToken(scope); }).then(function(t){
+      if(!t){ var e=new Error("Sign-in cancelled"); e.cancelled=true; throw e; }
+      return t;
+    });
+  }
+  if(!GOOGLE_CLIENT_ID){ var miss=new Error("Drive save needs a one-time Google setup"); throw miss; }
+  return loadScriptOnce("https://accounts.google.com/gsi/client").then(function(){
+    return new Promise(function(res, rej){
+      if(!window.google || !google.accounts || !google.accounts.oauth2){ rej(new Error("Google sign-in didn't load. Check your connection.")); return; }
+      var client=google.accounts.oauth2.initTokenClient({
+        client_id: GOOGLE_CLIENT_ID,
+        scope: scope,
+        callback: function(resp){
+          if(resp && resp.access_token) res(resp.access_token);
+          else { var e=new Error("Sign-in cancelled"); e.cancelled=true; rej(e); }
+        },
+        error_callback: function(){ var e=new Error("Sign-in cancelled"); e.cancelled=true; rej(e); }
+      });
+      try{ client.requestAccessToken({prompt:""}); }
+      catch(err){ var e=new Error("Sign-in cancelled"); e.cancelled=true; rej(e); }
+    });
+  });
+}
+function probeFolder(token, id){
+  return fetch("https://www.googleapis.com/drive/v3/files/"+encodeURIComponent(id)+"?fields=id,name,mimeType,capabilities&supportsAllDrives=true", {
+    headers:{Authorization:"Bearer "+token}
+  }).then(function(r){
+    if(!r.ok) return null;
+    return r.json().then(function(j){
+      if(!j || !j.id) return null;
+      if(j.mimeType && j.mimeType!=="application/vnd.google-apps.folder") return null;
+      if(j.capabilities && j.capabilities.canAddChildren===false) return null;
+      return j;
+    }).catch(function(){ return null; });
+  }).catch(function(){ return null; });
+}
+function pickDriveFolder(token){
+  if(!GOOGLE_API_KEY){ var e=new Error("picker-unavailable"); e.nopicker=true; return Promise.reject(e); }
+  return loadScriptOnce("https://apis.google.com/js/api.js").then(function(){
+    return new Promise(function(res, rej){
+      var fail=function(){ var e=new Error("picker-unavailable"); e.nopicker=true; rej(e); };
+      if(!window.gapi || !gapi.load) return fail();
+      gapi.load("picker", {callback:function(){
+        try{
+          var view=new google.picker.DocsView(google.picker.ViewId.FOLDERS);
+          view.setSelectFolderEnabled(true);
+          view.setIncludeFolders(true);
+          view.setMimeTypes("application/vnd.google-apps.folder");
+          var picker=new google.picker.PickerBuilder().setOAuthToken(token).setDeveloperKey(GOOGLE_API_KEY).setTitle("Choose Building Material (inside DCT)").addView(view).setCallback(function(data){
+            var A=google.picker.Action;
+            if(data.action===A.PICKED && data.docs && data.docs[0]) res({id:data.docs[0].id, name:data.docs[0].name||"Building Material"});
+            else if(data.action===A.CANCEL){ var e=new Error("Folder choice cancelled"); e.cancelled=true; rej(e); }
+          }).build();
+          picker.setVisible(true);
+        }catch(err){ fail(); }
+      }, onerror:fail});
+    });
+  }).catch(function(e){ if(e && (e.nopicker || e.cancelled)) throw e; var x=new Error("picker-unavailable"); x.nopicker=true; throw x; });
+}
+function resolveDriveFolder(auth, scope){
+  var mem=rememberedFolder();
+  var first=(mem && mem.id) ? probeFolder(auth.token, mem.id) : Promise.resolve(null);
+  return first.then(function(found){
+    if(found){ rememberFolder(found.id, found.name, (mem && mem.scope) || (scope===DRIVE_SCOPE_FULL?"full":"file")); return {id:found.id, name:found.name}; }
+    if(mem && mem.id){ try{ localStorage.removeItem("tjl.driveFolder"); }catch(e){} }
+    return probeFolder(auth.token, DRIVE_FOLDER_HINT).then(function(hint){
+      if(hint){ rememberFolder(hint.id, hint.name||"Building Material", scope===DRIVE_SCOPE_FULL?"full":"file"); return {id:hint.id, name:hint.name}; }
+      driveProgress("Choose the Building Material folder once…", 18);
+      return pickDriveFolder(auth.token).then(function(picked){
+        rememberFolder(picked.id, picked.name, "file");
+        return picked;
+      }).catch(function(e){
+        if(e && e.cancelled) throw e;
+        if(state.driveAbort){ var c=new Error("cancelled"); c.cancelled=true; throw c; }
+        if(scope===DRIVE_SCOPE_FULL) throw new Error("Couldn't open DCT / Building Material. Sign in with the Google account that can add files there.");
+        driveProgress("Allowing access to the Building Material folder…", 18);
+        return requestDriveToken(DRIVE_SCOPE_FULL).then(function(tok2){
+          auth.token=tok2;
+          return probeFolder(tok2, DRIVE_FOLDER_HINT).then(function(hint2){
+            if(!hint2) throw new Error("Couldn't open DCT / Building Material. Choose that folder when asked, then try again.");
+            rememberFolder(hint2.id, hint2.name||"Building Material", "full");
+            return {id:hint2.id, name:hint2.name};
+          });
+        });
+      });
+    });
+  });
+}
+function driveUploadOne(token, folderId, name, blob){
+  var boundary="tjlBoundary7MA";
+  var mime=blob.type || "application/octet-stream";
+  var meta=JSON.stringify({name:name, parents:[folderId]});
+  var head="--"+boundary+"\r\nContent-Type: application/json; charset=UTF-8\r\n\r\n"+meta+"\r\n--"+boundary+"\r\nContent-Type: "+mime+"\r\nContent-Transfer-Encoding: binary\r\n\r\n";
+  var tail="\r\n--"+boundary+"--";
+  var body=new Blob([head, blob, tail]);
+  var ctrl=state.driveAbortCtrl;
+  return fetch("https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart&supportsAllDrives=true&fields=id,name,webViewLink", {
+    method:"POST",
+    headers:{Authorization:"Bearer "+token, "Content-Type":"multipart/related; boundary="+boundary},
+    body:body,
+    signal: ctrl ? ctrl.signal : undefined
+  }).then(function(r){
+    return r.text().then(function(txt){
+      var j={}; try{ j=JSON.parse(txt); }catch(e){}
+      if(!r.ok){
+        var msg=(j.error && (j.error.message || (j.error.errors && j.error.errors[0] && j.error.errors[0].message))) || ("Drive upload failed ("+r.status+")");
+        throw new Error(msg);
+      }
+      return j;
+    });
+  });
+}
+function shareScanFiles(ctx){
+  var files=ctx.files.slice();
+  return Promise.all(files.map(getScanBlob)).then(function(blobs){
+    var list=blobs.map(function(b,i){
+      var name=driveFileName(ctx.job, files[i], ctx.modal);
+      var type=files[i].type || b.type || "application/octet-stream";
+      try{ return new File([b], name, {type:type, lastModified:Date.now()}); }
+      catch(e){ return b; }
+    });
+    if(!navigator.share || !navigator.canShare || !navigator.canShare({files:list})){
+      showToast("Sharing files isn't available in this browser. Use Chrome on the phone, or add the Google client id for a direct save.", {err:true, ms:6500});
+      return;
+    }
+    return navigator.share({files:list, title:"Save to Google Drive", text:"DCT / Building Material"}).then(function(){
+      showToast("Shared. Pick Google Drive, then the Building Material folder. The scan stays on this phone until you tap Skip Drive copy.", {ms:7000});
+    }).catch(function(err){
+      if(err && err.name==="AbortError") showToast("Share cancelled. The scan files are still on this phone.", {err:true, ms:5000});
+      else showToast("Couldn't open the share sheet.", {err:true});
+    });
+  }).catch(function(e){ showToast((e && e.message) || "Couldn't read the scan file.", {err:true, ms:6000}); });
+}
+function uploadScanFiles(ctx){
+  if(navigator.onLine===false){ showToast("You're offline. Connect to the internet to save a copy to Drive.", {err:true, ms:6000}); return; }
+  state.driveBusy=true; state.driveAbort=false;
+  state.driveAbortCtrl=(typeof AbortController==="function") ? new AbortController() : null;
+  var files=ctx.files.slice();
+  var n=files.length;
+  var auth={token:null};
+  var scope=scopeForRemembered();
+  driveProgress("Signing in to Google…", 8);
+  requestDriveToken(scope).then(function(token){
+    if(state.driveAbort){ var e=new Error("cancelled"); e.cancelled=true; throw e; }
+    auth.token=token;
+    driveProgress("Checking the Building Material folder…", 15);
+    return resolveDriveFolder(auth, scope);
+  }).then(function(folder){
+    if(state.driveAbort){ var e=new Error("cancelled"); e.cancelled=true; throw e; }
+    return Promise.all(files.map(getScanBlob)).then(function(blobs){
+      var links=[];
+      var seq=Promise.resolve();
+      blobs.forEach(function(blob,i){
+        seq=seq.then(function(){
+          if(state.driveAbort){ var e=new Error("cancelled"); e.cancelled=true; throw e; }
+          var name=driveFileName(ctx.job, files[i], ctx.modal && ctx.modal.type==="review" ? ctx.modal : null);
+          driveProgress("Saving "+(i+1)+" of "+n+" to Drive…", Math.round(20+((i)/Math.max(1,n))*70));
+          return driveUploadOne(auth.token, folder.id, name, blob).then(function(info){ links.push(info||{}); });
+        });
+      });
+      return seq.then(function(){ return {links:links, folder:folder}; });
+    });
+  }).then(function(res){
+    clearStoredScans(files.map(function(f){ return f.id; }));
+    setBusy(null);
+    var link=(res.links[0] && res.links[0].webViewLink) || ("https://drive.google.com/drive/folders/"+(res.folder && res.folder.id || DRIVE_FOLDER_HINT));
+    showToast(n===1 ? "Saved a copy to Drive" : ("Saved "+n+" copies to Drive"), {link:link, linkLabel:"OPEN", ms:9000});
+    refreshDriveUi();
+  }).catch(function(e){
+    setBusy(null);
+    if(state.driveAbort || (e && e.name==="AbortError")){ showToast("Drive save cancelled. The scan files are still on this phone.", {err:true, ms:5500}); return; }
+    if(e && e.cancelled){
+      var cancelled=/folder/i.test(e.message||"") ? "Folder choice cancelled. Nothing was uploaded." : "Sign-in cancelled. Nothing was uploaded.";
+      showToast(cancelled, {err:true, ms:6000}); return;
+    }
+    var msg=(e && e.message) || "Couldn't save to Drive.";
+    if(/failed to fetch|network|offline|load failed/i.test(msg)) msg="Couldn't reach Google Drive. Check your connection. Nothing was saved.";
+    showToast(msg, {err:true, ms:6500});
+  }).then(function(){ state.driveBusy=false; state.driveAbortCtrl=null; });
+}
+ACT.cancelDrive=function(){ state.driveAbort=true; if(state.driveAbortCtrl){ try{ state.driveAbortCtrl.abort(); }catch(e){} } };
+ACT.skipDrive=function(){
+  if(state.driveBusy){ showToast("Wait for the Drive save to finish"); return; }
+  var m=state.modal;
+  if(m && m.type==="review"){
+    dropScanMetas(m.scanFiles); m.scanFiles=[]; rvRerender(); showToast("Drive copy skipped"); return;
+  }
+  var j=curJob();
+  if(!j || !(j.scanFiles||[]).length){ showToast("No stored scan files"); return; }
+  dropScanMetas(j.scanFiles); j.scanFiles=[]; touch(j); saveJobs();
+  if(m && m.type==="jobMenu") renderModal(); else { closeModal(); render(); }
+  showToast("Drive copy skipped. Scan files removed from this phone.");
+};
+ACT.saveDrive=function(){
+  if(state.driveBusy) return;
+  var ctx=currentScanCtx();
+  if(!ctx){ showToast("No scan files are stored for this job.", {err:true}); return; }
+  if(!GOOGLE_CLIENT_ID){ shareScanFiles(ctx); return; }
+  uploadScanFiles(ctx);
 };
 
 /* ---------- ✨ Clean up editor: on-device background removal + touch-ups for one photo ---------- */
@@ -3887,7 +4238,7 @@ function init(){
     if(!state.meta.ocrWarmAt && !c.saveData && c.type!=="cellular") warmOcr(false);
   }, 8000);
 }
-window.__tjl = {state:state, parseLines:parseLines, buildReview:buildReview, render:render, scan:{buildSynIndex:buildSynIndex, labelUnitHint:labelUnitHint, parseNumber:parseNumber, defForLabel:defForLabel, reconcileFields:reconcileFields},
+window.__tjl = {state:state, googleClientId:GOOGLE_CLIENT_ID, parseLines:parseLines, buildReview:buildReview, render:render, scan:{buildSynIndex:buildSynIndex, labelUnitHint:labelUnitHint, parseNumber:parseNumber, defForLabel:defForLabel, reconcileFields:reconcileFields},
   ce:function(){ return CE; }, ceTestMask:function(o){ ceTestMask=o||null; }, getPhoto:getPhoto}; // test hooks (ceTestMask: fake segmentation when no model is available)
 init();
 })();

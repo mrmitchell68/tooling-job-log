@@ -10,10 +10,20 @@ sw.js                  service worker: caches the app shell + CDN libs (OCR, pdf
 bgworker.js            Web Worker that loads @imgly/background-removal on first use and returns the cutout mask
 icons/                 icon-192.png, icon-512.png, icon-maskable-512.png, apple-touch-icon.png, favicon-64.png
 shots/                 412×915 phone screenshots
-tests/                 Playwright end-to-end tests (test.py, test_refsheet.py, test_arrange.py, test_cleanup.py, test_scanfields.py) + fixture generators
+tests/                 Playwright end-to-end tests (test.py, test_refsheet.py, test_arrange.py, test_cleanup.py, test_scanfields.py, test_realforms.py, test_drive.py) + fixture generators
 ```
 
 All URLs are relative, so it runs from any path: `https://<user>.github.io/<repo>/`, a subfolder, or localhost.
+
+## What's new in 2.3.3 — Save a copy of the scan to Google Drive
+
+After you photograph or pick a job document (camera, gallery, or Drive/Files), the **original file** is kept on the phone until you save it or skip.
+
+- **Review screen:** **Save a copy to Drive** (DCT / Building Material), or **Skip Drive copy**.
+- **Job menu (⋮):** the same actions stay available for any scan files still stored with that job. Paste-text scans have no file, so they don't show the button.
+- **What is uploaded:** only the original photo/PDF bytes you scanned — not the rest of the job. The Drive file name is the part number (or job name), the document type (Photo or PDF), the date, and a short time, with the original extension.
+- **How it signs in:** Google Identity Services on the phone, as the Google account you pick. Scope is `drive.file` (files this app creates). The first time, if that account can't write to the Building Material folder yet, you choose **Building Material** once (Google Picker) or grant Drive access so the known folder can be used. The folder id is remembered on this phone.
+- **Until a Google client id is set in the app:** the button is **Share to Google Drive** and opens the Android share sheet so you can drop the files in Drive today. Settings explains: "Drive save needs a one-time Google setup."
 
 ## What's new in 2.3.2 — Real job forms fill in from a scan
 
@@ -182,6 +192,7 @@ python tests/test_arrange.py         # Arrange photos: touch long-press drag, mo
 python tests/make_cleanup_sample.py  # synthetic "part on a busy workbench" photo + ground-truth mask (tests/fixtures/)
 python tests/make_scan_fixtures.py   # sample mold sheet PDF (text layer) + PNG (for OCR) in tests/fixtures/
 python tests/test_realforms.py       # 2.3.2 the 3 real phone-photo forms (tests/fixtures), merge/conflicts, apply, detail, sheet, update flow
+python tests/test_drive.py           # 2.3.3 save original scan to Drive (mocked) + share-sheet fallback
 python tests/test_scanfields.py      # 2.3.1 scan labels/units, review + assign, apply, detail, both print layouts, page 2, migration
 python tests/test_cleanup.py         # ✨ Clean up: every entry point, REAL background removal (downloads the model), backgrounds,
                                      # sliders, crop, rotate, brush, save/revert/cancel, print sheet, batch, offline, dark mode, setting
