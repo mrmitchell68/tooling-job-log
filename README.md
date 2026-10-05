@@ -15,6 +15,16 @@ tests/                 Playwright end-to-end tests (test.py, test_refsheet.py, t
 
 All URLs are relative, so it runs from any path: `https://<user>.github.io/<repo>/`, a subfolder, or localhost.
 
+## What's new in 2.3.5 — Scans save on the phone and offer a Drive copy
+
+When you scan or photograph a document (camera, gallery, PDF, or Google Drive / Files), the **original file is saved with that job** on the phone as soon as the review screen opens.
+
+- **Send a Drive copy after each scan** is on by default (Settings).
+- **Until a Google client id is set** (the app today): the Android share sheet opens once, so you can pick **Google Drive → DCT → Building Material**. If you dismiss it, the file stays on the phone and the job's ⋮ menu still has **Share to Google Drive**. Opening the job again does not pop the sheet again.
+- **Once a Google client id is set:** the file uploads straight into **DCT / Building Material**. The first time, Google asks you to sign in. If the app can't write that folder yet, you choose **Building Material** once and the phone remembers it.
+- Settings says **Scanned documents: saved on this phone. Drive copy: share sheet**, or **Drive copy: DCT / Building Material** after that folder is remembered (or when direct upload is on).
+- Paste-text scans have no file. A direct upload removes the stored copy after it succeeds. A share-sheet copy does not.
+
 ## What's new in 2.3.4 — ✨ Make it professional
 
 One tap does the edit Allen would ask for, instead of driving every slider.
@@ -202,7 +212,7 @@ python tests/test_arrange.py         # Arrange photos: touch long-press drag, mo
 python tests/make_cleanup_sample.py  # synthetic "part on a busy workbench" photo + ground-truth mask (tests/fixtures/)
 python tests/make_scan_fixtures.py   # sample mold sheet PDF (text layer) + PNG (for OCR) in tests/fixtures/
 python tests/test_realforms.py       # 2.3.2 the 3 real phone-photo forms (tests/fixtures), merge/conflicts, apply, detail, sheet, update flow
-python tests/test_drive.py           # 2.3.3 save original scan to Drive (mocked) + share-sheet fallback
+python tests/test_drive.py           # 2.3.5 auto-save scan on the job + Drive copy (share sheet or mocked upload)
 python tests/test_scanfields.py      # 2.3.1 scan labels/units, review + assign, apply, detail, both print layouts, page 2, migration
 python tests/test_cleanup.py         # ✨ Clean up: every entry point, REAL background removal (downloads the model), backgrounds,
                                      # sliders, crop, rotate, brush, save/revert/cancel, print sheet, batch, offline, dark mode, setting

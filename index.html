@@ -533,7 +533,7 @@ pre.raw{white-space:pre-wrap;font-size:12px;background:var(--surface-2);padding:
 <script>
 (function(){
 "use strict";
-var APP_VERSION = "2.3.4";
+var APP_VERSION = "2.3.5";
 // Public OAuth client id (not a secret). Web client, authorized JavaScript origins:
 //   https://mrmitchell68.github.io   and   http://localhost:8766
 // Leave empty until that client exists — Save-to-Drive is hidden and the button uses the Android share sheet.
@@ -2369,9 +2369,10 @@ function viewSettings(){
   var lb = state.meta.lastBackupAt;
   h += '<div class="card" id="versionCard"><div class="card-bd verrow"><div class="grow"><div class="vtitle">App version <span id="appVersion">'+esc(APP_VERSION)+'</span></div><div class="faint" id="updStatus">'+(state.swUpdate? '<span style="color:var(--warn);font-weight:700">A new version is downloaded and ready to install.</span>' : 'Tooling Job Log · updates install automatically when you reopen the app')+'</div></div>'+
     '<button class="btn '+(state.swUpdate?'primary':'ghost')+'" data-act="checkUpdate" id="checkUpdBtn">'+(state.swUpdate? '⬇️ Install update' : '🔄 Check for update')+'</button></div></div>';
-  h += '<div class="card" id="driveCard"><div class="sec-hd"><h2>Google Drive copy</h2></div><div class="card-bd"><p class="muted" id="driveSetupNote" style="margin-top:0">'+(GOOGLE_CLIENT_ID
+  h += '<div class="card" id="driveCard"><div class="sec-hd"><h2>Google Drive copy</h2></div><div class="card-bd"><p class="muted" id="driveCopyLine" style="margin-top:0"><b>'+esc(driveStatusLine())+'</b></p><p class="muted" id="driveSetupNote">'+(GOOGLE_CLIENT_ID
     ? 'Scans can be saved straight into <b>DCT / Building Material</b>. The first time, Google asks you to sign in. If this app cannot see that folder yet, choose <b>Building Material</b> once.'
-    : 'Drive save needs a one-time Google setup. Until then, <b>Share to Google Drive</b> uses the Android share sheet so you can drop the scan in DCT / Building Material today.')+'</p></div></div>';
+    : 'Drive save needs a one-time Google setup. Until then, <b>Share to Google Drive</b> uses the Android share sheet so you can drop the scan in DCT / Building Material today.')+'</p>'+
+    '<label class="prefrow"><input type="checkbox" id="prefDriveCopy" data-meta-bool="driveCopy"'+(state.meta.driveCopy===false?'':' checked')+'><span>Send a Drive copy after each scan<small>'+(GOOGLE_CLIENT_ID?'Uploads the original into DCT / Building Material':'Opens the share sheet: Google Drive → DCT → Building Material')+'</small></span></label></div></div>';
   h += '<div class="card"><div class="sec-hd"><h2>Backup</h2></div><div class="card-bd">';
   h += '<dl class="kvlist"><dt>Jobs</dt><dd>'+state.jobs.length+'</dd><dt>Templates</dt><dd>'+state.templates.length+'</dd><dt>Photos</dt><dd>'+photos+' ('+fmtBytes(bytes)+')</dd>'+(origN? '<dt>Kept originals</dt><dd>'+origN+' ('+fmtBytes(origB)+') <small class="faint">for Revert</small></dd>' : '')+'<dt>Last backup</dt><dd style="color:'+(lb && Date.now()-new Date(lb)<14*DAY?'var(--good)':'var(--danger)')+'">'+(lb? esc(fmtDate(lb))+' ('+esc(ago(lb))+')' : 'Never')+'</dd><dt>Storage</dt><dd id="storageInfo">…</dd></dl><div class="sp"></div>';
   h += '<div class="menu"><button data-act="backupShare"><span class="ic">📤</span><span>Share backup file<small>Send to Google Drive, Gmail, etc. (jobs + photos, one .json)</small></span></button>';
@@ -2584,7 +2585,12 @@ function openModal(m){ state.modal=m; renderModal(); }
 function closeModal(){
   if(state.driveBusy){ showToast("Wait for the Drive save to finish"); return; }
   var prev=state.modal; state.modal=null; renderModal();
-  if(prev && prev.type==="review" && prev.scanFiles && prev.scanFiles.length){ dropScanMetas(prev.scanFiles); prev.scanFiles=[]; }
+  if(prev && prev.type==="review" && prev.scanFiles && prev.scanFiles.length){
+    var keptScan={};
+    state.jobs.forEach(function(j){ (j.scanFiles||[]).forEach(function(s){ if(s&&s.id) keptScan[s.id]=1; }); });
+    dropScanMetas(prev.scanFiles.filter(function(s){ return s && s.id && !keptScan[s.id]; }));
+    prev.scanFiles=[];
+  }
   if(prev && prev.type==="photoLabel" && !prev.arr && prev.backTo==null && state.cleanOffer && !state.photoQueue.length) offerCleanup();
 }
 function bindSwipe(){
@@ -3220,7 +3226,9 @@ function finishScan(pages, summary, scanFiles){
   var raw = docs.length>1 ? docs.map(function(d){ return "— "+d.label+" —\n"+d.raw; }).join("\n\n") : (docs[0]? docs[0].raw : "");
   window.__lastScan = {docs:docs.map(function(d){ return {label:d.label, kind:d.kind, raw:d.raw}; }), pages:pages.map(function(p){ return {label:p.label||"", kind:p.kind, conf:p.conf, prep:p.prep||null}; })};
   if(scanFiles) scanFiles._handed = true;
+  keepScanWithJob(job, scanFiles||[]);
   openModal({type:"review", items:items, raw:raw, docs:parsed.docs, conflicts:nConf, scanFiles:scanFiles||[], summary:(docs.length>1? docs.length+" documents ("+parsed.docs.join(", ")+") · " : (docs[0] && docs[0].kind? docs[0].kind+" · " : ""))+summary+" · "+items.filter(function(i){ return !i.loose; }).length+" value"+(items.length===1?"":"s")+" found"+(nConf? " · "+nConf+" conflict"+(nConf>1?"s":"") : "")});
+  scheduleAutoDriveCopy(scanFiles||[]);
 }
 ACT.rvPick = function(t){ var r=state.modal.items[+t.getAttribute("data-i")], o=r && r.options[+t.getAttribute("data-o")]; if(!o) return; r.value=o.value; r.unit=o.unit||""; r.selected=true; r.picked=true; rvRerender(); };
 ACT.rvRole = function(t){ var r=state.modal.items[+t.getAttribute("data-i")]; if(!r) return; r.role = r.role==="quality"? "instructions" : "quality"; r.label=ROLE_TITLES[r.role];
@@ -3238,6 +3246,9 @@ ACT.rvApply = function(){
   if($("rvNotes") && $("rvNotes").checked && m.raw){ var ns=secByRole(job,"notes") || job.sections.find(function(s){ return s.type==="notes" && !s.role; }); if(!ns){ ns=roleSection("notes"); job.sections.push(ns); } ns.text = (ns.text? ns.text+"\n\n" : "") + "— Scanned "+todayStr()+" —\n"+m.raw.trim(); }
   var scans=(m.scanFiles||[]).map(function(s){ return {id:s.id, name:s.name||"scan", type:s.type||"", bytes:s.bytes||0}; });
   m.scanFiles=[];
+  var haveScan={};
+  (job.scanFiles||[]).forEach(function(s){ if(s&&s.id) haveScan[s.id]=1; });
+  scans=scans.filter(function(s){ return s && s.id && !haveScan[s.id]; });
   if(scans.length) job.scanFiles=(job.scanFiles||[]).concat(scans);
   if(isNew){ state.jobs.unshift(job); }
   state.scanTarget=null; saveJobs(); askPersist(); closeModal();
@@ -3261,10 +3272,61 @@ function getScanBlob(meta){
   if(meta && meta._blob) return Promise.resolve(meta._blob);
   return getPhoto(meta.id).then(function(b){ if(!b) throw new Error("The original scan file is no longer on this phone."); return b; });
 }
+function driveStatusLine(){
+  var mem=rememberedFolder();
+  var dest = ((mem && mem.id) || GOOGLE_CLIENT_ID) ? "DCT / Building Material" : "share sheet";
+  return "Scanned documents: saved on this phone. Drive copy: "+dest;
+}
+function keepScanWithJob(job, metas){
+  if(!job || !metas || !metas.length) return;
+  if(!state.jobs.some(function(j){ return j===job || j.id===job.id; })) return;
+  var have={};
+  job.scanFiles=job.scanFiles||[];
+  job.scanFiles.forEach(function(s){ if(s&&s.id) have[s.id]=1; });
+  var add=[];
+  metas.forEach(function(s){
+    if(!s||!s.id||have[s.id]) return;
+    add.push({id:s.id, name:s.name||"scan", type:s.type||"", bytes:s.bytes||0});
+    have[s.id]=1;
+  });
+  if(!add.length) return;
+  job.scanFiles=job.scanFiles.concat(add);
+  touch(job); saveJobs();
+}
+function readOffered(){ try{ var a=JSON.parse(localStorage.getItem("tjl.driveOffered")||"[]"); return Array.isArray(a)? a : []; }catch(e){ return []; } }
+function driveAlreadyOffered(ids){ var set={}; readOffered().forEach(function(id){ set[id]=1; }); return ids.length>0 && ids.every(function(id){ return set[id]; }); }
+function markDriveOffered(ids){
+  var set={}; readOffered().forEach(function(id){ set[id]=1; });
+  (ids||[]).forEach(function(id){ if(id) set[id]=1; });
+  var all=Object.keys(set); if(all.length>400) all=all.slice(all.length-400);
+  try{ localStorage.setItem("tjl.driveOffered", JSON.stringify(all)); }catch(e){}
+}
+function scheduleAutoDriveCopy(files){
+  var ids=(files||[]).map(function(f){ return f && f.id; }).filter(Boolean);
+  if(!ids.length) return;
+  setTimeout(function(){
+    if(state.meta.driveCopy===false) return;
+    if(state.driveBusy) return;
+    if(!state.modal || state.modal.type!=="review") return;
+    if(driveAlreadyOffered(ids)) return;
+    var ctx=currentScanCtx(); if(!ctx || !ctx.files.length) return;
+    var subset=ctx.files.filter(function(f){ return ids.indexOf(f.id)>=0; });
+    if(!subset.length) return;
+    var sub={files:subset, job:ctx.job, modal:ctx.modal};
+    if(!GOOGLE_CLIENT_ID){ shareScanFiles(sub, {auto:true}); return; }
+    markDriveOffered(subset.map(function(f){ return f.id; }));
+    uploadScanFiles(sub);
+  }, 40);
+}
 function driveBoxHtml(){
   var label = GOOGLE_CLIENT_ID ? "Save a copy to Drive" : "Share to Google Drive";
   var sub = "DCT / Building Material";
-  return '<div class="drivebox" id="driveBox"><div class="dlab" style="font-weight:800">Original scan file'+(state.modal.scanFiles.length>1?"s":"")+'</div><p>Only these scan files are sent — not the rest of the job. They stay on this phone until you save or skip.</p>'+
+  var note = state.meta.driveCopy===false
+    ? "Only these scan files are sent — not the rest of the job. They stay on this phone until you save or skip."
+    : (GOOGLE_CLIENT_ID
+        ? "A copy is sent to DCT / Building Material. Only these scan files are sent — not the rest of the job."
+        : "The share sheet opens so you can choose Google Drive → DCT → Building Material. Only these scan files are sent — not the rest of the job. They stay on this phone if you dismiss it.");
+  return '<div class="drivebox" id="driveBox"><div class="dlab" style="font-weight:800">Original scan file'+(state.modal.scanFiles.length>1?"s":"")+'</div><p>'+note+'</p>'+
     '<button class="btn primary block" id="driveSaveBtn" data-act="saveDrive"><span>'+label+'</span><small>'+sub+'</small></button>'+
     '<button class="btn ghost block" id="driveSkipBtn" data-act="skipDrive" style="margin-top:8px">Skip Drive copy</button></div>';
 }
@@ -3468,7 +3530,8 @@ function driveUploadOne(token, folderId, name, blob){
     });
   });
 }
-function shareScanFiles(ctx){
+function shareScanFiles(ctx, opts){
+  opts=opts||{};
   var files=ctx.files.slice();
   return Promise.all(files.map(getScanBlob)).then(function(blobs){
     var list=blobs.map(function(b,i){
@@ -3478,16 +3541,19 @@ function shareScanFiles(ctx){
       catch(e){ return b; }
     });
     if(!navigator.share || !navigator.canShare || !navigator.canShare({files:list})){
-      showToast("Sharing files isn't available in this browser. Use Chrome on the phone, or add the Google client id for a direct save.", {err:true, ms:6500});
-      return;
+      if(!opts.auto) showToast("Sharing files isn't available in this browser. Use Chrome on the phone, or add the Google client id for a direct save.", {err:true, ms:6500});
+      return false;
     }
-    return navigator.share({files:list, title:"Save to Google Drive", text:"DCT / Building Material"}).then(function(){
-      showToast("Shared. Pick Google Drive, then the Building Material folder. The scan stays on this phone until you tap Skip Drive copy.", {ms:7000});
+    if(opts.auto) markDriveOffered(files.map(function(f){ return f.id; }));
+    return navigator.share({files:list, title:"Save to Google Drive", text:"Google Drive → DCT → Building Material"}).then(function(){
+      showToast("Shared. Pick Google Drive, then DCT → Building Material. The scan stays on this phone.", {ms:7000});
+      return true;
     }).catch(function(err){
       if(err && err.name==="AbortError") showToast("Share cancelled. The scan files are still on this phone.", {err:true, ms:5000});
-      else showToast("Couldn't open the share sheet.", {err:true});
+      else showToast("Couldn't open the share sheet. The scan is still on this phone.", {err:true, ms:5500});
+      return false;
     });
-  }).catch(function(e){ showToast((e && e.message) || "Couldn't read the scan file.", {err:true, ms:6000}); });
+  }).catch(function(e){ showToast((e && e.message) || "Couldn't read the scan file.", {err:true, ms:6000}); return false; });
 }
 function uploadScanFiles(ctx){
   if(navigator.onLine===false){ showToast("You're offline. Connect to the internet to save a copy to Drive.", {err:true, ms:6000}); return; }
@@ -3541,7 +3607,8 @@ ACT.skipDrive=function(){
   if(state.driveBusy){ showToast("Wait for the Drive save to finish"); return; }
   var m=state.modal;
   if(m && m.type==="review"){
-    dropScanMetas(m.scanFiles); m.scanFiles=[]; rvRerender(); showToast("Drive copy skipped"); return;
+    clearStoredScans((m.scanFiles||[]).map(function(s){ return s.id; }).filter(Boolean));
+    m.scanFiles=[]; rvRerender(); showToast("Drive copy skipped"); return;
   }
   var j=curJob();
   if(!j || !(j.scanFiles||[]).length){ showToast("No stored scan files"); return; }
@@ -4288,7 +4355,10 @@ document.addEventListener("change", function(e){
   if(t.hasAttribute("data-rvchk")){ var ri=state.modal.items[+t.getAttribute("data-rvchk")]; ri.selected=t.checked; if(ri.loose && t.checked && !ri.target){ retargetItem(scanJob(), ri, ri.label? "other" : ""); if(!ri.target){ t.checked=false; ri.selected=false; showToast("Pick a field for this line first"); } else rvRerender(); } return; }
   if(t.hasAttribute("data-rvtarget")){ var rt=state.modal.items[+t.getAttribute("data-rvtarget")]; retargetItem(scanJob(), rt, t.value); rvRerender(); return; }
   if(t.hasAttribute("data-ce")){ ceInput(t, true); return; }
-  if(t.hasAttribute("data-meta-bool")){ state.meta[t.getAttribute("data-meta-bool")]=t.checked; saveMeta(); showToast(t.checked? "Will offer ✨ Clean up after adding photos" : "Won’t offer clean-up after adding photos (still in Arrange & viewer)"); return; }
+  if(t.hasAttribute("data-meta-bool")){ var mk=t.getAttribute("data-meta-bool"); state.meta[mk]=t.checked; saveMeta();
+    if(mk==="driveCopy") showToast(t.checked? "A Drive copy will be offered after each scan" : "Drive copies are off. Scans stay on this phone.");
+    else showToast(t.checked? "Will offer ✨ Clean up after adding photos" : "Won’t offer clean-up after adding photos (still in Arrange & viewer)");
+    return; }
   if(!j) return;
   if(t.dataset.orig!=null && t.dataset.orig!==t.value){
     var orig=t.dataset.orig;
