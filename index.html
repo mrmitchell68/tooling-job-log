@@ -386,6 +386,12 @@ pre.raw{white-space:pre-wrap;font-size:12px;background:var(--surface-2);padding:
 .ce .btn:disabled{opacity:.4}
 .viewer .vtools{display:flex;gap:8px;padding:0 10px 8px}
 .viewer .vtools .btn{flex:1;min-height:48px}
+.ce-prochips{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin:8px 0 4px}
+.ce-prochips button{min-height:56px;border-radius:14px;border:2px solid var(--border);background:var(--surface);font-weight:800;font-size:16px;color:var(--text)}
+.ce-prochips button.sel{border-color:var(--primary);background:var(--primary);color:var(--primary-ink)}
+.viewer .vtools{flex-wrap:wrap}
+.viewer .vtools .btn.pro{flex:1 0 100%;min-height:52px}
+
 .toast .t2{background:transparent;border:1px solid rgba(255,255,255,.35)}
 .toast.offer{padding-left:14px;gap:6px}
 .toast.offer span{flex:1;min-width:0}
@@ -527,7 +533,7 @@ pre.raw{white-space:pre-wrap;font-size:12px;background:var(--surface-2);padding:
 <script>
 (function(){
 "use strict";
-var APP_VERSION = "2.3.3";
+var APP_VERSION = "2.3.4";
 // Public OAuth client id (not a secret). Web client, authorized JavaScript origins:
 //   https://mrmitchell68.github.io   and   http://localhost:8766
 // Leave empty until that client exists — Save-to-Drive is hidden and the button uses the Android share sheet.
@@ -2541,7 +2547,7 @@ function renderModal(){
     if(!p){ state.modal=null; return renderModal(); }
     root.innerHTML = '<div class="viewer" id="viewer"><div class="vtop"><button class="iconbtn" data-act="closeModal" aria-label="Close">✕</button><div class="vl">'+esc(p.label||"Photo")+' <span style="opacity:.6;font-weight:500">'+(m.i+1)+'/'+j.photos.length+'</span></div><button class="iconbtn" data-act="photoRelabel" aria-label="Relabel">🏷</button><button class="iconbtn" data-act="photoDelete" aria-label="Delete photo">🗑</button></div>'+
       '<div class="vimg" id="vimg"><img data-pid="'+esc(p.id)+'" alt="'+esc(p.label)+'"></div>'+
-      '<div class="vtools"><button class="btn ghost" data-act="ceFromViewer">✨ Clean up</button>'+(p.origId? '<button class="btn ghost" data-act="photoRevert">↺ Revert to original</button>' : '')+'</div>'+
+      '<div class="vtools"><button class="btn primary pro" data-act="ceProFromViewer" id="ceProViewer">✨ Make it professional</button><button class="btn ghost" data-act="ceFromViewer">✨ Clean up</button>'+(p.origId? '<button class="btn ghost" data-act="photoRevert">↺ Revert to original</button>' : '')+'</div>'+
       (j.photos.length>1? '<div class="vmove"><button class="btn ghost" data-act="photoMove" data-i="'+m.i+'" data-d="-1"'+(m.i?'':' disabled')+'>◀ Move earlier</button><button class="btn ghost" data-act="photoMove" data-i="'+m.i+'" data-d="1"'+(m.i<j.photos.length-1?'':' disabled')+'>Move later ▶</button></div>' : '')+
       '<div class="vbot"><button class="btn ghost" style="flex:1" data-act="photoNav" data-d="-1"'+(m.i?'':' disabled')+'>‹ Prev</button><span style="opacity:.7;font-size:13px;min-width:80px;text-align:center">'+esc(fmtBytes(p.bytes||0))+'</span><button class="btn ghost" style="flex:1" data-act="photoNav" data-d="1"'+(m.i<j.photos.length-1?'':' disabled')+'>Next ›</button></div></div>';
     hydratePhotos(root); bindSwipe(); return;
@@ -2835,7 +2841,8 @@ function arrModalHtml(j, m){
       (n>1? '<button data-act="arrMoveTo"><span class="ic">🔢</span><span>Move to position…<small>Pick its spot 1–'+n+' on the sheet</small></span></button>' : '')+
       '<button data-act="arrLabel"><span class="ic">🏷</span><span>Change label<small>Template views or your own text</small></span></button>'+
       '<button data-act="arrReplace"><span class="ic">🔄</span><span>Replace picture<small>Camera, gallery or Drive — keeps label &amp; position</small></span></button>'+
-      '<button data-act="arrClean"><span class="ic">✨</span><span>Clean up<small>Remove background, enhance, crop, straighten</small></span></button>'+
+      '<button data-act="arrPro"><span class="ic">✨</span><span>Make it professional<small>Cut out, white background, sharpen — one tap</small></span></button>'+
+      '<button data-act="arrClean"><span class="ic">🪄</span><span>Clean up<small>Remove background, enhance, crop, straighten</small></span></button>'+
       (p.origId? '<button data-act="arrRevert"><span class="ic">↺</span><span>Revert to original<small>Undo the clean-up — keeps label &amp; position</small></span></button>' : '')+
       '<button data-act="arrRotate"><span class="ic">⟳</span><span>Rotate 90°<small>Clockwise, saved right away</small></span></button>'+
       '<button data-act="arrView"><span class="ic">🔍</span><span>View full size</span></button>'+
@@ -3578,41 +3585,86 @@ function ceCover(d){
   return Math.max((f.w*c+f.h*s)/f.w, (f.w*s+f.h*c)/f.h);
 }
 function ceMatrix(d){ var f=ceFrame(d); return new DOMMatrix().translate(f.w/2, f.h/2).rotate(d.s.rot*90 + d.s.angle).scale(ceCover(d)).translate(-d.W/2, -d.H/2); }
-/* tone: auto enhance (per-channel levels = contrast + white balance, gamma = brightness), manual brightness/contrast, unsharp mask */
+/* tone: auto enhance (per-channel levels = contrast + white balance, gamma = brightness), manual brightness/contrast, unsharp mask.
+   pro=1 is the one-tap catalog look: fuller levels and a stronger unsharp applied only inside the cutout. */
 function ceAutoStats(d){
-  if(d.auto) return d.auto;
+  var pro=d.s.pro?1:0;
+  if(d.auto && d.auto.pro===pro) return d.auto;
   var sc=Math.min(1, 240/Math.max(d.W,d.H)), c=mkCanvas(d.W*sc, d.H*sc), g=c.getContext("2d"); g.drawImage(d.src,0,0,c.width,c.height);
   var p=g.getImageData(0,0,c.width,c.height).data, n=p.length/4, hist=[new Uint32Array(256),new Uint32Array(256),new Uint32Array(256)], i, ch;
   for(i=0;i<p.length;i+=4){ hist[0][p[i]]++; hist[1][p[i+1]]++; hist[2][p[i+2]]++; }
-  var lo=[0,0,0], hi=[255,255,255];
-  for(ch=0;ch<3;ch++){ var cum=0, cut=n*0.01; for(i=0;i<256;i++){ cum+=hist[ch][i]; if(cum>=cut){ lo[ch]=i; break; } } cum=0; for(i=255;i>=0;i--){ cum+=hist[ch][i]; if(cum>=cut){ hi[ch]=i; break; } }
-    lo[ch]=Math.min(lo[ch],70); hi[ch]=Math.max(hi[ch],175); }
+  var lo=[0,0,0], hi=[255,255,255], pct=pro?0.008:0.01, loCap=pro?100:70, hiFloor=pro?200:175;
+  for(ch=0;ch<3;ch++){ var cum=0, cut=n*pct; for(i=0;i<256;i++){ cum+=hist[ch][i]; if(cum>=cut){ lo[ch]=i; break; } } cum=0; for(i=255;i>=0;i--){ cum+=hist[ch][i]; if(cum>=cut){ hi[ch]=i; break; } }
+    lo[ch]=Math.min(lo[ch],loCap); hi[ch]=Math.max(hi[ch],hiFloor); }
   var sum=0; for(i=0;i<p.length;i+=4){ var y=0; for(ch=0;ch<3;ch++){ var v=(p[i+ch]-lo[ch])*255/(hi[ch]-lo[ch]); y+=(v<0?0:v>255?255:v)*[0.299,0.587,0.114][ch]; } sum+=y; }
-  var mean=Math.max(20, Math.min(235, sum/n)), gamma=Math.max(0.72, Math.min(1.3, Math.log(0.47)/Math.log(mean/255)));
-  d.auto={lo:lo, hi:hi, gamma:gamma}; return d.auto;
+  var target=pro?0.54:0.47, mean=Math.max(20, Math.min(235, sum/n)), gamma=Math.max(0.68, Math.min(1.35, Math.log(target)/Math.log(mean/255)));
+  d.auto={lo:lo, hi:hi, gamma:gamma, pro:pro}; return d.auto;
 }
 function ceToneNeutral(s){ return !s.auto && !s.bri && !s.con && !s.sharp; }
 function ceLuts(d){
-  var s=d.s, A=s.auto? ceAutoStats(d) : null, L=[new Uint8ClampedArray(256),new Uint8ClampedArray(256),new Uint8ClampedArray(256)], cf=1+s.con/100, bo=s.bri*1.4;
+  var s=d.s, A=s.auto? ceAutoStats(d) : null, L=[new Uint8ClampedArray(256),new Uint8ClampedArray(256),new Uint8ClampedArray(256)], cf=1+s.con/100, bo=s.bri*1.4, mix=s.pro?1:0.8;
   for(var ch=0;ch<3;ch++) for(var v=0;v<256;v++){ var x=v;
-    if(A){ var y=(v-A.lo[ch])*255/Math.max(1,A.hi[ch]-A.lo[ch]); y=255*Math.pow(Math.max(0,Math.min(255,y))/255, A.gamma); x=v*0.2+y*0.8; }
+    if(A){ var y=(v-A.lo[ch])*255/Math.max(1,A.hi[ch]-A.lo[ch]); y=255*Math.pow(Math.max(0,Math.min(255,y))/255, A.gamma); x=v*(1-mix)+y*mix; }
     L[ch][v]=(x-128)*cf+128+bo; }
   return L;
 }
-function ceSharpen(p, w, h, amt){
-  var src=new Uint8ClampedArray(p), row=w*4;
-  for(var y=1;y<h-1;y++){ for(var x=1;x<w-1;x++){ var o=(y*w+x)*4;
-    for(var c=0;c<3;c++){ var k=o+c, b=(src[k-row-4]+src[k-row]+src[k-row+4]+src[k-4]+src[k]+src[k+4]+src[k+row-4]+src[k+row]+src[k+row+4])/9; p[k]=src[k]+amt*(src[k]-b); } } }
+/* separable box blur (clamp edges). `passes` of this ≈ a gaussian. */
+function ceBoxBlur(src, w, h, rad){
+  var tmp=new Float32Array(w*h*3), dst=new Uint8ClampedArray(src.length), win=rad*2+1, y, x, c, sum, k, row, a, b, o, i;
+  for(y=0;y<h;y++){
+    row=y*w;
+    for(c=0;c<3;c++){
+      sum=0;
+      for(k=-rad;k<=rad;k++){ x=k<0?0:(k>=w?w-1:k); sum+=src[(row+x)*4+c]; }
+      for(x=0;x<w;x++){
+        tmp[(row+x)*3+c]=sum/win;
+        a=x-rad; if(a<0)a=0; else if(a>=w)a=w-1;
+        b=x+rad+1; if(b<0)b=0; else if(b>=w)b=w-1;
+        sum+=src[(row+b)*4+c]-src[(row+a)*4+c];
+      }
+    }
+  }
+  for(x=0;x<w;x++){
+    for(c=0;c<3;c++){
+      sum=0;
+      for(k=-rad;k<=rad;k++){ y=k<0?0:(k>=h?h-1:k); sum+=tmp[(y*w+x)*3+c]; }
+      for(y=0;y<h;y++){
+        dst[(y*w+x)*4+c]=sum/win;
+        a=y-rad; if(a<0)a=0; else if(a>=h)a=h-1;
+        b=y+rad+1; if(b<0)b=0; else if(b>=h)b=h-1;
+        sum+=tmp[(b*w+x)*3+c]-tmp[(a*w+x)*3+c];
+      }
+    }
+  }
+  for(i=3;i<src.length;i+=4) dst[i]=src[i];
+  return dst;
+}
+/* unsharp mask. mask=true skips the cutout edge so the old background doesn't leave a halo. */
+function ceUnsharp(p, w, h, amount, radius, thresh, mask, passes){
+  if(!(amount>0)) return;
+  var src=new Uint8ClampedArray(p), b=src, npass=passes||(radius>=2?2:1), r=Math.max(1, radius|0), i, y, x, c, o, row=w*4, dlt, v;
+  for(i=0;i<npass;i++) b=ceBoxBlur(b, w, h, r);
+  for(y=1;y<h-1;y++) for(x=1;x<w-1;x++){
+    o=(y*w+x)*4;
+    if(mask && (p[o+3]<230 || p[o-4+3]<230 || p[o+4+3]<230 || p[o-row+3]<230 || p[o+row+3]<230)) continue;
+    for(c=0;c<3;c++){
+      dlt=src[o+c]-b[o+c];
+      if(dlt<thresh && dlt>-thresh) continue;
+      v=src[o+c]+amount*dlt;
+      p[o+c]=v<0?0:v>255?255:v;
+    }
+  }
 }
 function ceApplyTone(c, d){
   if(ceToneNeutral(d.s)) return;
-  var g=c.getContext("2d"), id=g.getImageData(0,0,c.width,c.height), p=id.data, i;
-  if(d.s.auto || d.s.bri || d.s.con){ var L=ceLuts(d); for(i=0;i<p.length;i+=4){ p[i]=L[0][p[i]]; p[i+1]=L[1][p[i+1]]; p[i+2]=L[2][p[i+2]]; } }
-  if(d.s.sharp>0) ceSharpen(p, c.width, c.height, d.s.sharp/100*1.5);
+  var g=c.getContext("2d"), id=g.getImageData(0,0,c.width,c.height), p=id.data, i, s=d.s;
+  if(s.auto || s.bri || s.con){ var L=ceLuts(d); for(i=0;i<p.length;i+=4){ p[i]=L[0][p[i]]; p[i+1]=L[1][p[i+1]]; p[i+2]=L[2][p[i+2]]; } }
+  /* professional sharpen runs after the cutout (ceSubject) so it doesn't crunch the backdrop or fringe the edge */
+  if(s.sharp>0 && !s.pro) ceUnsharp(p, c.width, c.height, s.sharp/100*1.25, 1, 2, false);
   g.putImageData(id,0,0);
 }
 function ceTone(d, ps){
-  var s=d.s, key=[s.rot,s.angle,ceCover(d),ps,s.auto,s.bri,s.con,s.sharp].join("|");
+  var s=d.s, key=[s.rot,s.angle,ceCover(d),ps,s.auto,s.bri,s.con,s.sharp,s.pro?1:0].join("|");
   if(d.cache.tk===key) return d.cache.t;
   var f=ceFrame(d), c=mkCanvas(f.w*ps, f.h*ps), g=c.getContext("2d");
   g.imageSmoothingQuality="high"; g.setTransform(new DOMMatrix().scale(c.width/f.w, c.height/f.h).multiply(ceMatrix(d)));
@@ -3626,6 +3678,11 @@ function ceSubject(d, ps){
   g.imageSmoothingQuality="high"; g.setTransform(new DOMMatrix().scale(c.width/f.w, c.height/f.h).multiply(ceMatrix(d)));
   g.drawImage(d.mask,0,0); g.setTransform(1,0,0,1,0,0);
   g.globalCompositeOperation="source-in"; g.drawImage(T,0,0); g.globalCompositeOperation="source-over";
+  if(d.s.pro && d.s.sharp>0){
+    var id=g.getImageData(0,0,c.width,c.height);
+    ceUnsharp(id.data, c.width, c.height, 0.55 + d.s.sharp/100*0.6, 2, 3, true, 1);
+    g.putImageData(id,0,0);
+  }
   d.cache.sk=key; d.cache.s=c; return c;
 }
 function ceMaskBox(d){
@@ -3641,7 +3698,7 @@ function ceFitMatrix(d){
   var M=ceMatrix(d), f=ceFrame(d), X0=1e9, Y0=1e9, X1=-1e9, Y1=-1e9;
   [[bb.x0,bb.y0],[bb.x1,bb.y0],[bb.x0,bb.y1],[bb.x1,bb.y1]].forEach(function(q){ var t=M.transformPoint(new DOMPoint(q[0],q[1])); X0=Math.min(X0,t.x); X1=Math.max(X1,t.x); Y0=Math.min(Y0,t.y); Y1=Math.max(Y1,t.y); });
   var bw=X1-X0, bh=Y1-Y0; if(bw<4 || bh<4) return new DOMMatrix();
-  var pad=0.08*Math.min(f.w,f.h), k=Math.min((f.w-2*pad)/bw, (f.h-2*pad)/bh, 3);
+  var pad=(d.s.pro?0.10:0.08)*Math.min(f.w,f.h), k=Math.min((f.w-2*pad)/bw, (f.h-2*pad)/bh, 3);
   return new DOMMatrix().translate(f.w/2, f.h/2).scale(k).translate(-(X0+X1)/2, -(Y0+Y1)/2);
 }
 function cePaintBg(g, w, h, d, k){
@@ -3732,7 +3789,7 @@ function bgSegment(c, onProg){
     var req = bgReq = {res:res, rej:rej, onProg:onProg};
     if(ceTestMask){
       onProg && onProg({type:"progress", key:"compute:inference", cur:1, total:4});
-      req.timer=setTimeout(function(){ if(bgReq!==req) return; bgReq=null; res(ceFakeSeg(c)); }, ceTestMask.delay||300);
+      req.timer=setTimeout(function(){ if(bgReq!==req) return; bgReq=null; if(ceTestMask.fail) rej(new Error(ceTestMask.fail===true?"remover failed":String(ceTestMask.fail))); else res(ceFakeSeg(c)); }, ceTestMask.delay||300);
       return;
     }
     canvasBlob(c, "image/jpeg", 0.92).then(function(blob){
@@ -3777,8 +3834,9 @@ function ceOpen(pid, opts){
   getPhoto(srcId).then(function(b){ if(!b) throw new Error("picture not found"); return loadImage(b); }).then(function(img){
     setBusy(null);
     CE = {jobId:j.id, pid:pid, from:opts.from||"detail", viewerI:opts.viewerI, queue:opts.queue||[], qn:opts.qn||1, qi:opts.qi||1, fromOrig:!!opts.fromOrig,
-      doc:ceDoc(img), tab:"bg", z:1, px:0, py:0, ptrs:{}, brush:34, erase:true, undo:[], dirty:!!opts.fromOrig, before:false, sticky:false, raf:0};
+      doc:ceDoc(img), tab:"bg", look:null, proRun:false, proDone:false, bgKept:false, z:1, px:0, py:0, ptrs:{}, brush:34, erase:true, undo:[], dirty:!!opts.fromOrig, before:false, sticky:false, raf:0};
     ceRender();
+    if(opts.autoPro) requestAnimationFrame(function(){ if(CE && CE.jobId===j.id) ceRunPro(); });
   }).catch(function(e){ setBusy(null); showToast("Couldn’t open photo: "+(e.message||e), {err:true}); });
 }
 function ceClose(saved, silent){
@@ -3792,6 +3850,7 @@ function ceClose(saved, silent){
   if(c.from!=="arrange"){ var y2=window.scrollY; render(); window.scrollTo(0,y2); }
 }
 function ceTabsHtml(){
+  if(CE.look==="result") return "";
   return [["bg","🪄","Background"],["tone","☀️","Touch up"],["crop","✂️","Crop"],["brush","🖌️","Brush"]].map(function(t){
     return '<button class="'+(CE.tab===t[0]?'sel':'')+'" data-act="ceTab" data-v="'+t[0]+'" aria-pressed="'+(CE.tab===t[0])+'"><span class="ic">'+t[1]+'</span>'+t[2]+'</button>'; }).join("");
 }
@@ -3799,11 +3858,26 @@ function ceSlider(k, label, min, max, step, val, unit){
   return '<div class="ce-row"><label class="l" for="ce_'+k+'">'+label+'</label><input type="range" id="ce_'+k+'" data-ce="'+k+'" min="'+min+'" max="'+max+'" step="'+step+'" value="'+val+'"><span class="v" id="ceV_'+k+'">'+ceFmt(k,val)+'</span></div>';
 }
 function ceFmt(k, v){ v=+v; if(k==="angle") return (v>0?"+":"")+v.toFixed(1)+"°"; if(k==="brush") return Math.round(v); if(k==="sharp") return Math.round(v); return (v>0?"+":"")+Math.round(v); }
+function ceProResultHtml(){
+  var kept=CE.bgKept || !CE.doc.mask, bg=CE.doc.s.bg;
+  var h='<div class="ce-done"><span>'+(kept?'✓ Brightened &amp; sharpened':'✓ Professional edit')+'</span></div>';
+  if(kept) h += '<p class="ce-note">Background left as-is — the photo was brightened and sharpened. Nothing was uploaded.</p>';
+  else {
+    h += '<p class="ce-note">'+(bg==="studio"?"Studio background":"White background")+', soft shadow, centered and sharpened. Hold <b>◐</b> to see the original. Nothing was uploaded.</p>';
+    h += '<div class="ce-prochips" role="radiogroup" aria-label="Backdrop">'+
+      '<button class="'+(bg==="white"?"sel":"")+'" data-act="ceProBg" data-v="white" data-bg="white">White</button>'+
+      '<button class="'+(bg==="studio"?"sel":"")+'" data-act="ceProBg" data-v="studio" data-bg="studio">Studio</button></div>';
+  }
+  h += '<button class="btn ghost block tall" data-act="ceAdjust" id="ceAdjustBtn">Adjust</button><p class="faint ce-note">Brush, crop and sliders — starting from this result, not from scratch.</p>';
+  return h;
+}
 function cePanelHtml(){
   var d=CE.doc, s=d.s, j=getJob(CE.jobId), p=j && j.photos.find(function(x){ return x.id===CE.pid; }), h='';
+  if(CE.look==="result") return ceProResultHtml();
   if(CE.tab==="bg"){
+    h += '<button class="btn primary block tall" data-act="cePro" id="ceProBtn">✨ Make it professional</button><p class="faint ce-note">One tap: cuts out the part, white background, soft shadow, brighten and sharpen. The photo stays on this phone.</p>';
     h += d.mask ? '<div class="ce-done"><span>✓ Background removed</span><button class="smallbtn" data-act="ceRemove">↻ Redo</button></div>'
-               : '<button class="btn primary block tall" data-act="ceRemove" id="ceRemoveBtn">✂️ Remove background</button><p class="faint ce-note">Runs on this phone — the photo is never uploaded. First use downloads the remover once (~'+BG.mb+' MB, Wi-Fi recommended), then it works offline.</p>';
+               : '<button class="btn ghost block tall" data-act="ceRemove" id="ceRemoveBtn">✂️ Remove background</button><p class="faint ce-note">Runs on this phone — the photo is never uploaded. First use downloads the remover once (~'+BG.mb+' MB, Wi-Fi recommended), then it works offline.</p>';
     h += '<div class="ce-sw" role="radiogroup" aria-label="Background">'+CE_BGS.map(function(b){
       var sel=s.bg===b.k, sw;
       if(b.k==="none") sw='<i class="sw orig"></i>'; else if(b.k==="transparent") sw='<i class="sw chk"></i>'; else if(b.k==="studio") sw='<i class="sw studio"></i>';
@@ -3834,7 +3908,8 @@ function cePanelHtml(){
 function ceHeadHtml(){
   var j=getJob(CE.jobId), i=j? arrIdx(j, CE.pid) : -1, p=i>=0? j.photos[i] : null;
   var eb = (CE.qn>1? 'Photo '+CE.qi+' of '+CE.qn+' · ' : '')+(p && p.label ? p.label : 'Photo '+(i+1));
-  return '<button class="iconbtn" data-act="ceCancel" aria-label="Cancel — discard changes">✕</button><div class="brand"><div class="eyebrow">'+esc(eb)+'</div><div class="title">✨ Clean up</div></div>'+
+  var title = CE.look==="result" ? (CE.bgKept ? "✨ Touched up" : "✨ Professional") : "✨ Clean up";
+  return '<button class="iconbtn" data-act="ceCancel" aria-label="Cancel — discard changes">✕</button><div class="brand"><div class="eyebrow">'+esc(eb)+'</div><div class="title">'+title+'</div></div>'+
     (CE.qn>1 && CE.queue.length? '<button class="smallbtn" data-act="ceSkipRest">Skip rest</button>' : '')+
     '<button class="btn primary" data-act="ceSave" id="ceSaveBtn">✓ Save</button>';
 }
@@ -3848,7 +3923,7 @@ function ceRender(){
   $("ceRoot").innerHTML=h; document.body.style.overflow="hidden";
   ceBind(); requestAnimationFrame(function(){ ceLayout(); ceSchedule(); });
 }
-function cePanel(){ if(!CE) return; var y=$("cePanel")? $("cePanel").scrollTop : 0; $("ceTabs").innerHTML=ceTabsHtml(); $("cePanel").innerHTML=cePanelHtml(); $("cePanel").scrollTop=y; }
+function cePanel(){ if(!CE) return; var y=$("cePanel")? $("cePanel").scrollTop : 0; var tabs=$("ceTabs"); if(tabs){ tabs.innerHTML=ceTabsHtml(); tabs.hidden = CE.look==="result"; } var hd=document.querySelector("#ceEditor .ce-top"); if(hd) hd.innerHTML=ceHeadHtml(); $("cePanel").innerHTML=cePanelHtml(); $("cePanel").scrollTop=y; }
 function ceChanged(){ if(!CE) return; CE.dirty=true; ceSchedule(); }
 function cePs(d){ var f=ceFrame(d); return Math.min(1, CE_PREV/Math.max(f.w,f.h)); }
 function ceSchedule(){ if(CE && !CE.raf) CE.raf=requestAnimationFrame(ceDraw); }
@@ -3965,27 +4040,54 @@ function ceBusy(b){
     '<div class="prog" style="margin-top:12px;height:12px"><i id="ceBusyProg" style="width:'+(b.pct||0)+'%"></i></div>'+(b.sub?'<p class="faint" style="margin:10px 0 0">'+esc(b.sub)+'</p>':'')+
     (b.cancel?'<button class="btn ghost block" style="margin-top:12px" data-act="ceRemoveCancel">Cancel</button>':'')+'</div></div>';
 }
-function ceRunRemoval(){
-  if(!CE || CE.running) return; var c=CE, d=c.doc; c.running=true;
+function ceApplyProLook(bgKept){
+  if(!CE || CE.proDone) return;
+  var d=CE.doc, s=d.s;
+  CE.proDone=true; CE.proRun=false; CE.running=false;
+  d.auto=null; d.cache={};
+  s.pro=true; s.auto=true; s.bri=8; s.con=14; s.sharp=100;
+  if(bgKept || !d.mask){ s.bg="none"; s.shadow=false; s.fit=false; CE.bgKept=true; }
+  else { if(s.bg!=="studio") s.bg="white"; s.shadow=true; s.fit=true; CE.bgKept=false; }
+  CE.look="result"; CE.dirty=true; CE.before=false; CE.sticky=false;
+  ceBusy(null); cePanel(); ceSchedule();
+}
+function ceRunRemoval(opts){
+  opts=opts||{};
+  if(!CE || CE.running) return; var c=CE, d=c.doc, pro=!!opts.pro; c.running=true;
+  if(pro){ c.proRun=true; c.proDone=false; c.look=null; }
   bgModelReady().then(function(cached){
     if(CE!==c) return;
-    if(!cached && navigator.onLine===false){ c.running=false; openModal({type:"info", title:"You’re offline", html:esc(bgErrorText(new Error("offline")))}); return; }
+    if(!cached && navigator.onLine===false && !ceTestMask){
+      c.running=false; c.proRun=false;
+      if(pro){ ceApplyProLook(true); showToast("You’re offline — background left as-is, brightened and sharpened"); return; }
+      openModal({type:"info", title:"You’re offline", html:esc(bgErrorText(new Error("offline")))}); return;
+    }
     var pr=bgProgress(cached), tick;
-    ceBusy({text:cached? "Loading background remover…" : "Starting download…", pct:1, cancel:true, sub: cached? "Runs on this phone — nothing is uploaded." : "First time only: ~"+BG.mb+" MB download, then it works offline. Your photo is never uploaded."});
+    ceBusy({text:cached? "Loading background remover…" : "Starting download…", pct:1, cancel:true, sub: pro? "Making it professional on this phone — nothing is uploaded." : (cached? "Runs on this phone — nothing is uploaded." : "First time only: ~"+BG.mb+" MB download, then it works offline. Your photo is never uploaded.")});
     tick=setInterval(function(){ if(CE!==c || !c.running){ clearInterval(tick); return; } ceBusy(pr.view()); }, 250);
     return bgSegment(ceSegInput(d), function(m){ pr.on(m); }).then(function(m){
       clearInterval(tick); c.running=false; if(CE!==c) return;
       bgKill(); // free the model's working memory (~0.8 GB while it runs) right away; Redo reloads it from the offline cache
-      ceApplyMask(d, m); c.undo=[]; if(d.s.bg==="none") d.s.bg="white"; c.dirty=true;
+      ceApplyMask(d, m); c.undo=[];
       if(!ceTestMask){ state.meta.bgModelAt=nowIso(); saveMeta(); }
+      if(pro){ ceApplyProLook(false); return; }
+      if(d.s.bg==="none") d.s.bg="white"; c.dirty=true;
       ceBusy(null); cePanel(); ceSchedule(); showToast("Background removed ✓ — pick a background, or fix edges with 🖌️ Brush");
     }, function(e){
-      clearInterval(tick); c.running=false; if(CE===c) ceBusy(null);
+      clearInterval(tick); c.running=false;
+      if(pro && CE===c){
+        var cancelled=e && e.cancelled;
+        ceApplyProLook(true);
+        showToast(cancelled? "Cancelled — background left as-is, brightened and sharpened" : "Couldn’t remove the background — left as-is, brightened and sharpened");
+        return;
+      }
+      if(CE===c) ceBusy(null);
       if(e && e.cancelled) return; console.warn(e);
       if(CE===c) openModal({type:"info", title:"Background removal didn’t work", html:esc(bgErrorText(e))});
     });
   });
 }
+function ceRunPro(){ ceRunRemoval({pro:true}); }
 function ceRec(o, r){ // new photo record after cleanup: keeps label/position, remembers the ORIGINAL picture once
   var n=Object.assign({}, o, {id:r.id, bytes:r.blob.size, w:r.w, h:r.h, cleanedAt:nowIso()});
   if(!o.origId){ n.origId=o.id; n.origBytes=o.bytes||0; n.origW=o.w; n.origH=o.h; }
@@ -4001,7 +4103,27 @@ function blobIdsOf(p){ return p.origId ? [p.id, p.origId] : [p.id]; }
 /* actions */
 ACT.ceTab = function(t){ var v=t.getAttribute("data-v"); CE.tab=v; CE.cursor=null; if(v==="brush") ceEnsureMask(); cePanel(); ceSchedule(); };
 ACT.ceRemove = function(){ ceRunRemoval(); };
-ACT.ceRemoveCancel = function(){ bgCancel(); if(CE){ CE.running=false; ceBusy(null); } showToast("Background removal cancelled"); };
+ACT.cePro = function(){ ceRunPro(); };
+ACT.ceProBg = function(t){
+  if(!CE || !CE.doc.mask) return;
+  var v=t.getAttribute("data-v"); if(v!=="white" && v!=="studio") return;
+  CE.doc.s.bg=v; CE.doc.s.shadow=true; CE.doc.s.fit=true; CE.bgKept=false; CE.look="result";
+  ceChanged(); cePanel();
+};
+ACT.ceAdjust = function(){
+  if(!CE) return;
+  CE.look=null; CE.tab = CE.doc.mask ? "brush" : "tone";
+  if(CE.tab==="brush") ceEnsureMask();
+  cePanel(); ceSchedule();
+};
+ACT.ceRemoveCancel = function(){
+  var pro=CE && CE.proRun;
+  bgCancel();
+  if(!CE){ if(!pro) showToast("Background removal cancelled"); return; }
+  CE.running=false;
+  if(pro) return; // the removal promise applies brighten + sharpen and says the background was left as-is
+  ceBusy(null); showToast("Background removal cancelled");
+};
 ACT.ceBg = function(t){
   var v=t.getAttribute("data-v"), d=CE.doc;
   if(v==="photo"){ $("inCleanBg").click(); return; }
@@ -4010,7 +4132,7 @@ ACT.ceBg = function(t){
 };
 ACT.ceAuto = function(){ CE.doc.s.auto=!CE.doc.s.auto; ceChanged(); cePanel(); };
 ACT.ceRot = function(){ var s=CE.doc.s; s.rot=(s.rot+1)%4; s.crop=null; s.aspect="free"; CE.z=1; CE.px=CE.py=0; ceApplyZoom(); ceChanged(); };
-ACT.ceToneReset = function(){ var s=CE.doc.s; s.auto=false; s.bri=0; s.con=0; s.sharp=0; s.angle=0; s.rot=0; s.crop=null; s.aspect="free"; ceChanged(); cePanel(); };
+ACT.ceToneReset = function(){ var s=CE.doc.s; s.auto=false; s.bri=0; s.con=0; s.sharp=0; s.pro=false; s.angle=0; s.rot=0; s.crop=null; s.aspect="free"; CE.doc.auto=null; ceChanged(); cePanel(); };
 ACT.ceFromOrig = function(){ var c=CE; openModal({type:"confirm", title:"Start over from the original?", text:"Loads the original photo (before any clean-up). Your current edits in this editor are discarded.", ok:"Start over", onOk:function(){ var o={from:c.from, viewerI:c.viewerI, queue:c.queue, qn:c.qn, qi:c.qi, fromOrig:true}; ceClose(false, true); ceOpen(c.pid, o); }}); };
 ACT.ceAspect = function(t){ ceSetAspect(t.getAttribute("data-v")); cePanel(); };
 ACT.ceCropReset = function(){ CE.doc.s.crop=null; CE.doc.s.aspect="free"; ceChanged(); cePanel(); };
@@ -4041,7 +4163,9 @@ ACT.ceSave = function(){
   }, 30);
 };
 ACT.ceFromViewer = function(){ var j=curJob(), i=state.modal && state.modal.i; if(!j || i==null || !j.photos[i]) return; ceOpen(j.photos[i].id, {from:"viewer", viewerI:i}); };
+ACT.ceProFromViewer = function(){ var j=curJob(), i=state.modal && state.modal.i; if(!j || i==null || !j.photos[i]) return; ceOpen(j.photos[i].id, {from:"viewer", viewerI:i, autoPro:true}); };
 ACT.arrClean = function(){ var pid=state.modal && state.modal.pid; if(pid) ceOpen(pid, {from:"arrange"}); };
+ACT.arrPro = function(){ var pid=state.modal && state.modal.pid; if(pid) ceOpen(pid, {from:"arrange", autoPro:true}); };
 function confirmRevert(pid, done){
   openModal({type:"confirm", title:"Revert to the original?", text:"Puts back the photo as it was before clean-up. Label and position stay the same.", ok:"Revert", onOk:done});
 }

@@ -15,6 +15,16 @@ tests/                 Playwright end-to-end tests (test.py, test_refsheet.py, t
 
 All URLs are relative, so it runs from any path: `https://<user>.github.io/<repo>/`, a subfolder, or localhost.
 
+## What's new in 2.3.4 — ✨ Make it professional
+
+One tap does the edit Allen would ask for, instead of driving every slider.
+
+- **✨ Make it professional** is the primary button on the Clean up screen, under the photo in the viewer, and on the Arrange photo sheet.
+- That tap removes the background (same on-device model, same download / progress / Cancel), puts the part on a **clean white** background with a little padding and a **soft shadow**, centers it, and applies a stronger catalog brighten, contrast, and a real **unsharp mask** (only inside the part, so the cut edge doesn't pick up a halo from the old background).
+- The result shows immediately. **Hold ◐** to see the original. **Save** and **Cancel** are at the top. **White** is the default; **Studio** (soft light gradient) is one tap. **Adjust** opens the brush, crop, and sliders **starting from this result**.
+- If background removal is cancelled or fails, the photo is still brightened and sharpened and the screen says the **background was left as-is**.
+- The photo is never uploaded. The manual Clean up tools are still there.
+
 ## What's new in 2.3.3 — Save a copy of the scan to Google Drive
 
 After you photograph or pick a job document (camera, gallery, or Drive/Files), the **original file** is kept on the phone until you save it or skip.
