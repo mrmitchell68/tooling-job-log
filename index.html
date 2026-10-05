@@ -330,6 +330,8 @@ pre.raw{white-space:pre-wrap;font-size:12px;background:var(--surface-2);padding:
 .toast a.tlink{color:#fff;background:rgba(255,255,255,.15);border-radius:8px;min-height:40px;padding:8px 14px;font-weight:800;text-decoration:none;display:inline-flex;align-items:center}
 .drivebox{margin:12px 0 4px;padding:12px;border:1px solid var(--border);border-radius:14px;background:var(--surface-2)}
 .drivebox p{margin:4px 0 10px;font-size:13.5px;color:var(--text-dim)}
+.drivebox .btn.block{flex-direction:column;gap:2px;padding:8px 16px;min-height:56px;border-radius:14px}
+.drivebox .btn.block small{font-weight:600;font-size:12.5px;opacity:.85}
 #driveSaveBtn{display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:58px;line-height:1.25;font-weight:800}
 #driveSaveBtn small{display:block;font-weight:650;font-size:12.5px;opacity:.9}
 .menu #driveSaveBtn{display:flex;flex-direction:row;align-items:center;justify-content:flex-start;min-height:58px;font-weight:600}
@@ -533,7 +535,7 @@ pre.raw{white-space:pre-wrap;font-size:12px;background:var(--surface-2);padding:
 <script>
 (function(){
 "use strict";
-var APP_VERSION = "2.3.5";
+var APP_VERSION = "2.3.6";
 // Public OAuth client id (not a secret). Web client, authorized JavaScript origins:
 //   https://mrmitchell68.github.io   and   http://localhost:8766
 // Leave empty until that client exists — Save-to-Drive is hidden and the button uses the Android share sheet.
@@ -2369,10 +2371,18 @@ function viewSettings(){
   var lb = state.meta.lastBackupAt;
   h += '<div class="card" id="versionCard"><div class="card-bd verrow"><div class="grow"><div class="vtitle">App version <span id="appVersion">'+esc(APP_VERSION)+'</span></div><div class="faint" id="updStatus">'+(state.swUpdate? '<span style="color:var(--warn);font-weight:700">A new version is downloaded and ready to install.</span>' : 'Tooling Job Log · updates install automatically when you reopen the app')+'</div></div>'+
     '<button class="btn '+(state.swUpdate?'primary':'ghost')+'" data-act="checkUpdate" id="checkUpdBtn">'+(state.swUpdate? '⬇️ Install update' : '🔄 Check for update')+'</button></div></div>';
+  var anm=albumName();
+  h += '<div class="card" id="albumCard"><div class="sec-hd"><h2>Save scans to the phone</h2></div><div class="card-bd"><p class="muted" id="albumLine" style="margin-top:0"><b>'+(canPickFolder()? (anm? 'Scan images are saved to the '+esc(anm)+' folder on this phone.' : 'Folder not chosen yet.') : 'This browser saves scan images to the Download folder.')+'</b></p>'+
+    '<p class="muted" id="albumNote">The phone does not let a web app add pictures to a Gallery album by name. '+(canPickFolder()
+      ? 'Instead, choose the <b>'+PHONE_ALBUM+'</b> folder once (usually <b>Pictures → '+PHONE_ALBUM+'</b>; if it isn’t there, make a new folder with that name). Scans written to that folder show up in Gallery under it.'
+      : 'Use <b>Save to phone</b> on the review screen, then move the picture into '+PHONE_ALBUM+' in Gallery.')+'</p>'+
+    (canPickFolder()? '<div class="btnrow"><button class="btn '+(anm?'ghost':'primary')+'" data-act="pickAlbum" id="pickAlbumBtn">'+(anm?'Change folder':'Choose '+PHONE_ALBUM+' folder')+'</button>'+(anm?'<button class="btn ghost" data-act="forgetAlbum" id="forgetAlbumBtn">Forget folder</button>':'')+'</div>'+
+      '<label class="prefrow"><input type="checkbox" id="prefPhoneCopy" data-meta-bool="phoneCopy"'+(state.meta.phoneCopy===false?'':' checked')+'><span>Save each scan to this folder automatically<small>If the phone asks again, tap Save to '+PHONE_ALBUM+' on the review screen</small></span></label>' : '')+
+    '</div></div>';
   h += '<div class="card" id="driveCard"><div class="sec-hd"><h2>Google Drive copy</h2></div><div class="card-bd"><p class="muted" id="driveCopyLine" style="margin-top:0"><b>'+esc(driveStatusLine())+'</b></p><p class="muted" id="driveSetupNote">'+(GOOGLE_CLIENT_ID
     ? 'Scans can be saved straight into <b>DCT / Building Material</b>. The first time, Google asks you to sign in. If this app cannot see that folder yet, choose <b>Building Material</b> once.'
     : 'Drive save needs a one-time Google setup. Until then, <b>Share to Google Drive</b> uses the Android share sheet so you can drop the scan in DCT / Building Material today.')+'</p>'+
-    '<label class="prefrow"><input type="checkbox" id="prefDriveCopy" data-meta-bool="driveCopy"'+(state.meta.driveCopy===false?'':' checked')+'><span>Send a Drive copy after each scan<small>'+(GOOGLE_CLIENT_ID?'Uploads the original into DCT / Building Material':'Opens the share sheet: Google Drive → DCT → Building Material')+'</small></span></label></div></div>';
+    '<label class="prefrow"><input type="checkbox" id="prefDriveCopy" data-meta-bool="driveCopy"'+(state.meta.driveCopy===false?'':' checked')+'><span>Send a Drive copy after each scan<small>'+(GOOGLE_CLIENT_ID?'Uploads the original into DCT / Building Material':'Shows Share to Google Drive after each scan (tap it, then DCT → Building Material)')+'</small></span></label></div></div>';
   h += '<div class="card"><div class="sec-hd"><h2>Backup</h2></div><div class="card-bd">';
   h += '<dl class="kvlist"><dt>Jobs</dt><dd>'+state.jobs.length+'</dd><dt>Templates</dt><dd>'+state.templates.length+'</dd><dt>Photos</dt><dd>'+photos+' ('+fmtBytes(bytes)+')</dd>'+(origN? '<dt>Kept originals</dt><dd>'+origN+' ('+fmtBytes(origB)+') <small class="faint">for Revert</small></dd>' : '')+'<dt>Last backup</dt><dd style="color:'+(lb && Date.now()-new Date(lb)<14*DAY?'var(--good)':'var(--danger)')+'">'+(lb? esc(fmtDate(lb))+' ('+esc(ago(lb))+')' : 'Never')+'</dd><dt>Storage</dt><dd id="storageInfo">…</dd></dl><div class="sp"></div>';
   h += '<div class="menu"><button data-act="backupShare"><span class="ic">📤</span><span>Share backup file<small>Send to Google Drive, Gmail, etc. (jobs + photos, one .json)</small></span></button>';
@@ -2483,6 +2493,7 @@ function renderModal(){
       '<button data-act="shareText"><span class="ic">📤</span>Share as text</button>'+
       '<button data-act="go" data-hash="#/job/'+esc(j.id)+'/print"><span class="ic">🖨️</span>Print sheet / Save PDF</button>'+
       (rescanText(j)? '<button data-act="rescanNotes"><span class="ic">🔁</span>Re-check notes / saved scan<small>Finds part weight, material, color… in Notes text so you can assign them</small></button>' : '')+
+      ((j.scanFiles||[]).length? (canPickFolder()? '<button data-act="saveAlbum" id="phoneAlbumBtn"><span class="ic">🖼️</span><span>Save scans to '+esc(albumName()||PHONE_ALBUM)+'<small>'+j.scanFiles.length+' scan file'+(j.scanFiles.length>1?'s':'')+' → folder on this phone</small></span></button>' : '')+'<button data-act="savePhoneDl" id="phoneDlBtn"><span class="ic">📥</span><span>Save scans to phone<small>Download folder — then move into '+PHONE_ALBUM+' in Gallery</small></span></button>' : '')+
       ((j.scanFiles||[]).length? '<button data-act="saveDrive" id="driveSaveBtn"><span class="ic">☁️</span><span>'+(GOOGLE_CLIENT_ID?'Save a copy to Drive':'Share to Google Drive')+'<small>'+j.scanFiles.length+' original scan file'+(j.scanFiles.length>1?'s':'')+' → DCT / Building Material</small></span></button><button data-act="skipDrive" id="driveSkipBtn"><span class="ic">⏭️</span><span>Skip Drive copy<small>Remove the stored scan files from this phone</small></span></button>' : '')+
       '<button data-act="saveTemplate"><span class="ic">📑</span>Save as mold template</button>'+
       '<button data-act="duplicate"><span class="ic">⧉</span>Duplicate job<small>Copies sheet & photos, clears checklist & log</small></button>'+
@@ -2523,7 +2534,7 @@ function renderModal(){
     h += '<label style="display:flex;gap:10px;align-items:center;margin-top:10px;min-height:44px"><input type="checkbox" id="rvNotes" style="width:24px;height:24px"'+(items.length?'':' checked')+'> Also save the scanned text in Notes</label>';
     if(m.raw) h += '<details><summary class="linkbtn" style="display:flex;align-items:center">Show scanned text</summary><pre class="raw">'+esc(m.raw)+'</pre></details>';
     h += datalists();
-    if((m.scanFiles||[]).length) h += driveBoxHtml();
+    if((m.scanFiles||[]).length) h += phoneBoxHtml(m.scanFiles) + driveBoxHtml();
     h += '<div class="actions"><button class="btn ghost" data-act="closeModal">Cancel</button><button class="btn primary" data-act="rvApply">'+(state.scanTarget && state.scanTarget.newJob? 'Create job' : 'Apply selected')+'</button></div>';
   } else if(m.type==="addField"){
     h = '<h3>Add field</h3><div class="field"><label class="fl" for="nfLabel">Label</label><input class="inp" id="nfLabel" placeholder="e.g. Cushion, Clamp tonnage, Ejector stroke"></div>'+
@@ -3304,6 +3315,16 @@ function markDriveOffered(ids){
 function scheduleAutoDriveCopy(files){
   var ids=(files||[]).map(function(f){ return f && f.id; }).filter(Boolean);
   if(!ids.length) return;
+  state.albumNeedsTap=false;
+  setTimeout(function(){
+    var actx=currentScanCtx();
+    if(actx && state.modal && state.modal.type==="review"){
+      var asub=actx.files.filter(function(f){ return ids.indexOf(f.id)>=0; });
+      if(asub.length) autoAlbumSave({files:asub, job:actx.job, modal:actx.modal});
+    }
+  }, 20);
+  // Android only opens the share sheet right after a tap, so without a direct Drive save the user taps Share to Google Drive.
+  if(!GOOGLE_CLIENT_ID) return;
   setTimeout(function(){
     if(state.meta.driveCopy===false) return;
     if(state.driveBusy) return;
@@ -3313,7 +3334,6 @@ function scheduleAutoDriveCopy(files){
     var subset=ctx.files.filter(function(f){ return ids.indexOf(f.id)>=0; });
     if(!subset.length) return;
     var sub={files:subset, job:ctx.job, modal:ctx.modal};
-    if(!GOOGLE_CLIENT_ID){ shareScanFiles(sub, {auto:true}); return; }
     markDriveOffered(subset.map(function(f){ return f.id; }));
     uploadScanFiles(sub);
   }, 40);
@@ -3325,7 +3345,7 @@ function driveBoxHtml(){
     ? "Only these scan files are sent — not the rest of the job. They stay on this phone until you save or skip."
     : (GOOGLE_CLIENT_ID
         ? "A copy is sent to DCT / Building Material. Only these scan files are sent — not the rest of the job."
-        : "The share sheet opens so you can choose Google Drive → DCT → Building Material. Only these scan files are sent — not the rest of the job. They stay on this phone if you dismiss it.");
+        : "Tap Share to Google Drive, then choose Google Drive → DCT → Building Material. Only these scan files are sent — not the rest of the job. They stay in this app if you cancel.");
   return '<div class="drivebox" id="driveBox"><div class="dlab" style="font-weight:800">Original scan file'+(state.modal.scanFiles.length>1?"s":"")+'</div><p>'+note+'</p>'+
     '<button class="btn primary block" id="driveSaveBtn" data-act="saveDrive"><span>'+label+'</span><small>'+sub+'</small></button>'+
     '<button class="btn ghost block" id="driveSkipBtn" data-act="skipDrive" style="margin-top:8px">Skip Drive copy</button></div>';
@@ -3541,7 +3561,7 @@ function shareScanFiles(ctx, opts){
       catch(e){ return b; }
     });
     if(!navigator.share || !navigator.canShare || !navigator.canShare({files:list})){
-      if(!opts.auto) showToast("Sharing files isn't available in this browser. Use Chrome on the phone, or add the Google client id for a direct save.", {err:true, ms:6500});
+      if(!opts.auto) showToast("Sharing files isn't available in this browser. Use Chrome on the phone, or add the Google client id for a direct save.", {err:true, ms:6500, act:function(){ downloadScans(ctx); }, actLabel:"SAVE TO PHONE"});
       return false;
     }
     if(opts.auto) markDriveOffered(files.map(function(f){ return f.id; }));
@@ -3550,7 +3570,7 @@ function shareScanFiles(ctx, opts){
       return true;
     }).catch(function(err){
       if(err && err.name==="AbortError") showToast("Share cancelled. The scan files are still on this phone.", {err:true, ms:5000});
-      else showToast("Couldn't open the share sheet. The scan is still on this phone.", {err:true, ms:5500});
+      else showToast("The phone wouldn't open the share menu"+(err && err.name==="NotAllowedError"?" (it needs a fresh tap)":"")+". The scan is still saved in this app.", {err:true, ms:9000, act:function(){ downloadScans(ctx); }, actLabel:"SAVE TO PHONE"});
       return false;
     });
   }).catch(function(e){ showToast((e && e.message) || "Couldn't read the scan file.", {err:true, ms:6000}); return false; });
@@ -3623,6 +3643,154 @@ ACT.saveDrive=function(){
   if(!GOOGLE_CLIENT_ID){ shareScanFiles(ctx); return; }
   uploadScanFiles(ctx);
 };
+
+/* ---------- Save scan images to the phone: the DCT Document folder (File System Access) or Downloads ---------- */
+// A web app cannot add a picture to a named Gallery/Photos album. On Android Chrome 132+ it CAN write into a folder
+// the user picks once (Pictures → DCT Document); Gallery shows that folder as an album. Otherwise we download the file
+// (Download folder) so it can be moved into DCT Document by hand.
+var PHONE_ALBUM = "DCT Document";
+var albumHandle = null, albumReady = null;
+function canPickFolder(){ return typeof window.showDirectoryPicker==="function"; }
+function albumDb(){
+  return new Promise(function(res, rej){
+    var r=indexedDB.open("tjlPhoneAlbum", 1);
+    r.onupgradeneeded=function(){ if(!r.result.objectStoreNames.contains("h")) r.result.createObjectStore("h"); };
+    r.onsuccess=function(){ res(r.result); }; r.onerror=function(){ rej(r.error); };
+  });
+}
+function loadAlbumHandle(){
+  if(albumReady) return albumReady;
+  albumReady = albumDb().then(function(d){ return new Promise(function(res){
+    var q=d.transaction("h","readonly").objectStore("h").get("album");
+    q.onsuccess=function(){ res(q.result||null); }; q.onerror=function(){ res(null); };
+  }); }).catch(function(){ return null; }).then(function(h){ if(h && !albumHandle) albumHandle=h; return albumHandle; });
+  return albumReady;
+}
+function storeAlbumHandle(h){
+  albumHandle=h; albumReady=Promise.resolve(h);
+  try{ if(h) localStorage.setItem("tjl.albumName", h.name||PHONE_ALBUM); else localStorage.removeItem("tjl.albumName"); }catch(e){}
+  return albumDb().then(function(d){ return new Promise(function(res){
+    var tx=d.transaction("h","readwrite"); if(h) tx.objectStore("h").put(h,"album"); else tx.objectStore("h").delete("album");
+    tx.oncomplete=function(){ res(); }; tx.onerror=function(){ res(); };
+  }); }).catch(function(){});
+}
+function albumName(){ if(albumHandle && albumHandle.name) return albumHandle.name; try{ return localStorage.getItem("tjl.albumName")||""; }catch(e){ return ""; } }
+function readPhoneSaved(){ try{ var o=JSON.parse(localStorage.getItem("tjl.phoneSaved")||"{}"); return (o && typeof o==="object")? o : {}; }catch(e){ return {}; } }
+function markPhoneSaved(ids, where){
+  var o=readPhoneSaved(); (ids||[]).forEach(function(id){ if(id) o[id]=where; });
+  var k=Object.keys(o); if(k.length>400) k.slice(0,k.length-400).forEach(function(x){ delete o[x]; });
+  try{ localStorage.setItem("tjl.phoneSaved", JSON.stringify(o)); }catch(e){}
+}
+function phoneSavedWhere(files){
+  var o=readPhoneSaved(), w=null;
+  for(var i=0;i<(files||[]).length;i++){ var v=files[i] && o[files[i].id]; if(!v) return null; if(v==="album") w=w||"album"; else w="download"; }
+  return w;
+}
+function albumPermission(h, ask){
+  if(!h) return Promise.resolve("none");
+  var opt={mode:"readwrite"};
+  if(ask && h.requestPermission) return h.requestPermission(opt).catch(function(){ return "denied"; });
+  if(!h.queryPermission) return Promise.resolve("granted");
+  return h.queryPermission(opt).catch(function(){ return "prompt"; });
+}
+function scanNamedFiles(ctx){
+  var files=ctx.files.slice();
+  return Promise.all(files.map(getScanBlob)).then(function(blobs){
+    return blobs.map(function(b,i){ return {meta:files[i], blob:b, name:driveFileName(ctx.job, files[i], ctx.modal && ctx.modal.type==="review" ? ctx.modal : null)}; });
+  });
+}
+function uniqueName(dir, name){
+  var m=name.match(/^(.*?)(\.[a-z0-9]{1,8})?$/i), base=m[1], ext=m[2]||"", n=1, tryName=name;
+  function step(){
+    return dir.getFileHandle(tryName).then(function(){ n++; tryName=base+" ("+n+")"+ext; return n>50? tryName : step(); }).catch(function(){ return tryName; });
+  }
+  return step();
+}
+function writeToAlbum(h, items){
+  var seq=Promise.resolve(), names=[];
+  items.forEach(function(it){
+    seq=seq.then(function(){ return uniqueName(h, it.name); }).then(function(nm){
+      return h.getFileHandle(nm, {create:true}).then(function(fh){ return fh.createWritable(); }).then(function(w){
+        return w.write(it.blob).then(function(){ return w.close(); });
+      }).then(function(){ names.push(nm); });
+    });
+  });
+  return seq.then(function(){ return names; });
+}
+function downloadScans(ctx, quiet){
+  return scanNamedFiles(ctx).then(function(items){
+    items.forEach(function(it, i){ setTimeout(function(){ download(it.blob, it.name); }, i*450); });
+    markPhoneSaved(ctx.files.map(function(f){ return f.id; }), "download");
+    if(!quiet) showToast((items.length===1? "Saved to this phone" : "Saved "+items.length+" files to this phone")+" (Download folder). To put it in "+PHONE_ALBUM+": Gallery → Download → move to "+PHONE_ALBUM+".", {ms:9000});
+    refreshDriveUi();
+    return true;
+  }).catch(function(e){ showToast((e && e.message) || "Couldn't read the scan file.", {err:true, ms:6000}); return false; });
+}
+function albumFail(e, ctx){
+  var name=e && e.name;
+  if(name==="NotFoundError"){ storeAlbumHandle(null); showToast("The "+PHONE_ALBUM+" folder was moved or deleted. Choose it again.", {err:true, ms:7000}); refreshDriveUi(); return false; }
+  showToast("Couldn't save into "+(albumName()||PHONE_ALBUM)+". Saving to the Download folder instead.", {err:true, ms:6500});
+  return downloadScans(ctx, true);
+}
+// tap path: must start the picker / permission prompt before anything slow, so the tap still counts
+function saveScansToAlbum(ctx){
+  if(!canPickFolder()) return downloadScans(ctx);
+  var h=albumHandle;
+  var getDir = h ? albumPermission(h, true).then(function(p){ if(p!=="granted"){ var e=new Error("perm"); e.perm=true; throw e; } return h; })
+                 : window.showDirectoryPicker({id:"tjl-dct-document", mode:"readwrite", startIn:"pictures"}).then(function(d){ return storeAlbumHandle(d).then(function(){ return d; }); });
+  return getDir.then(function(dir){
+    return scanNamedFiles(ctx).then(function(items){ return writeToAlbum(dir, items); }).then(function(names){
+      markPhoneSaved(ctx.files.map(function(f){ return f.id; }), "album");
+      showToast((names.length===1? "Saved to " : "Saved "+names.length+" files to ")+(dir.name||PHONE_ALBUM)+" on this phone", {ms:6000});
+      refreshDriveUi();
+      return true;
+    }).catch(function(e){ return albumFail(e, ctx); });
+  }).catch(function(e){
+    if(e && e.name==="AbortError"){ showToast("No folder chosen. The scan is still saved in this app.", {err:true, ms:5000}); return false; }
+    if(e && e.perm){ showToast("The phone didn't allow saving into "+(albumName()||PHONE_ALBUM)+". Tap Save to phone (Download folder) instead.", {err:true, ms:7000}); return false; }
+    return albumFail(e, ctx);
+  });
+}
+// no tap: only writes when the folder is already chosen and the phone still allows it
+function autoAlbumSave(ctx){
+  if(state.meta.phoneCopy===false || !canPickFolder()) return Promise.resolve(false);
+  return loadAlbumHandle().then(function(h){
+    if(!h) return false;
+    return albumPermission(h, false).then(function(p){
+      if(p!=="granted"){ state.albumNeedsTap=true; refreshDriveUi(); return false; }
+      return scanNamedFiles(ctx).then(function(items){ return writeToAlbum(h, items); }).then(function(names){
+        markPhoneSaved(ctx.files.map(function(f){ return f.id; }), "album");
+        showToast("Scan saved to "+(h.name||PHONE_ALBUM)+" on this phone", {ms:5000});
+        refreshDriveUi(); return true;
+      }).catch(function(e){ console.warn(e); state.albumNeedsTap=true; refreshDriveUi(); return false; });
+    });
+  });
+}
+function phoneBoxHtml(files){
+  var where=phoneSavedWhere(files), nm=albumName(), many=files.length>1;
+  var status;
+  if(where==="album") status='<b style="color:var(--good)">✓ Saved to '+esc(nm||PHONE_ALBUM)+' on this phone.</b>';
+  else if(where==="download") status='<b style="color:var(--good)">✓ Saved to this phone (Download folder).</b> Move '+(many?'them':'it')+' into '+PHONE_ALBUM+' in Gallery if you want '+(many?'them':'it')+' there.';
+  else if(canPickFolder() && nm) status='Not saved to '+esc(nm)+' yet. Tap the button below'+(state.albumNeedsTap?' — the phone wants you to allow it again':'')+'.';
+  else if(canPickFolder()) status='A camera photo taken in this app is not in your Gallery. Tap <b>Save to '+PHONE_ALBUM+'</b> and pick <b>Pictures → '+PHONE_ALBUM+'</b> once. After that, each scan goes there.';
+  else status='A camera photo taken in this app is not in your Gallery. <b>Save to phone</b> puts it in the Download folder. Then move it into '+PHONE_ALBUM+' in Gallery.';
+  return '<div class="drivebox" id="phoneBox"><div class="dlab" style="font-weight:800">Scan image on this phone</div><p id="phoneStatus">'+status+'</p>'+
+    (canPickFolder()? '<button class="btn '+(where?'ghost':'primary')+' block" id="phoneAlbumBtn" data-act="saveAlbum"><span>Save to '+esc(nm||PHONE_ALBUM)+'</span><small>'+(nm?'Folder on this phone':'Pick Pictures → '+PHONE_ALBUM+' once')+'</small></button>' : '')+
+    '<button class="btn '+(canPickFolder()||where?'ghost':'primary')+' block" id="phoneDlBtn" data-act="savePhoneDl" style="margin-top:8px"><span>Save to phone (Download folder)</span><small>Then move it into '+PHONE_ALBUM+' in Gallery</small></button></div>';
+}
+ACT.saveAlbum=function(){ var ctx=currentScanCtx(); if(!ctx){ showToast("No scan files are stored for this job.", {err:true}); return; } saveScansToAlbum(ctx); };
+ACT.savePhoneDl=function(){ var ctx=currentScanCtx(); if(!ctx){ showToast("No scan files are stored for this job.", {err:true}); return; } downloadScans(ctx); };
+ACT.pickAlbum=function(){
+  if(!canPickFolder()){ showToast("This browser can't pick a phone folder. Use Save to phone (Download folder).", {err:true, ms:6000}); return; }
+  window.showDirectoryPicker({id:"tjl-dct-document", mode:"readwrite", startIn:"pictures"}).then(function(d){
+    return storeAlbumHandle(d).then(function(){
+      state.albumNeedsTap=false;
+      showToast("Scans will be saved to "+(d.name||PHONE_ALBUM)+(d.name && d.name!==PHONE_ALBUM? " (you picked a different folder than "+PHONE_ALBUM+")" : ""), {ms:6500});
+      render();
+    });
+  }).catch(function(e){ if(e && e.name==="AbortError") return; showToast("Couldn't open that folder. Try Pictures → "+PHONE_ALBUM+".", {err:true, ms:6000}); });
+};
+ACT.forgetAlbum=function(){ storeAlbumHandle(null).then(function(){ showToast("Folder forgotten. Scans will not be saved to it."); render(); }); };
 
 /* ---------- ✨ Clean up editor: on-device background removal + touch-ups for one photo ---------- */
 // Background removal: @imgly/background-removal (ISNet, quantized "small" model) running in bgworker.js.
@@ -4426,13 +4594,14 @@ function init(){
   saveMeta();
   onRoute();
   registerSW();
+  if(canPickFolder()) loadAlbumHandle();
   if(window.matchMedia && matchMedia("(display-mode: standalone)").matches) askPersist();
   setTimeout(function(){
     var c=navigator.connection||{};
     if(!state.meta.ocrWarmAt && !c.saveData && c.type!=="cellular") warmOcr(false);
   }, 8000);
 }
-window.__tjl = {state:state, googleClientId:GOOGLE_CLIENT_ID, parseLines:parseLines, buildReview:buildReview, render:render, scan:{buildSynIndex:buildSynIndex, labelUnitHint:labelUnitHint, parseNumber:parseNumber, defForLabel:defForLabel, reconcileFields:reconcileFields},
+window.__tjl = {state:state, googleClientId:GOOGLE_CLIENT_ID, phone:{storeAlbumHandle:storeAlbumHandle, albumName:albumName, readPhoneSaved:readPhoneSaved}, parseLines:parseLines, buildReview:buildReview, render:render, scan:{buildSynIndex:buildSynIndex, labelUnitHint:labelUnitHint, parseNumber:parseNumber, defForLabel:defForLabel, reconcileFields:reconcileFields},
   ce:function(){ return CE; }, ceTestMask:function(o){ ceTestMask=o||null; }, getPhoto:getPhoto}; // test hooks (ceTestMask: fake segmentation when no model is available)
 init();
 })();
