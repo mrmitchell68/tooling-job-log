@@ -16,6 +16,16 @@ tests/                 Playwright end-to-end tests (test.py, test_refsheet.py, t
 
 All URLs are relative, so it runs from any path: `https://<user>.github.io/<repo>/`, a subfolder, or localhost.
 
+## What's new in 2.3.8 — "Upload all saved scans" fixed: small uploads, one at a time, with progress and Stop
+
+- **Why 2.3.7 got stuck:** older scans (saved before 2.3.7) were merged into one big PDF per job, and an original PDF was sent at full size, so a single upload could be many MB. Each upload had no time limit, so one slow or dropped mobile upload left the button greyed out with no progress, and failures were only marked "waiting to retry". Nothing reached Drive.
+- Every post now stays small. Pages are downscaled to 1800 px (JPEG 0.72) and shrunk again if a page is still over about 650 KB. A scan that would make a PDF over about 2.2 MB is split into **`… part 1 of 3.pdf`**, **`… part 2 of 3.pdf`**, and so on. An original PDF over 2.2 MB is redrawn page by page with pdf.js and rebuilt small. If pdf.js can't load, a PDF up to 12 MB is sent as is.
+- Uploads run **one at a time** with a time limit per request (45 s plus 1 s per 40 KB, at most 5 min) and 2 quick retries (3 s, then 8 s). If 2 PDFs in a row can't reach Google, the app stops instead of grinding through the rest. Everything stays on the phone and is listed as "not sent yet".
+- A progress panel shows **"Making PDF 2 of 6…" / "Uploading 2 of 6 · 628 KB…"** with **Stop**. The busy state always clears, including after errors, timeouts, and Stop. The screen stays on while it runs (wake lock).
+- **Upload all** sends PDFs that are waiting to retry plus scans not sent yet, each once. **Re-send all saved scans** sends everything again, and the script skips names already in the folder. A retry that starts when the app opens can be taken over by tapping Upload all.
+- Optional Drive check: with **Code.gs 2.3.8** deployed (`doGet ?action=docExists`, JSONP), Upload all asks the script which PDFs are really in DCT / Building Material and re-sends any that are missing. If the script hasn't been updated, the app works without the check.
+- The app shows no "wait N minutes" message.
+
 ## What's new in 2.3.7 — Scans upload to Google Drive as PDF (DCT / Building Material)
 
 - Each scan is made into a **PDF on the phone** and sent to Drive → **DCT / Building Material** through the owner's Google Apps Script web app (`saveDocPdf`). The Drive folder is fixed on the server; the app never picks a folder.
@@ -231,6 +241,7 @@ python tests/make_scan_fixtures.py   # sample mold sheet PDF (text layer) + PNG 
 python tests/test_realforms.py       # 2.3.2 the 3 real phone-photo forms (tests/fixtures), merge/conflicts, apply, detail, sheet, update flow
 python tests/test_phone.py           # 2.3.6 save scans to DCT Document folder / Download folder
 python tests/test_docpdf.py          # 2.3.7 scan → PDF → Apps Script post (script.google.com is intercepted, never reached), offline queue
+python tests/test_upload238.py       # 2.3.8 Upload all with 19 big scans: small posts, progress/Stop, timeout+retry, waiting+unsent, Re-send all, docExists check
 python tests/test_drive.py           # 2.3.5 auto-save scan on the job + Drive copy (share sheet or mocked upload)
 python tests/test_scanfields.py      # 2.3.1 scan labels/units, review + assign, apply, detail, both print layouts, page 2, migration
 python tests/test_cleanup.py         # ✨ Clean up: every entry point, REAL background removal (downloads the model), backgrounds,

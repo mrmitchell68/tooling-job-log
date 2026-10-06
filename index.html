@@ -535,7 +535,7 @@ pre.raw{white-space:pre-wrap;font-size:12px;background:var(--surface-2);padding:
 <script>
 (function(){
 "use strict";
-var APP_VERSION = "2.3.7";
+var APP_VERSION = "2.3.8";
 // Public OAuth client id (not a secret). Web client, authorized JavaScript origins:
 //   https://mrmitchell68.github.io   and   http://localhost:8766
 // Leave empty until that client exists — Save-to-Drive is hidden and the button uses the Android share sheet.
@@ -2380,11 +2380,13 @@ function viewSettings(){
     (canPickFolder()? '<div class="btnrow"><button class="btn '+(anm?'ghost':'primary')+'" data-act="pickAlbum" id="pickAlbumBtn">'+(anm?'Change folder':'Choose '+PHONE_ALBUM+' folder')+'</button>'+(anm?'<button class="btn ghost" data-act="forgetAlbum" id="forgetAlbumBtn">Forget folder</button>':'')+'</div>'+
       '<label class="prefrow"><input type="checkbox" id="prefPhoneCopy" data-meta-bool="phoneCopy"'+(state.meta.phoneCopy===false?'':' checked')+'><span>Save each scan to this folder automatically<small>If the phone asks again, tap Save to '+PHONE_ALBUM+' on the review screen</small></span></label>' : '')+
     '</div></div>';
-  var dq=readDocQueue().length, dn=unsentScanCount();
-  h += '<div class="card" id="docCard"><div class="sec-hd"><h2>Upload scans to Drive as PDF</h2></div><div class="card-bd"><p class="muted" id="docLine" style="margin-top:0"><b>Each scan is made into a PDF on this phone and sent to Drive: '+DOC_DEST+'.</b>'+(dq? ' <span style="color:var(--warn);font-weight:700">'+dq+' waiting to retry.</span>' : '')+'</p>'+
+  var dq=readDocQueue().length, dn=unsentScanCount(), dall=allScanCount(), drun=state.docRun;
+  h += '<div class="card" id="docCard"><div class="sec-hd"><h2>Upload scans to Drive as PDF</h2></div><div class="card-bd"><p class="muted" id="docLine" style="margin-top:0"><b>Each scan is made into a PDF on this phone and sent to Drive: '+DOC_DEST+'.</b>'+(dq? ' <span style="color:var(--warn);font-weight:700">'+dq+' PDF'+(dq>1?'s':'')+' not sent yet (kept on this phone). Tap Upload all to send '+(dq>1?'them':'it')+'.</span>' : '')+'</p>'+
+    '<p id="docProg" style="font-weight:700;color:var(--primary);margin:4px 0 8px'+(drun?'':';display:none')+'">'+(drun? esc(drun.text||"Uploading…") : '')+'</p>'+
     '<label class="prefrow"><input type="checkbox" id="prefDocAuto" data-meta-bool="docAuto"'+(docAutoOn()?' checked':'')+'><span>Upload every scan to Drive automatically<small>After you tap Apply selected or Create job on the review screen</small></span></label>'+
-    '<button class="btn '+(dn?'primary':'ghost')+' block" data-act="docUploadAll" id="docAllBtn"'+(state.docBusy?' disabled':'')+'><span>Upload all saved scans to Drive</span><small>'+(dn? dn+' scan file'+(dn>1?'s':'')+' on this phone not sent yet' : (allSavedScans().length? 'All saved scans were sent' : 'No scans saved on this phone yet'))+'</small></button>'+
-    '<p class="faint" style="margin-bottom:0">The phone can’t see Google’s reply, so “Sent” means handed to Google. If there’s no signal, the upload waits on this phone and retries. <a href="'+DOC_FOLDER_URL+'" target="_blank" rel="noopener">Open the Drive folder</a></p></div></div>';
+    '<button class="btn '+(dn?'primary':'ghost')+' block" data-act="docUploadAll" id="docAllBtn"'+(docFgBusy()?' disabled':'')+'><span>Upload all saved scans to Drive</span><small>'+(dn? dn+' scan file'+(dn>1?'s':'')+' on this phone not sent yet' : (dall? 'All saved scans were sent' : 'No scans saved on this phone yet'))+'</small></button>'+
+    (dall? '<button class="btn ghost block" data-act="docResendAll" id="docResendBtn"'+(docFgBusy()?' disabled':'')+' style="margin-top:8px"><span>Re-send all saved scans</span><small>Sends all '+dall+' again. Files already in Drive are skipped.</small></button>' : '')+
+    '<p class="faint" style="margin-bottom:0">One PDF at a time, each kept small. You’ll see “Uploading 2 of 6…” with a Stop button; keep the app open until it finishes. If there’s no signal, the scans stay on this phone and Upload all sends them later. <a href="'+DOC_FOLDER_URL+'" target="_blank" rel="noopener">Open the Drive folder</a></p></div></div>';
   h += '<div class="card" id="driveCard"><div class="sec-hd"><h2>Google Drive copy</h2></div><div class="card-bd"><p class="muted" id="driveCopyLine" style="margin-top:0"><b>'+esc(driveStatusLine())+'</b></p><p class="muted" id="driveSetupNote">'+(GOOGLE_CLIENT_ID
     ? 'Scans can be saved straight into <b>DCT / Building Material</b>. The first time, Google asks you to sign in. If this app cannot see that folder yet, choose <b>Building Material</b> once.'
     : 'Drive save needs a one-time Google setup. Until then, <b>Share to Google Drive</b> uses the Android share sheet so you can drop the scan in DCT / Building Material today.')+'</p>'+
@@ -2499,7 +2501,7 @@ function renderModal(){
       '<button data-act="shareText"><span class="ic">📤</span>Share as text</button>'+
       '<button data-act="go" data-hash="#/job/'+esc(j.id)+'/print"><span class="ic">🖨️</span>Print sheet / Save PDF</button>'+
       (rescanText(j)? '<button data-act="rescanNotes"><span class="ic">🔁</span>Re-check notes / saved scan<small>Finds part weight, material, color… in Notes text so you can assign them</small></button>' : '')+
-      ((j.scanFiles||[]).length? '<button data-act="docUploadJob" id="docJobBtn"'+(state.docBusy?' disabled':'')+'><span class="ic">📄</span><span>Upload scans to Drive as PDF<small>'+j.scanFiles.length+' scan file'+(j.scanFiles.length>1?'s':'')+' → '+DOC_DEST+(docStatusOf(j.scanFiles)==="sent"?' · already sent':docStatusOf(j.scanFiles)==="queued"?' · waiting to retry':'')+'</small></span></button>' : '')+
+      ((j.scanFiles||[]).length? '<button data-act="docUploadJob" id="docJobBtn"'+(docFgBusy()?' disabled':'')+'><span class="ic">📄</span><span>Upload scans to Drive as PDF<small>'+j.scanFiles.length+' scan file'+(j.scanFiles.length>1?'s':'')+' → '+DOC_DEST+(docStatusOf(j.scanFiles)==="sent"?' · already sent':docStatusOf(j.scanFiles)==="queued"?' · waiting to retry':'')+'</small></span></button>' : '')+
       ((j.scanFiles||[]).length? (canPickFolder()? '<button data-act="saveAlbum" id="phoneAlbumBtn"><span class="ic">🖼️</span><span>Save scans to '+esc(albumName()||PHONE_ALBUM)+'<small>'+j.scanFiles.length+' scan file'+(j.scanFiles.length>1?'s':'')+' → folder on this phone</small></span></button>' : '')+'<button data-act="savePhoneDl" id="phoneDlBtn"><span class="ic">📥</span><span>Save scans to phone<small>Download folder — then move into '+PHONE_ALBUM+' in Gallery</small></span></button>' : '')+
       ((j.scanFiles||[]).length? '<button data-act="saveDrive" id="driveSaveBtn"><span class="ic">☁️</span><span>'+(GOOGLE_CLIENT_ID?'Save a copy to Drive':'Share to Google Drive')+'<small>'+j.scanFiles.length+' original scan file'+(j.scanFiles.length>1?'s':'')+' → DCT / Building Material</small></span></button><button data-act="skipDrive" id="driveSkipBtn"><span class="ic">⏭️</span><span>Skip Drive copy<small>Remove the stored scan files from this phone</small></span></button>' : '')+
       '<button data-act="saveTemplate"><span class="ic">📑</span>Save as mold template</button>'+
@@ -3804,12 +3806,19 @@ ACT.forgetAlbum=function(){ storeAlbumHandle(null).then(function(){ showToast("F
 /* ---------- Upload scans to Google Drive as PDF (DCT / Building Material) via Allen's Apps Script ---------- */
 // The scan files live only in this app (IndexedDB). Each scan (one scan session = one PDF; an original PDF goes as is)
 // is posted to an Apps Script web app that saves it into DCT / Building Material. The folder is fixed on the server.
-// fetch mode "no-cors" means the phone can't read Google's reply, so "Sent" = handed to Google, not confirmed.
+// fetch mode "no-cors" means the phone can't read Google's reply, so "Sent" = Google accepted the post (the reply only comes
+// after the script saved the file). With Code.gs 2.3.8 the app can also ask the script (JSONP docExists) whether a file is there.
 var DOC_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbxTPhnAVS2jY6TW8eVA3CCghB-ZSU93otxG2HL6ogh-QuuxIbml04nRnMi8gZxCDqrduw/exec";
 var DOC_TOKEN = "dct-bbn8gle8d0aa";
 var DOC_DEST = "DCT / Building Material";
 var DOC_FOLDER_URL = "https://drive.google.com/drive/folders/17H6NaqOz34DgtE3jnYIZsS341ZiahRVe";
-var DOC_MAX_SIDE = 2000, DOC_JPEG_Q = 0.8, DOC_QUEUE_MAX = 60, DOC_MAX_BYTES = 35*1024*1024;
+// v2.3.8: every post stays small (pages downscaled + re-compressed; a scan that would make a big PDF is split into parts),
+// uploads run one at a time with a time limit per request, progress shows "Uploading 3 of 6…", Stop works, and the
+// busy state always clears. If the Apps Script has the docExists reply (Code.gs 2.3.8), the app also checks Drive afterwards.
+var DOC_MAX_SIDE = 1800, DOC_JPEG_Q = 0.72, DOC_PAGE_MAX = 650*1024, DOC_PART_BYTES = 2200*1024, DOC_PDF_ASIS = 2200*1024;
+var DOC_PDF_ASIS_FALLBACK = 12*1024*1024, DOC_PDF_MAX_PAGES = 60, DOC_QUEUE_MAX = 60, DOC_BUILD_MS = 120000;
+function docTimeoutMs(b64len){ var t=window.__tjlDocTimeoutMs; if(t) return t; return Math.min(300000, 45000 + Math.round((b64len||0)/40)); } // ≥45 s, +1 s per 40 KB (slow mobile upload), max 5 min
+function docRetryDelays(){ return window.__tjlDocRetryDelays || [3000, 8000]; }
 var docChain = Promise.resolve();
 function docAutoOn(){ return state.meta.docAuto!==false; }
 function readDocUploaded(){ try{ var o=JSON.parse(localStorage.getItem("tjl.docUploaded")||"{}"); return (o && typeof o==="object")? o : {}; }catch(e){ return {}; } }
@@ -3818,6 +3827,11 @@ function markDocUploaded(ids, name){
   var k=Object.keys(o); if(k.length>800) k.slice(0,k.length-800).forEach(function(x){ delete o[x]; });
   try{ localStorage.setItem("tjl.docUploaded", JSON.stringify(o)); }catch(e){}
 }
+function unmarkDocUploaded(ids){ var o=readDocUploaded(); (ids||[]).forEach(function(id){ delete o[id]; }); try{ localStorage.setItem("tjl.docUploaded", JSON.stringify(o)); }catch(e){} }
+// names handed to Google, per scan id: {name:{ids:[...], parts:[names], at, ok:true when Drive confirmed it}}
+function readDocSent(){ try{ var o=JSON.parse(localStorage.getItem("tjl.docSent")||"{}"); return (o && typeof o==="object")? o : {}; }catch(e){ return {}; } }
+function writeDocSent(o){ var k=Object.keys(o); if(k.length>400) k.sort(function(a,b){ return (o[a].at||0)-(o[b].at||0); }).slice(0,k.length-400).forEach(function(x){ delete o[x]; }); try{ localStorage.setItem("tjl.docSent", JSON.stringify(o)); }catch(e){} }
+function recordDocSent(doc, parts){ var o=readDocSent(); o[doc.name]={ids:doc.files.map(function(f){ return f.id; }), parts:parts, at:Date.now(), ok:false}; writeDocSent(o); }
 function readDocQueue(){ try{ var a=JSON.parse(localStorage.getItem("tjl.docQueue")||"[]"); return Array.isArray(a)? a : []; }catch(e){ return []; } }
 function writeDocQueue(a){ a=(a||[]).slice(-DOC_QUEUE_MAX); try{ localStorage.setItem("tjl.docQueue", JSON.stringify(a)); }catch(e){} }
 // the queue holds only names + scan ids (the PDF is rebuilt from the stored scan), so it can't fill up localStorage
@@ -3855,7 +3869,7 @@ function docGroups(ctx){
   if(changed && ctx.job && state.jobs.some(function(j){ return j===ctx.job; })) saveJobs();
   return order.map(function(k){ return groups[k]; });
 }
-// a group's images become one PDF; an original PDF is sent as is. Names: "<part or job> <date> <time>.pdf"
+// a group's images become one PDF (split into parts if big); an original PDF is sent as is when small. Names: "<part or job> <date> <time>.pdf"
 function docsForGroup(ctx, g){
   var base=driveBaseName(ctx.job, ctx.modal && ctx.modal.type==="review" ? ctx.modal : null)+" "+docStamp(g.at);
   var imgs=g.files.filter(function(f){ return !isPdfMeta(f); }), pdfs=g.files.filter(function(f){ return isPdfMeta(f); });
@@ -3892,41 +3906,96 @@ function decodeViaImg(blob){
     im.src=u;
   });
 }
-// downscale (long side ~2000 px) and re-encode as JPEG so each page stays well under the Apps Script post limit
+function canvasJpeg(c, q){
+  return new Promise(function(res, rej){ c.toBlob(function(b){ b? res(b) : rej(new Error("Couldn't make the PDF page (the phone ran low on memory).")); }, "image/jpeg", q); });
+}
+// draw a picture/canvas at most DOC_MAX_SIDE px on the long side and JPEG it; shrink again if one page is still big
+function sourceToPage(src, w, h){
+  var tries=[[DOC_MAX_SIDE, DOC_JPEG_Q], [1500, 0.62], [1200, 0.55]], k=0;
+  function attempt(){
+    var side=tries[k][0], q=tries[k][1], s=Math.min(1, side/Math.max(w,h)), c=mkCanvas(w*s, h*s), g=c.getContext("2d");
+    g.fillStyle="#ffffff"; g.fillRect(0,0,c.width,c.height); g.imageSmoothingQuality="high"; g.drawImage(src,0,0,c.width,c.height);
+    return canvasJpeg(c, q).then(function(b){
+      var cw=c.width, ch=c.height; c.width=c.height=1; // free the canvas memory now
+      if(b.size>DOC_PAGE_MAX && k<tries.length-1){ k++; return attempt(); }
+      return b.arrayBuffer().then(function(buf){ return {bytes:new Uint8Array(buf), w:cw, h:ch}; });
+    });
+  }
+  return attempt();
+}
 function scanToJpeg(blob){
   return decodeScanImage(blob).then(function(img){
     var w=img.naturalWidth||img.width, h=img.naturalHeight||img.height;
     if(!w || !h) throw new Error("Couldn't read this picture to make a PDF.");
-    var s=Math.min(1, DOC_MAX_SIDE/Math.max(w,h)), c=mkCanvas(w*s, h*s), g=c.getContext("2d");
-    g.fillStyle="#ffffff"; g.fillRect(0,0,c.width,c.height); g.imageSmoothingQuality="high"; g.drawImage(img,0,0,c.width,c.height);
-    if(img.close) try{ img.close(); }catch(e){}
-    return new Promise(function(res, rej){ c.toBlob(function(b){ b? res(b) : rej(new Error("Couldn't make the PDF page.")); }, "image/jpeg", DOC_JPEG_Q); })
-      .then(function(b){ return b.arrayBuffer(); }).then(function(buf){ return {bytes:new Uint8Array(buf), w:c.width, h:c.height}; });
+    return sourceToPage(img, w, h).then(function(p){ if(img.close) try{ img.close(); }catch(e){} return p; });
   });
 }
-function imagesToPdf(blobs){
-  return loadJsPdf().then(function(JsPDF){
-    var pages=[], seq=Promise.resolve();
-    blobs.forEach(function(b){ seq=seq.then(function(){ return scanToJpeg(b).then(function(p){ pages.push(p); }); }); });
-    return seq.then(function(){
-      var doc=null;
-      pages.forEach(function(p){
-        var k=792/Math.max(p.w,p.h), pw=p.w*k, ph=p.h*k, o=pw>ph?"l":"p";
-        if(!doc) doc=new JsPDF({unit:"pt", format:[pw,ph], orientation:o, compress:true});
-        else doc.addPage([pw,ph], o);
-        doc.addImage(p.bytes, "JPEG", 0, 0, pw, ph, undefined, "NONE");
-      });
-      doc.setProperties({title:"Scanned document", creator:"Tooling Job Log"});
-      return new Blob([doc.output("arraybuffer")], {type:"application/pdf"});
+// a big original PDF: draw each page (pdf.js, already used for scanning) and rebuild it small
+function pdfToPages(blob){
+  return pdfLib().then(function(lib){
+    return blob.arrayBuffer().then(function(buf){ return lib.getDocument({data:new Uint8Array(buf)}).promise; }).then(function(pdf){
+      var n=Math.min(pdf.numPages, DOC_PDF_MAX_PAGES), pages=[], seq=Promise.resolve();
+      for(var i=1;i<=n;i++) (function(i){ seq=seq.then(function(){
+        docCheckCancel();
+        return pdf.getPage(i).then(function(page){
+          var vp1=page.getViewport({scale:1}), sc=Math.min(3, DOC_MAX_SIDE/Math.max(vp1.width, vp1.height)), vp=page.getViewport({scale:sc});
+          var c=mkCanvas(vp.width, vp.height), g=c.getContext("2d"); g.fillStyle="#ffffff"; g.fillRect(0,0,c.width,c.height);
+          return page.render({canvasContext:g, viewport:vp}).promise.then(function(){ return sourceToPage(c, c.width, c.height); }).then(function(p){ c.width=c.height=1; if(page.cleanup) page.cleanup(); pages.push(p); });
+        });
+      }); })(i);
+      return seq.then(function(){ if(pdf.destroy) try{ pdf.destroy(); }catch(e){} return pages; });
     });
   });
 }
-function buildDocPdf(doc){
-  return Promise.all(doc.files.map(getScanBlob)).then(function(blobs){
-    if(doc.kind==="pdf" || (doc.files.length===1 && isPdfMeta(doc.files[0], blobs[0]))) return blobs[0].type==="application/pdf"? blobs[0] : new Blob([blobs[0]], {type:"application/pdf"});
-    return imagesToPdf(blobs);
+function pagesToPdf(pages){
+  return loadJsPdf().then(function(JsPDF){
+    var doc=null;
+    pages.forEach(function(p){
+      var k=792/Math.max(p.w,p.h), pw=p.w*k, ph=p.h*k, o=pw>ph?"l":"p";
+      if(!doc) doc=new JsPDF({unit:"pt", format:[pw,ph], orientation:o, compress:true});
+      else doc.addPage([pw,ph], o);
+      doc.addImage(p.bytes, "JPEG", 0, 0, pw, ph, undefined, "NONE");
+    });
+    doc.setProperties({title:"Scanned document", creator:"Tooling Job Log"});
+    return new Blob([doc.output("arraybuffer")], {type:"application/pdf"});
   });
 }
+// pages -> parts of at most DOC_PART_BYTES each (a single page is always its own part at worst)
+function packPages(pages){
+  var parts=[], cur=[], sz=0, lim=window.__tjlDocPartBytes || DOC_PART_BYTES;
+  pages.forEach(function(p){
+    if(cur.length && sz+p.bytes.length>lim){ parts.push(cur); cur=[]; sz=0; }
+    cur.push(p); sz+=p.bytes.length;
+  });
+  if(cur.length) parts.push(cur);
+  return parts;
+}
+function partName(name, k, n){ return n<=1? name : name.replace(/\.pdf$/i, "")+" part "+k+" of "+n+".pdf"; }
+function pagesToParts(doc, pages){
+  if(!pages.length) throw new Error("Couldn't make the PDF.");
+  var groups=packPages(pages), out=[], seq=Promise.resolve();
+  groups.forEach(function(g, i){ seq=seq.then(function(){ return pagesToPdf(g).then(function(b){ out.push({name:partName(doc.name, i+1, groups.length), blob:b, pages:g.length}); }); }); });
+  return seq.then(function(){ return out; });
+}
+// one doc -> [{name, blob}] — every blob small enough for a quick post
+function buildDocParts(doc){
+  return Promise.all(doc.files.map(getScanBlob)).then(function(blobs){
+    if(doc.kind==="pdf" || (doc.files.length===1 && isPdfMeta(doc.files[0], blobs[0]))){
+      var b=blobs[0], pdfBlob = b.type==="application/pdf"? b : new Blob([b], {type:"application/pdf"});
+      if(pdfBlob.size<=DOC_PDF_ASIS) return [{name:doc.name, blob:pdfBlob, pages:0}];
+      return pdfToPages(pdfBlob).then(function(pages){ return pagesToParts(doc, pages); }, function(e){
+        if(e && e.cancelled) throw e;
+        if(pdfBlob.size<=DOC_PDF_ASIS_FALLBACK) return [{name:doc.name, blob:pdfBlob, pages:0}]; // PDF engine not available: send the original
+        var big=new Error("This PDF is too big to upload ("+fmtBytes(pdfBlob.size)+") and the PDF engine didn't load to shrink it. Open the app with signal and try again."); throw big;
+      });
+    }
+    var pages=[], seq=Promise.resolve();
+    blobs.forEach(function(bl){ seq=seq.then(function(){ docCheckCancel(); return scanToJpeg(bl).then(function(p){ pages.push(p); }); }); });
+    return seq.then(function(){ return pagesToParts(doc, pages); });
+  });
+}
+// kept for older callers/tests: one doc -> one PDF blob (first part)
+function buildDocPdf(doc){ return buildDocParts(doc).then(function(parts){ return parts[0].blob; }); }
 function blobToBase64(blob){
   return new Promise(function(res, rej){
     var r=new FileReader();
@@ -3935,117 +4004,267 @@ function blobToBase64(blob){
     r.readAsDataURL(blob);
   });
 }
+function docCheckCancel(){ if(state.docRun && state.docRun.cancel){ var e=new Error("cancelled"); e.cancelled=true; throw e; } }
+function withTimeout(p, ms, msg){
+  var t; return Promise.race([p, new Promise(function(_, rej){ t=setTimeout(function(){ var e=new Error(msg||"Timed out"); e.timeout=true; rej(e); }, ms); })]).then(function(v){ clearTimeout(t); return v; }, function(e){ clearTimeout(t); throw e; });
+}
+// one post with its own time limit; resolves when Google accepted it (the reply comes back after the script saved the file)
 function postDocPdf(name, b64){
-  return fetch(DOC_SCRIPT_URL, {
+  var run=state.docRun, ctrl=(typeof AbortController==="function")? new AbortController() : null, ms=docTimeoutMs(b64.length), timedOut=false;
+  if(run) run.ctrl=ctrl;
+  var timer=setTimeout(function(){ timedOut=true; if(ctrl) try{ ctrl.abort(); }catch(e){} }, ms);
+  var p=fetch(DOC_SCRIPT_URL, {
     method:"POST", mode:"no-cors",
     headers:{"Content-Type":"text/plain;charset=utf-8"},
-    body: JSON.stringify({action:"saveDocPdf", token:DOC_TOKEN, name:name, data:b64})
+    body: JSON.stringify({action:"saveDocPdf", token:DOC_TOKEN, name:name, data:b64}),
+    signal: ctrl? ctrl.signal : undefined
+  });
+  if(!ctrl) p=withTimeout(p, ms, "The upload took too long.");
+  return p.then(function(r){ clearTimeout(timer); if(run) run.ctrl=null; return r; }, function(e){
+    clearTimeout(timer); if(run) run.ctrl=null;
+    if(run && run.cancel){ var c=new Error("cancelled"); c.cancelled=true; throw c; }
+    var x=new Error(timedOut || (e && e.timeout)? "The upload took too long." : "Couldn't reach Google."); x.net=true; x.timeout=timedOut || !!(e && e.timeout); throw x;
   });
 }
-// one doc: build the PDF on the phone, hand it to Google. Resolves "sent" | "queued" | "failed"
-function sendDoc(doc){
-  return buildDocPdf(doc).then(function(pdf){
-    if(pdf.size>DOC_MAX_BYTES){ var big=new Error("This PDF is too big to upload ("+fmtBytes(pdf.size)+")."); big.permanent=true; throw big; }
-    return blobToBase64(pdf);
-  }).then(function(b64){
-    if(window.__docLog) window.__docLog.push({name:doc.name, bytes:b64.length});
-    return postDocPdf(doc.name, b64).then(function(){
-      unqueueDoc(doc.name); markDocUploaded(doc.files.map(function(f){ return f.id; }), doc.name); return "sent";
-    }, function(){ queueDoc(doc); return "queued"; });
-  }).catch(function(e){
-    if(e && /no longer on this phone/.test(e.message||"")){ unqueueDoc(doc.name); return "failed"; }
-    if(e && e.permanent){ unqueueDoc(doc.name); state.docLastError=e.message; return "failed"; }
-    if(e && /PDF maker/.test(e.message||"")){ queueDoc(doc); return "queued"; }
-    console.warn(e); state.docLastError=(e && e.message) || "Couldn't make the PDF."; unqueueDoc(doc.name); return "failed";
-  });
-}
-function sendDocs(docs){
-  var tally={sent:0, queued:0, failed:0, total:docs.length};
-  var seq=Promise.resolve();
-  docs.forEach(function(d){ seq=seq.then(function(){ return sendDoc(d).then(function(r){ tally[r]++; }); }); });
-  return seq.then(function(){ return tally; });
-}
-// retry waiting uploads (on open, when the phone comes back online, and before every new upload)
-function flushDocQueueNow(quiet){
-  {
-    var q=readDocQueue(); if(!q.length) return Promise.resolve({sent:0, queued:0, failed:0, total:0});
-    if(navigator.onLine===false) return Promise.resolve({sent:0, queued:q.length, failed:0, total:q.length});
-    var docs=q.map(function(e){ var fs=(e.files||[]).filter(function(f){ return f && f.id; }); return {name:e.name, files:fs, kind:(fs.length===1 && isPdfMeta(fs[0]))? "pdf" : "images"}; }).filter(function(d){ return d.files.length; });
-    return sendDocs(docs).then(function(t){
-      if(!quiet && t.sent) showToast((t.sent===1? "Sent a waiting scan" : "Sent "+t.sent+" waiting scans")+" to Drive: "+DOC_DEST, {link:DOC_FOLDER_URL, linkLabel:"OPEN", ms:7000});
-      if(t.sent) docRefresh();
-      return t;
+function docSleep(ms){ return new Promise(function(res){ var t0=Date.now(); (function tick(){ if((state.docRun && state.docRun.cancel) || Date.now()-t0>=ms) return res(); setTimeout(tick, 250); })(); }); }
+function postWithRetry(name, b64, onTry){
+  var delays=docRetryDelays(), k=0;
+  function attempt(){
+    docCheckCancel();
+    if(onTry) onTry(k);
+    return postDocPdf(name, b64).catch(function(e){
+      if(e && e.cancelled) throw e;
+      if(k>=delays.length || navigator.onLine===false) throw e;
+      var d=delays[k++]; return docSleep(d).then(attempt);
     });
   }
+  return attempt();
 }
-function flushDocQueue(quiet){
-  var run=function(){ return flushDocQueueNow(quiet); };
-  var p=docChain.then(run, run); docChain=p.catch(function(){}); return p;
+/* ---- confirm in Drive (needs Code.gs 2.3.8: doGet action=docExists, JSONP). Without it the app works as before. ---- */
+var docJsonpN=0;
+function docExistsCall(names){
+  return new Promise(function(res){
+    var cb="__tjlDocCb"+(++docJsonpN)+"_"+Date.now(), s=document.createElement("script"), done=false;
+    function fin(v){ if(done) return; done=true; clearTimeout(t); try{ delete window[cb]; }catch(e){ window[cb]=undefined; } if(s.parentNode) s.parentNode.removeChild(s); res(v); }
+    var t=setTimeout(function(){ fin(null); }, window.__tjlDocExistsMs || 15000);
+    window[cb]=function(d){ fin(d && d.exists && typeof d.exists==="object"? d.exists : null); };
+    s.onerror=function(){ fin(null); };
+    s.onload=function(){ setTimeout(function(){ fin(null); }, 50); }; // loaded but never called back: the script doesn't know docExists yet
+    s.src=DOC_SCRIPT_URL+"?action=docExists&token="+encodeURIComponent(DOC_TOKEN)+"&callback="+cb+"&names="+encodeURIComponent(JSON.stringify(names));
+    document.head.appendChild(s);
+  });
 }
+// -> {name:true|false} for every name, or null when the script can't answer (not updated yet, or no signal)
+function docExists(names){
+  names=(names||[]).filter(Boolean);
+  if(!names.length) return Promise.resolve({});
+  if(navigator.onLine===false || (state.docServerOk===false && Date.now()-(state.docServerAt||0) < 10*60000)) return Promise.resolve(null);
+  var chunks=[]; for(var i=0;i<names.length;i+=15) chunks.push(names.slice(i,i+15));
+  var all={}, seq=Promise.resolve(true);
+  chunks.forEach(function(c){ seq=seq.then(function(okSoFar){ if(!okSoFar) return false; return docExistsCall(c).then(function(m){ if(!m) return false; Object.keys(m).forEach(function(k){ all[k]=!!m[k]; }); return true; }); }); });
+  return seq.then(function(ok){ state.docServerOk=ok; state.docServerAt=Date.now(); return ok? all : null; });
+}
+// sent-but-unconfirmed docs that Drive says are missing: forget the "sent" mark so they go again. -> {checked, missing, confirmed} or null
+function docVerifySent(onlyNames){
+  var sent=readDocSent(), names=Object.keys(sent).filter(function(n){ return !sent[n].ok && (!onlyNames || onlyNames.indexOf(n)>=0); });
+  if(!names.length) return Promise.resolve({checked:0, missing:0, confirmed:0});
+  var ask=[]; names.forEach(function(n){ (sent[n].parts && sent[n].parts.length? sent[n].parts : [n]).forEach(function(p){ ask.push(p); }); });
+  return docExists(ask).then(function(m){
+    if(!m) return null;
+    var o=readDocSent(), missing=0, confirmed=0;
+    names.forEach(function(n){
+      var rec=o[n]; if(!rec) return;
+      var parts=rec.parts && rec.parts.length? rec.parts : [n];
+      if(parts.every(function(p){ return m[p]; })){ rec.ok=true; confirmed++; }
+      else { unmarkDocUploaded(rec.ids); delete o[n]; missing++; }
+    });
+    writeDocSent(o);
+    return {checked:names.length, missing:missing, confirmed:confirmed};
+  });
+}
+/* ---- the upload runner: one doc at a time, progress, Stop, busy always cleared ---- */
+function docProgress(text, pct, fg){
+  var r=state.docRun; if(r){ r.text=text; r.pct=pct; }
+  if((r && r.fg) || (!r && fg)){ if(state.busy && state.busy.cancelAct==="docCancel"){ state.busy.text=text; state.busy.pct=pct; renderBusy(); } else setBusy(text, {pct:pct, cancel:true, cancelAct:"docCancel"}); }
+  var el=$("docProg"); if(el){ el.textContent=text; el.style.display=""; }
+}
+var docWake=null;
+function docWakeOn(){ try{ if(navigator.wakeLock && document.visibilityState==="visible" && !docWake) navigator.wakeLock.request("screen").then(function(l){ docWake=l; l.addEventListener("release", function(){ docWake=null; }); if(!state.docRun) docWakeOff(); }).catch(function(){}); }catch(e){} }
+function docWakeOff(){ try{ if(docWake) docWake.release(); }catch(e){} docWake=null; }
+// docs: [{name, files, kind}] -> tally {total, sent, queued, failed, cancelled, parts, bytes}
+function runDocs(docs, opts){
+  opts=opts||{};
+  var tally={total:docs.length, sent:0, queued:0, failed:0, cancelled:false, parts:0, bytes:0, done:0};
+  if(!docs.length) return Promise.resolve(tally);
+  var run={cancel:false, ctrl:null, fg:!!opts.fg, n:docs.length, i:0, text:"", pct:0};
+  state.docRun=run; state.docBusy=true; state.docLastError=""; refreshDocBtns(); docWakeOn();
+  if(run.fg && state.toast){ clearTimeout(toastTimer); state.toast=null; renderToast(); } // no stale "Sent" toast under the progress panel
+  var n=docs.length, fails=0, stopNet=false;
+  function one(d, i){
+    run.i=i+1;
+    var lead=n>1? (i+1)+" of "+n : "";
+    docProgress((n>1? "Making PDF "+lead : "Making the PDF")+"…", Math.round(i/n*100));
+    return withTimeout(buildDocParts(d), DOC_BUILD_MS, "Making the PDF took too long.").then(function(parts){
+      var names=parts.map(function(p){ return p.name; }), seq=Promise.resolve();
+      parts.forEach(function(p, k){ seq=seq.then(function(){
+        docCheckCancel();
+        return blobToBase64(p.blob).then(function(b64){
+          if(window.__docLog) window.__docLog.push({name:p.name, bytes:b64.length});
+          return postWithRetry(p.name, b64, function(attemptNo){
+            var t=(n>1? "Uploading "+lead : "Uploading")+(parts.length>1? " (part "+(k+1)+" of "+parts.length+")" : "")+" · "+fmtBytes(p.blob.size)+(attemptNo? " · trying again ("+(attemptNo+1)+" of "+(docRetryDelays().length+1)+")" : "")+"…";
+            docProgress(t, Math.round((i + (k+0.5)/parts.length)/n*100));
+          }).then(function(){ tally.parts++; tally.bytes+=p.blob.size; });
+        });
+      }); });
+      return seq.then(function(){
+        unqueueDoc(d.name); markDocUploaded(d.files.map(function(f){ return f.id; }), d.name); recordDocSent(d, names.length>1? names : []);
+        tally.sent++; fails=0;
+      });
+    }).catch(function(e){
+      if(e && e.cancelled) throw e;
+      if(e && /no longer on this phone/.test(e.message||"")){ unqueueDoc(d.name); tally.failed++; return; }
+      if(e && (e.net || /PDF maker/.test(e.message||""))){
+        queueDoc(d); tally.queued++; fails++; state.docNetFailAt=Date.now();
+        state.docLastError = e.timeout? "Uploads are taking too long (weak signal?)." : (e.net? "Couldn't reach Google." : e.message);
+        if(navigator.onLine===false || fails>=2) stopNet=true; // no point waiting on the rest: they are kept and retried
+        return;
+      }
+      console.warn(e); state.docLastError=(e && e.message) || "Couldn't make the PDF."; unqueueDoc(d.name); tally.failed++;
+    }).then(function(){ tally.done++; });
+  }
+  var seq=Promise.resolve();
+  docs.forEach(function(d, i){ seq=seq.then(function(){
+    if(run.cancel) return;
+    if(stopNet){ queueDoc(d); tally.queued++; tally.done++; return; }
+    return one(d, i);
+  }); });
+  return seq.catch(function(e){ if(!(e && e.cancelled)) throw e; }).then(function(){
+    tally.cancelled=run.cancel;
+    if(tally.sent && !run.cancel && opts.verify && state.docServerOk!==false){
+      docProgress("Checking Drive…", 100);
+      return docVerifySent(docs.map(function(d){ return d.name; })).then(function(v){ tally.verify=v; if(v && v.missing){ tally.sent-=v.missing; tally.missingNow=v.missing; } });
+    }
+  }).then(function(){ return tally; }, function(e){ return Promise.reject(e); }).finally(function(){
+    if(state.docRun===run) state.docRun=null;
+    state.docBusy=false;
+    if(state.busy && state.busy.cancelAct==="docCancel") setBusy(null);
+    docWakeOff(); refreshDocBtns();
+    var el=$("docProg"); if(el){ el.textContent=""; el.style.display="none"; }
+  });
+}
+ACT.docCancel=function(){
+  state.docPendingCancel=true;
+  var r=state.docRun; if(!r) { if(state.busy && state.busy.cancelAct==="docCancel") setBusy(null); return; }
+  r.cancel=true; if(r.ctrl) try{ r.ctrl.abort(); }catch(e){}
+  if(state.busy && state.busy.cancelAct==="docCancel"){ state.busy.text="Stopping…"; renderBusy(); }
+};
+// waiting docs (queue) -> doc objects; skip ones whose scan files are all covered by `have`
+function queuedDocs(have){
+  var covered={}; (have||[]).forEach(function(d){ d.files.forEach(function(f){ covered[f.id]=1; }); });
+  var names={}; (have||[]).forEach(function(d){ names[d.name]=1; });
+  return readDocQueue().map(function(e){ var fs=(e.files||[]).filter(function(f){ return f && f.id; }); return {name:e.name, files:fs, kind:(fs.length===1 && isPdfMeta(fs[0]))? "pdf" : "images"}; })
+    .filter(function(d){ return d.files.length && !names[d.name] && !d.files.every(function(f){ return covered[f.id]; }); });
+}
+// retry waiting uploads (on open, when the phone comes back online)
+function flushDocQueueNow(quiet, force){
+  if(!force && Date.now()-(state.docNetFailAt||0) < 60000) return Promise.resolve({sent:0, queued:0, failed:0, total:0}); // an upload just failed: don't hammer Google again right away
+  var docs=queuedDocs([]);
+  if(!docs.length) return Promise.resolve({sent:0, queued:0, failed:0, total:0});
+  if(navigator.onLine===false) return Promise.resolve({sent:0, queued:docs.length, failed:0, total:docs.length});
+  return runDocs(docs, {fg:false}).then(function(t){
+    if(!quiet && t.sent) showToast((t.sent===1? "Sent a waiting scan" : "Sent "+t.sent+" waiting scans")+" to Drive: "+DOC_DEST, {link:DOC_FOLDER_URL, linkLabel:"OPEN", ms:7000});
+    docRefresh();
+    return t;
+  });
+}
+function docEnqueue(run){ var p=docChain.then(run, run); docChain=p.catch(function(){}); return p; }
+function flushDocQueue(quiet, force){ return docEnqueue(function(){ return flushDocQueueNow(quiet, force); }); }
 function docToast(t, opts){
   opts=opts||{};
   if(opts.quiet) return;
   if(!t.total){ if(!opts.quietEmpty) showToast(opts.emptyText || "No scan files to upload."); return; }
-  if(t.queued && !t.sent) showToast("Saved on this phone. Upload will retry.", {err:true, ms:7000});
-  else if(t.queued) showToast("Sent "+t.sent+" to Drive: "+DOC_DEST+". "+t.queued+" saved on this phone. Upload will retry.", {err:true, ms:8000});
-  else if(t.failed && !t.sent) showToast((state.docLastError || "Couldn't make the PDF.")+" The scan is still saved in this app.", {err:true, ms:8000});
-  else showToast("Sent to Drive: "+DOC_DEST+(t.total>1? " ("+t.sent+" PDFs)" : ""), {link:DOC_FOLDER_URL, linkLabel:"OPEN", ms:7000});
+  var conf = t.verify && t.verify.confirmed ? " Checked: they're in Drive." : "";
+  if(t.cancelled){ showToast("Upload stopped. Sent "+t.sent+" of "+t.total+". Tap Upload all to send the rest.", {err:true, ms:9000}); return; }
+  if(t.missingNow) showToast(t.missingNow+" PDF"+(t.missingNow>1?"s":"")+" didn't show up in Drive. Tap Upload all to send "+(t.missingNow>1?"them":"it")+" again.", {err:true, ms:10000});
+  else if(t.queued && !t.sent) showToast((state.docLastError? state.docLastError+" " : "")+"Nothing was sent yet. The scans are kept on this phone and are tried again when the app opens, or tap Upload all in Settings.", {err:true, ms:10000});
+  else if(t.queued) showToast("Sent "+t.sent+" of "+t.total+" to Drive. "+t.queued+" kept on this phone"+(state.docLastError? " ("+state.docLastError.replace(/\.$/,"")+")" : "")+"; tap Upload all in Settings to send the rest.", {err:true, ms:10000});
+  else if(t.failed && !t.sent) showToast((state.docLastError || "Couldn't make the PDF.")+" The scan is still saved in this app.", {err:true, ms:9000});
+  else if(t.failed) showToast("Sent "+t.sent+" of "+t.total+" to Drive. "+t.failed+" couldn't be made into a PDF: "+(state.docLastError||"")+" The scans stay in this app.", {err:true, ms:10000});
+  else showToast("Sent to Drive: "+DOC_DEST+(t.total>1? " ("+t.sent+" PDF"+(t.sent>1?"s":"")+")" : "")+"."+conf, {link:DOC_FOLDER_URL, linkLabel:"OPEN", ms:8000});
 }
-// ctx = {files, job, modal}; opts.skipSent: leave out scans already sent from this phone
+// ctx = {files, job, modal}; opts.skipSent: leave out scans already sent from this phone; opts.fg: show progress with Stop
 function uploadScansAsPdf(ctx, opts){
   opts=opts||{};
-  var run=function(){
+  return docEnqueue(function(){
     state.docLastError="";
     var docs=docsForCtx(ctx);
     if(opts.skipSent){ var up=readDocUploaded(); docs=docs.filter(function(d){ return !d.files.every(function(f){ return up[f.id]; }); }); }
     if(!docs.length){ docToast({total:0}, opts); return {total:0, sent:0, queued:0, failed:0}; }
-    state.docBusy=true; refreshDocBtns();
-    if(!opts.quiet) showToast(docs.length===1? "Making the PDF…" : "Making "+docs.length+" PDFs…", {ms:20000});
-    var pre = navigator.onLine===false ? Promise.resolve() : flushDocQueueNow(true);
-    return pre.catch(function(){}).then(function(){ return sendDocs(docs); }).then(function(t){
-      state.docBusy=false; docToast(t, opts); docRefresh(); return t;
-    }, function(e){ state.docBusy=false; docRefresh(); throw e; });
-  };
-  var p=docChain.then(run, run); docChain=p.catch(function(){}); return p;
+    if(navigator.onLine===false){ docs.forEach(queueDoc); var tq={total:docs.length, sent:0, queued:docs.length, failed:0}; state.docLastError="No signal."; docToast(tq, opts); docRefresh(); return tq; }
+    return runDocs(docs, {fg:!!opts.fg}).then(function(t){ docToast(t, opts); docRefresh(); return t; }, function(e){ docRefresh(); throw e; });
+  });
 }
 // redraw only what shows upload status (an open sheet or Settings), never the job page the user may be typing in
 function docRefresh(){
   if(state.modal){ if(state.modal.type==="review") rvRerender(); else renderModal(); return; }
   if(/settings/.test(location.hash||"")) render();
 }
-function refreshDocBtns(){ ["docPdfBtn","docJobBtn","docAllBtn"].forEach(function(id){ var b=$(id); if(b) b.disabled=!!state.docBusy; }); }
+// buttons are greyed out only while an upload with the progress panel runs; a quiet background retry can be taken over by a tap
+function docFgBusy(){ return !!((state.docRun && state.docRun.fg) || (state.busy && state.busy.cancelAct==="docCancel")); }
+function refreshDocBtns(){ ["docPdfBtn","docJobBtn","docAllBtn","docResendBtn"].forEach(function(id){ var b=$(id); if(b) b.disabled=docFgBusy(); }); }
+function docTakeOver(){ if(state.docRun && !state.docRun.fg){ state.docRun.fg=true; docProgress(state.docRun.text||"Uploading…", state.docRun.pct||0); refreshDocBtns(); return true; } return false; }
 function docBoxHtml(files){
   var st=docStatusOf(files);
-  var line = st==="sent" ? '<b style="color:var(--good)">✓ Sent to Drive: '+DOC_DEST+'.</b> <span class="faint">The phone can’t see Google’s reply, so check the folder if a file is missing.</span>'
-    : st==="queued" ? '<b style="color:var(--warn)">Saved on this phone. Upload will retry.</b>'
+  var line = st==="sent" ? '<b style="color:var(--good)">✓ Sent to Drive: '+DOC_DEST+'.</b>'
+    : st==="queued" ? '<b style="color:var(--warn)">Not sent yet. Kept on this phone; tap Upload PDF to Drive to try again.</b>'
     : (docAutoOn() ? 'Goes to Drive as a PDF when you tap '+(state.scanTarget && state.scanTarget.newJob? 'Create job' : 'Apply selected')+'.' : 'Not sent to Drive yet.');
   return '<p id="docStatus" style="margin:6px 0">'+line+'</p>'+
-    '<button class="btn primary block" id="docPdfBtn" data-act="docUploadReview"'+(state.docBusy?' disabled':'')+'><span>Upload PDF to Drive (DCT / Building Material)</span><small>Makes a PDF on this phone and sends it to Drive</small></button>';
+    '<button class="btn primary block" id="docPdfBtn" data-act="docUploadReview"'+(docFgBusy()?' disabled':'')+'><span>Upload PDF to Drive (DCT / Building Material)</span><small>Makes a PDF on this phone and sends it to Drive</small></button>';
 }
 function allSavedScans(){
   var out=[]; state.jobs.forEach(function(j){ if((j.scanFiles||[]).length) out.push({files:j.scanFiles, job:j, modal:null}); }); return out;
 }
 function unsentScanCount(){ var up=readDocUploaded(), n=0; allSavedScans().forEach(function(c){ c.files.forEach(function(f){ if(f && f.id && !up[f.id]) n++; }); }); return n; }
+function allScanCount(){ var n=0; allSavedScans().forEach(function(c){ c.files.forEach(function(f){ if(f && f.id) n++; }); }); return n; }
 ACT.docUploadReview=function(){
   var m=state.modal;
   if(!m || m.type!=="review" || !(m.scanFiles||[]).length){ showToast("No scan files are stored for this scan.", {err:true}); return; }
-  uploadScansAsPdf({files:m.scanFiles, job:scanJob(), modal:m});
+  docTakeOver(); uploadScansAsPdf({files:m.scanFiles, job:scanJob(), modal:m}, {fg:true});
 };
 ACT.docUploadJob=function(){
   var j=curJob(); if(!j || !(j.scanFiles||[]).length){ showToast("No scan files are stored for this job.", {err:true}); return; }
-  uploadScansAsPdf({files:j.scanFiles, job:j, modal:null});
+  docTakeOver(); uploadScansAsPdf({files:j.scanFiles, job:j, modal:null}, {fg:true});
 };
-ACT.docUploadAll=function(){
-  var list=allSavedScans();
-  if(!list.length){ showToast("No scans are saved on this phone."); return; }
-  var files=[], up=readDocUploaded();
-  list.forEach(function(c){ c.files.forEach(function(f){ if(f && f.id && !up[f.id]) files.push(f); }); });
-  if(!files.length){ showToast("Every saved scan was already sent to Drive: "+DOC_DEST+"."); return; }
-  var tally={total:0, sent:0, queued:0, failed:0}, seq=Promise.resolve();
-  list.forEach(function(c){ seq=seq.then(function(){ return uploadScansAsPdf(c, {skipSent:true, quiet:true}).then(function(t){ ["total","sent","queued","failed"].forEach(function(k){ tally[k]+=t[k]||0; }); }); }); });
-  showToast("Making PDFs for "+files.length+" saved scan file"+(files.length>1?"s":"")+"…", {ms:30000});
-  seq.then(function(){ docToast(tally); if(location.hash.indexOf("settings")>=0) render(); });
-};
+// Upload all: waiting (queued) + not sent; resend=true sends every saved scan again (Drive skips names it already has)
+function docPanelOff(){ if(state.busy && state.busy.cancelAct==="docCancel") setBusy(null); refreshDocBtns(); }
+function docStoppedToast(){ showToast("Upload stopped. Tap Upload all to send the rest.", {err:true, ms:7000}); }
+function uploadAllDocs(resend){
+  return docEnqueue(function(){
+    state.docLastError="";
+    if(state.docPendingCancel){ state.docPendingCancel=false; docPanelOff(); docStoppedToast(); docRefresh(); return {total:0, cancelled:true}; }
+    var list=allSavedScans();
+    if(!list.length){ docPanelOff(); showToast("No scans are saved on this phone."); return {total:0}; }
+    docProgress("Checking what's already in Drive…", 0, true);
+    return docVerifySent().then(function(v){
+      if(state.docPendingCancel){ state.docPendingCancel=false; docPanelOff(); docStoppedToast(); docRefresh(); return {total:0, cancelled:true}; }
+      var up=readDocUploaded(), docs=[];
+      list.forEach(function(c){ docsForCtx(c).forEach(function(d){ if(resend || !d.files.every(function(f){ return up[f.id]; })) docs.push(d); }); });
+      docs=docs.concat(queuedDocs(docs));
+      if(!docs.length){ docPanelOff(); showToast(v? "Every saved scan is in Drive: "+DOC_DEST+"." : "Every saved scan was already sent to Drive: "+DOC_DEST+". If one is missing there, tap Re-send all.", {link:DOC_FOLDER_URL, linkLabel:"OPEN", ms:8000}); docRefresh(); return {total:0}; }
+      if(navigator.onLine===false){ docPanelOff(); docs.forEach(queueDoc); showToast("No signal. "+docs.length+" PDF"+(docs.length>1?"s are":" is")+" waiting; tap Upload all again when you have signal.", {err:true, ms:9000}); docRefresh(); return {total:docs.length, queued:docs.length}; }
+      return runDocs(docs, {fg:true, verify:true}).then(function(t){ docToast(t); docRefresh(); return t; });
+    }).catch(function(e){ docPanelOff(); docRefresh(); throw e; });
+  });
+}
+function docAllNow(resend){
+  state.docPendingCancel=false;
+  // a background retry is running: show its progress now (with Stop), then do the rest
+  if(!docTakeOver()) setBusy("Getting ready…", {pct:0, cancel:true, cancelAct:"docCancel"});
+  refreshDocBtns();
+  return uploadAllDocs(resend);
+}
+ACT.docUploadAll=function(){ docAllNow(false); };
+ACT.docResendAll=function(){ docAllNow(true); };
 // auto: after Apply selected / Create job, send the new scans (setting "Upload every scan to Drive automatically")
 function autoDocUpload(job, ids){
   if(!docAutoOn() || !job || !ids || !ids.length) return;
@@ -4861,7 +5080,7 @@ function init(){
   registerSW();
   if(canPickFolder()) loadAlbumHandle();
   setTimeout(function(){ flushDocQueue(false); }, 3000);
-  window.addEventListener("online", function(){ flushDocQueue(false); });
+  window.addEventListener("online", function(){ flushDocQueue(false, true); });
   if(window.matchMedia && matchMedia("(display-mode: standalone)").matches) askPersist();
   setTimeout(function(){
     var c=navigator.connection||{};
@@ -4869,7 +5088,7 @@ function init(){
   }, 8000);
 }
 window.__tjl = {state:state, googleClientId:GOOGLE_CLIENT_ID, phone:{storeAlbumHandle:storeAlbumHandle, albumName:albumName, readPhoneSaved:readPhoneSaved},
-  doc:{url:DOC_SCRIPT_URL, readQueue:readDocQueue, readUploaded:readDocUploaded, flush:flushDocQueue, docsForCtx:docsForCtx, buildDocPdf:buildDocPdf}, parseLines:parseLines, buildReview:buildReview, render:render, scan:{buildSynIndex:buildSynIndex, labelUnitHint:labelUnitHint, parseNumber:parseNumber, defForLabel:defForLabel, reconcileFields:reconcileFields},
+  doc:{url:DOC_SCRIPT_URL, readQueue:readDocQueue, readUploaded:readDocUploaded, readSent:readDocSent, flush:flushDocQueue, docsForCtx:docsForCtx, buildDocPdf:buildDocPdf, buildDocParts:buildDocParts, exists:docExists, uploadAll:uploadAllDocs, limits:function(){ return {page:DOC_PAGE_MAX, part:DOC_PART_BYTES, asis:DOC_PDF_ASIS, side:DOC_MAX_SIDE}; }}, parseLines:parseLines, buildReview:buildReview, render:render, scan:{buildSynIndex:buildSynIndex, labelUnitHint:labelUnitHint, parseNumber:parseNumber, defForLabel:defForLabel, reconcileFields:reconcileFields},
   ce:function(){ return CE; }, ceTestMask:function(o){ ceTestMask=o||null; }, getPhoto:getPhoto}; // test hooks (ceTestMask: fake segmentation when no model is available)
 init();
 })();
