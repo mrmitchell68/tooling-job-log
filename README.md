@@ -16,6 +16,13 @@ tests/                 Playwright end-to-end tests (test.py, test_refsheet.py, t
 
 All URLs are relative, so it runs from any path: `https://<user>.github.io/<repo>/`, a subfolder, or localhost.
 
+## What's new in 2.3.9 — Drive PDFs are named by Part name
+
+- Each PDF is named **`<Part name> <YYYY-MM-DD>.pdf`**, using the **Part name** on the job sheet (the job's `partName` field, shown under the tool # on the job sheet and job card). If the part name is empty, the part number is used, then the tool / mold #. Slashes, quotes and `: * ? < > |` are replaced with spaces.
+- A short time is added only when it's needed to keep names unique (another scan of the same part on the same day): `Closet Flange 2026-10-06 0611.pdf`, then `…061114.pdf`, then `(2)`. Split PDFs keep `… part 1 of 2.pdf`.
+- The name is saved with the scan the first time it's worked out, so retries always use the same name and the script skips duplicates. Changing the part name later doesn't rename scans already named.
+- Scans already sent under a number (2.3.7 / 2.3.8) keep that name. **Upload all** and **Re-send all** don't make renamed copies. Settings → **Send copies named by part name** (with a confirm) is the only thing that sends them again under the part name. The old number-named files stay in Drive.
+
 ## What's new in 2.3.8 — "Upload all saved scans" fixed: small uploads, one at a time, with progress and Stop
 
 - **Why 2.3.7 got stuck:** older scans (saved before 2.3.7) were merged into one big PDF per job, and an original PDF was sent at full size, so a single upload could be many MB. Each upload had no time limit, so one slow or dropped mobile upload left the button greyed out with no progress, and failures were only marked "waiting to retry". Nothing reached Drive.
@@ -241,6 +248,7 @@ python tests/make_scan_fixtures.py   # sample mold sheet PDF (text layer) + PNG 
 python tests/test_realforms.py       # 2.3.2 the 3 real phone-photo forms (tests/fixtures), merge/conflicts, apply, detail, sheet, update flow
 python tests/test_phone.py           # 2.3.6 save scans to DCT Document folder / Download folder
 python tests/test_docpdf.py          # 2.3.7 scan → PDF → Apps Script post (script.google.com is intercepted, never reached), offline queue
+python tests/test_naming239.py       # 2.3.9 '<Part name> <date>.pdf' names, fallbacks, uniqueness, stability, copies only on request
 python tests/test_upload238.py       # 2.3.8 Upload all with 19 big scans: small posts, progress/Stop, timeout+retry, waiting+unsent, Re-send all, docExists check
 python tests/test_drive.py           # 2.3.5 auto-save scan on the job + Drive copy (share sheet or mocked upload)
 python tests/test_scanfields.py      # 2.3.1 scan labels/units, review + assign, apply, detail, both print layouts, page 2, migration

@@ -535,7 +535,7 @@ pre.raw{white-space:pre-wrap;font-size:12px;background:var(--surface-2);padding:
 <script>
 (function(){
 "use strict";
-var APP_VERSION = "2.3.8";
+var APP_VERSION = "2.3.9";
 // Public OAuth client id (not a secret). Web client, authorized JavaScript origins:
 //   https://mrmitchell68.github.io   and   http://localhost:8766
 // Leave empty until that client exists — Save-to-Drive is hidden and the button uses the Android share sheet.
@@ -740,7 +740,7 @@ function normalizeJob(j){
   j.scanFiles = (Array.isArray(j.scanFiles)? j.scanFiles : []).filter(function(s){ return s && s.id; }).map(scanMetaCopy);
   return j;
 }
-function scanMetaCopy(s){ var o={id:s.id, name:s.name||"scan", type:s.type||"", bytes:s.bytes||0}; if(s.batch) o.batch=s.batch; if(s.at) o.at=s.at; return o; }
+function scanMetaCopy(s){ var o={id:s.id, name:s.name||"scan", type:s.type||"", bytes:s.bytes||0}; if(s.batch) o.batch=s.batch; if(s.at) o.at=s.at; if(s.docName) o.docName=s.docName; return o; }
 function jobTitle(j){ return j.toolNumber || j.partName || "Untitled job"; }
 function stepsOf(j){ var out=[]; (j.sections||[]).forEach(function(s){ if(s.type==="steps" && !isPlainList(s)) out=out.concat(s.items||[]); }); return out.filter(function(it){ return String(it.text||"").trim(); }); }
 function stepProgress(j){ var st=stepsOf(j); var d=st.filter(function(x){ return x.done; }).length; return {done:d, total:st.length, pct: st.length? Math.round(d*100/st.length):0}; }
@@ -2380,12 +2380,13 @@ function viewSettings(){
     (canPickFolder()? '<div class="btnrow"><button class="btn '+(anm?'ghost':'primary')+'" data-act="pickAlbum" id="pickAlbumBtn">'+(anm?'Change folder':'Choose '+PHONE_ALBUM+' folder')+'</button>'+(anm?'<button class="btn ghost" data-act="forgetAlbum" id="forgetAlbumBtn">Forget folder</button>':'')+'</div>'+
       '<label class="prefrow"><input type="checkbox" id="prefPhoneCopy" data-meta-bool="phoneCopy"'+(state.meta.phoneCopy===false?'':' checked')+'><span>Save each scan to this folder automatically<small>If the phone asks again, tap Save to '+PHONE_ALBUM+' on the review screen</small></span></label>' : '')+
     '</div></div>';
-  var dq=readDocQueue().length, dn=unsentScanCount(), dall=allScanCount(), drun=state.docRun;
+  var dq=readDocQueue().length, dn=unsentScanCount(), dall=allScanCount(), drun=state.docRun, dren=dall? renameableDocs().length : 0;
   h += '<div class="card" id="docCard"><div class="sec-hd"><h2>Upload scans to Drive as PDF</h2></div><div class="card-bd"><p class="muted" id="docLine" style="margin-top:0"><b>Each scan is made into a PDF on this phone and sent to Drive: '+DOC_DEST+'.</b>'+(dq? ' <span style="color:var(--warn);font-weight:700">'+dq+' PDF'+(dq>1?'s':'')+' not sent yet (kept on this phone). Tap Upload all to send '+(dq>1?'them':'it')+'.</span>' : '')+'</p>'+
     '<p id="docProg" style="font-weight:700;color:var(--primary);margin:4px 0 8px'+(drun?'':';display:none')+'">'+(drun? esc(drun.text||"Uploading…") : '')+'</p>'+
     '<label class="prefrow"><input type="checkbox" id="prefDocAuto" data-meta-bool="docAuto"'+(docAutoOn()?' checked':'')+'><span>Upload every scan to Drive automatically<small>After you tap Apply selected or Create job on the review screen</small></span></label>'+
     '<button class="btn '+(dn?'primary':'ghost')+' block" data-act="docUploadAll" id="docAllBtn"'+(docFgBusy()?' disabled':'')+'><span>Upload all saved scans to Drive</span><small>'+(dn? dn+' scan file'+(dn>1?'s':'')+' on this phone not sent yet' : (dall? 'All saved scans were sent' : 'No scans saved on this phone yet'))+'</small></button>'+
-    (dall? '<button class="btn ghost block" data-act="docResendAll" id="docResendBtn"'+(docFgBusy()?' disabled':'')+' style="margin-top:8px"><span>Re-send all saved scans</span><small>Sends all '+dall+' again. Files already in Drive are skipped.</small></button>' : '')+
+    (dall? '<button class="btn ghost block" data-act="docResendAll" id="docResendBtn"'+(docFgBusy()?' disabled':'')+' style="margin-top:8px"><span>Re-send all saved scans</span><small>Sends all '+dall+' again under the names they were sent with. Files already in Drive are skipped.</small></button>' : '')+
+    (dren? '<button class="btn ghost block" data-act="docCopiesByName" id="docCopiesBtn"'+(docFgBusy()?' disabled':'')+' style="margin-top:8px"><span>Send copies named by part name</span><small>'+dren+' PDF'+(dren>1?'s were':' was')+' sent under a number. Sends '+(dren>1?'them':'it')+' again as “Part name date”. The old files stay.</small></button>' : '')+
     '<p class="faint" style="margin-bottom:0">One PDF at a time, each kept small. You’ll see “Uploading 2 of 6…” with a Stop button; keep the app open until it finishes. If there’s no signal, the scans stay on this phone and Upload all sends them later. <a href="'+DOC_FOLDER_URL+'" target="_blank" rel="noopener">Open the Drive folder</a></p></div></div>';
   h += '<div class="card" id="driveCard"><div class="sec-hd"><h2>Google Drive copy</h2></div><div class="card-bd"><p class="muted" id="driveCopyLine" style="margin-top:0"><b>'+esc(driveStatusLine())+'</b></p><p class="muted" id="driveSetupNote">'+(GOOGLE_CLIENT_ID
     ? 'Scans can be saved straight into <b>DCT / Building Material</b>. The first time, Google asks you to sign in. If this app cannot see that folder yet, choose <b>Building Material</b> once.'
@@ -3869,17 +3870,82 @@ function docGroups(ctx){
   if(changed && ctx.job && state.jobs.some(function(j){ return j===ctx.job; })) saveJobs();
   return order.map(function(k){ return groups[k]; });
 }
-// a group's images become one PDF (split into parts if big); an original PDF is sent as is when small. Names: "<part or job> <date> <time>.pdf"
-function docsForGroup(ctx, g){
-  var base=driveBaseName(ctx.job, ctx.modal && ctx.modal.type==="review" ? ctx.modal : null)+" "+docStamp(g.at);
+// v2.3.9 names: "<Part name> <YYYY-MM-DD>.pdf" — the Part name on the job sheet (job.partName); if empty the part number,
+// then the tool / mold #. A second scan of the same part on the same day gets " HHMM" (then HHMMSS, then (2)…).
+// The name is saved on the scan (docName) the first time it is worked out, so retries always use the same name and the
+// script skips names it already has. Scans already sent under an older name keep that name (no surprise copies);
+// "Send copies named by part name" in Settings is the only thing that sends them again under the new name.
+function docBaseName(job, modal){
+  var pname="", part="", tool="", mp="", mpart="", mtool="";
+  ((modal && modal.items) || []).forEach(function(i){
+    if(!i || i.loose || !i.value) return;
+    var v=String(i.value).trim();
+    if(i.key==="partName") mp = mp || v;
+    if(i.key==="part_no") mpart = mpart || v;
+    if(i.key==="toolNumber") mtool = mtool || v;
+  });
+  if(job){
+    pname = String(job.partName||"").trim();
+    var pf=bestField(job,"part_no"); part = (pf && String(pf.f.value||"").trim()) || "";
+    tool = String(job.toolNumber||"").trim();
+  }
+  var base = pname || mp || part || mpart || tool || mtool || "Job";
+  base = String(base).replace(/[\\/:*?"<>|\u0000-\u001f]+/g," ").replace(/\s+/g," ").replace(/^[\s.]+/,"").trim().slice(0,80).trim();
+  return base || "Job";
+}
+function docDay(at){ var d=new Date(at||Date.now()); function z(n){ return (n<10?"0":"")+n; } return d.getFullYear()+"-"+z(d.getMonth()+1)+"-"+z(d.getDate()); }
+function docHM(at){ var d=new Date(at||Date.now()); function z(n){ return (n<10?"0":"")+n; } return z(d.getHours())+z(d.getMinutes()); }
+function docHMS(at){ var d=new Date(at||Date.now()); function z(n){ return (n<10?"0":"")+n; } return docHM(at)+z(d.getSeconds()); }
+function sentNameOf(files, up){ for(var i=0;i<files.length;i++){ var v=up[files[i].id]; if(typeof v==="string" && v) return v; } return ""; }
+// every name already used on this phone (saved on scans, sent, waiting), except the scans in `except`
+function docTakenNames(except){
+  var s={}, up=readDocUploaded();
+  function add(n){ if(n) s[String(n).toLowerCase()]=1; }
+  function scan(arr){ (arr||[]).forEach(function(f){ if(f && f.id && !except[f.id]) add(f.docName); }); }
+  state.jobs.forEach(function(j){ scan(j.scanFiles); });
+  if(state.modal && state.modal.scanFiles) scan(state.modal.scanFiles);
+  Object.keys(up).forEach(function(id){ if(!except[id] && typeof up[id]==="string") add(up[id]); });
+  readDocQueue().forEach(function(q){ if(!(q.files||[]).some(function(f){ return f && except[f.id]; })) add(q.name); });
+  return s;
+}
+function setDocName(ctx, files, name){
+  var ids={}; files.forEach(function(f){ ids[f.id]=1; f.docName=name; });
+  var changed=false;
+  function upd(arr){ (arr||[]).forEach(function(f){ if(f && ids[f.id] && f.docName!==name){ f.docName=name; changed=true; } }); }
+  if(ctx.job) upd(ctx.job.scanFiles);
+  state.jobs.forEach(function(j){ upd(j.scanFiles); });
+  if(state.modal && state.modal.scanFiles) upd(state.modal.scanFiles);
+  return changed || files.length>0;
+}
+function assignDocName(ctx, d, g){
+  var have=d.files[0].docName;
+  if(have && d.files.every(function(f){ return f.docName===have; })) return {name:have, changed:false};
+  var except={}; d.files.forEach(function(f){ except[f.id]=1; });
+  var taken=docTakenNames(except), base=docBaseName(ctx.job, ctx.modal && ctx.modal.type==="review" ? ctx.modal : null), day=docDay(g.at);
+  var cands=[base+" "+day, base+" "+day+" "+docHM(g.at), base+" "+day+" "+docHMS(g.at)], name="";
+  for(var i=0;i<cands.length && !name;i++) if(!taken[(cands[i]+".pdf").toLowerCase()]) name=cands[i]+".pdf";
+  for(var k=2; !name; k++) if(!taken[(cands[2]+" ("+k+")"+".pdf").toLowerCase()]) name=cands[2]+" ("+k+").pdf";
+  return {name:name, changed:setDocName(ctx, d.files, name)};
+}
+// a group's images become one PDF (split into parts if big); an original PDF is its own PDF (sent as is when small)
+function docsForGroup(ctx, g, opts){
   var imgs=g.files.filter(function(f){ return !isPdfMeta(f); }), pdfs=g.files.filter(function(f){ return isPdfMeta(f); });
-  var out=[];
+  var out=[], up=readDocUploaded(), changed=false;
   if(imgs.length) out.push({kind:"images", files:imgs});
   pdfs.forEach(function(f){ out.push({kind:"pdf", files:[f]}); });
-  out.forEach(function(d, i){ d.name = base+(i? " ("+(i+1)+")" : "")+".pdf"; });
+  out.forEach(function(d){
+    var a=assignDocName(ctx, d, g); changed = changed || a.changed;
+    d.docName=a.name; d.sentName=sentNameOf(d.files, up);
+    d.name = (opts && opts.fresh) ? d.docName : (d.sentName || d.docName);
+  });
+  if(changed && ctx.job && state.jobs.some(function(j){ return j===ctx.job; })) saveJobsSoon();
   return out;
 }
-function docsForCtx(ctx){ var out=[]; docGroups(ctx).forEach(function(g){ out=out.concat(docsForGroup(ctx, g)); }); return out; }
+function docsForCtx(ctx, opts){ var out=[]; docGroups(ctx).forEach(function(g){ out=out.concat(docsForGroup(ctx, g, opts)); }); return out; }
+// scans sent under an older name (e.g. the part number) whose part-name name is different -> candidates for renamed copies
+// (only when the sent name doesn't already start with the same part name / number, so no copies just to drop a time)
+function needsRename(d, up){ if(!d.sentName || d.sentName===d.docName || !d.files.every(function(f){ return up[f.id]; })) return false; var base=d.docName.replace(/ \d{4}-\d{2}-\d{2}( [^]*)?\.pdf$/i, ""); return d.sentName.toLowerCase().indexOf((base+" ").toLowerCase())!==0; }
+function renameableDocs(){ var out=[], up=readDocUploaded(); allSavedScans().forEach(function(c){ docsForCtx(c, {fresh:true}).forEach(function(d){ if(needsRename(d, up)) out.push(d); }); }); return out; }
 var jsPdfReady=null;
 function loadJsPdf(){
   if(window.jspdf && window.jspdf.jsPDF) return Promise.resolve(window.jspdf.jsPDF);
@@ -4117,7 +4183,7 @@ function runDocs(docs, opts){
         });
       }); });
       return seq.then(function(){
-        unqueueDoc(d.name); markDocUploaded(d.files.map(function(f){ return f.id; }), d.name); recordDocSent(d, names.length>1? names : []);
+        unqueueDocFor(d); markDocUploaded(d.files.map(function(f){ return f.id; }), d.name); recordDocSent(d, names.length>1? names : []);
         tally.sent++; fails=0;
       });
     }).catch(function(e){
@@ -4160,10 +4226,27 @@ ACT.docCancel=function(){
 };
 // waiting docs (queue) -> doc objects; skip ones whose scan files are all covered by `have`
 function queuedDocs(have){
+  var q=readDocQueue(); if(!q.length) return [];
   var covered={}; (have||[]).forEach(function(d){ d.files.forEach(function(f){ covered[f.id]=1; }); });
   var names={}; (have||[]).forEach(function(d){ names[d.name]=1; });
-  return readDocQueue().map(function(e){ var fs=(e.files||[]).filter(function(f){ return f && f.id; }); return {name:e.name, files:fs, kind:(fs.length===1 && isPdfMeta(fs[0]))? "pdf" : "images"}; })
-    .filter(function(d){ return d.files.length && !names[d.name] && !d.files.every(function(f){ return covered[f.id]; }); });
+  var byFile={}; allSavedScans().forEach(function(c){ docsForCtx(c).forEach(function(d){ d.files.forEach(function(f){ byFile[f.id]=d; }); }); });
+  var out=[], seen={}, up=readDocUploaded();
+  q.forEach(function(e){
+    var fs=(e.files||[]).filter(function(f){ return f && f.id; });
+    var mapped=fs.map(function(f){ return byFile[f.id]; }).filter(Boolean);
+    if(mapped.length){ // the scan is saved with a job: send it under the job's (part-name) name
+      mapped.forEach(function(d){ if(!seen[d.name] && !d.files.every(function(f){ return up[f.id]; })){ seen[d.name]=1; out.push(d); } });
+      if(mapped.every(function(d){ return d.files.every(function(f){ return up[f.id]; }); })) unqueueDoc(e.name); // already sent: drop the stale entry
+      return;
+    }
+    if(!seen[e.name]){ seen[e.name]=1; out.push({name:e.name, files:fs, kind:(fs.length===1 && isPdfMeta(fs[0]))? "pdf" : "images"}); }
+  });
+  return out.filter(function(d){ return d.files.length && !names[d.name] && !d.files.every(function(f){ return covered[f.id]; }); });
+}
+// drop waiting entries for this doc: same name, or every scan in the entry is part of this doc
+function unqueueDocFor(d){
+  var ids={}; d.files.forEach(function(f){ ids[f.id]=1; });
+  writeDocQueue(readDocQueue().filter(function(q){ if(!q || q.name===d.name) return false; var fs=(q.files||[]).filter(function(f){ return f && f.id; }); return !(fs.length && fs.every(function(f){ return ids[f.id]; })); }));
 }
 // retry waiting uploads (on open, when the phone comes back online)
 function flushDocQueueNow(quiet, force){
@@ -4211,7 +4294,7 @@ function docRefresh(){
 }
 // buttons are greyed out only while an upload with the progress panel runs; a quiet background retry can be taken over by a tap
 function docFgBusy(){ return !!((state.docRun && state.docRun.fg) || (state.busy && state.busy.cancelAct==="docCancel")); }
-function refreshDocBtns(){ ["docPdfBtn","docJobBtn","docAllBtn","docResendBtn"].forEach(function(id){ var b=$(id); if(b) b.disabled=docFgBusy(); }); }
+function refreshDocBtns(){ ["docPdfBtn","docJobBtn","docAllBtn","docResendBtn","docCopiesBtn"].forEach(function(id){ var b=$(id); if(b) b.disabled=docFgBusy(); }); }
 function docTakeOver(){ if(state.docRun && !state.docRun.fg){ state.docRun.fg=true; docProgress(state.docRun.text||"Uploading…", state.docRun.pct||0); refreshDocBtns(); return true; } return false; }
 function docBoxHtml(files){
   var st=docStatusOf(files);
@@ -4248,8 +4331,12 @@ function uploadAllDocs(resend){
     return docVerifySent().then(function(v){
       if(state.docPendingCancel){ state.docPendingCancel=false; docPanelOff(); docStoppedToast(); docRefresh(); return {total:0, cancelled:true}; }
       var up=readDocUploaded(), docs=[];
-      list.forEach(function(c){ docsForCtx(c).forEach(function(d){ if(resend || !d.files.every(function(f){ return up[f.id]; })) docs.push(d); }); });
-      docs=docs.concat(queuedDocs(docs));
+      if(resend==="copies"){ // only when Allen picks it: scans sent under an older name go again under the part-name name
+        list.forEach(function(c){ docsForCtx(c, {fresh:true}).forEach(function(d){ if(needsRename(d, up)) docs.push(d); }); });
+      } else {
+        list.forEach(function(c){ docsForCtx(c).forEach(function(d){ if(resend || !d.files.every(function(f){ return up[f.id]; })) docs.push(d); }); });
+        docs=docs.concat(queuedDocs(docs));
+      }
       if(!docs.length){ docPanelOff(); showToast(v? "Every saved scan is in Drive: "+DOC_DEST+"." : "Every saved scan was already sent to Drive: "+DOC_DEST+". If one is missing there, tap Re-send all.", {link:DOC_FOLDER_URL, linkLabel:"OPEN", ms:8000}); docRefresh(); return {total:0}; }
       if(navigator.onLine===false){ docPanelOff(); docs.forEach(queueDoc); showToast("No signal. "+docs.length+" PDF"+(docs.length>1?"s are":" is")+" waiting; tap Upload all again when you have signal.", {err:true, ms:9000}); docRefresh(); return {total:docs.length, queued:docs.length}; }
       return runDocs(docs, {fg:true, verify:true}).then(function(t){ docToast(t); docRefresh(); return t; });
@@ -4265,6 +4352,11 @@ function docAllNow(resend){
 }
 ACT.docUploadAll=function(){ docAllNow(false); };
 ACT.docResendAll=function(){ docAllNow(true); };
+ACT.docCopiesByName=function(){
+  var n=renameableDocs().length; if(!n){ showToast("Every sent scan already has its part-name name."); return; }
+  if(!window.confirm("Send "+n+" PDF"+(n>1?"s":"")+" again, named by part name?\n\nThe files already in Drive (named by number) stay there. Delete them in Drive afterwards if you don't want both.")) return;
+  docAllNow("copies");
+};
 // auto: after Apply selected / Create job, send the new scans (setting "Upload every scan to Drive automatically")
 function autoDocUpload(job, ids){
   if(!docAutoOn() || !job || !ids || !ids.length) return;
@@ -5088,7 +5180,7 @@ function init(){
   }, 8000);
 }
 window.__tjl = {state:state, googleClientId:GOOGLE_CLIENT_ID, phone:{storeAlbumHandle:storeAlbumHandle, albumName:albumName, readPhoneSaved:readPhoneSaved},
-  doc:{url:DOC_SCRIPT_URL, readQueue:readDocQueue, readUploaded:readDocUploaded, readSent:readDocSent, flush:flushDocQueue, docsForCtx:docsForCtx, buildDocPdf:buildDocPdf, buildDocParts:buildDocParts, exists:docExists, uploadAll:uploadAllDocs, limits:function(){ return {page:DOC_PAGE_MAX, part:DOC_PART_BYTES, asis:DOC_PDF_ASIS, side:DOC_MAX_SIDE}; }}, parseLines:parseLines, buildReview:buildReview, render:render, scan:{buildSynIndex:buildSynIndex, labelUnitHint:labelUnitHint, parseNumber:parseNumber, defForLabel:defForLabel, reconcileFields:reconcileFields},
+  doc:{url:DOC_SCRIPT_URL, readQueue:readDocQueue, readUploaded:readDocUploaded, readSent:readDocSent, baseName:docBaseName, renameable:function(){ return renameableDocs().map(function(d){ return {sent:d.sentName, name:d.docName}; }); }, flush:flushDocQueue, docsForCtx:docsForCtx, buildDocPdf:buildDocPdf, buildDocParts:buildDocParts, exists:docExists, uploadAll:uploadAllDocs, limits:function(){ return {page:DOC_PAGE_MAX, part:DOC_PART_BYTES, asis:DOC_PDF_ASIS, side:DOC_MAX_SIDE}; }}, parseLines:parseLines, buildReview:buildReview, render:render, scan:{buildSynIndex:buildSynIndex, labelUnitHint:labelUnitHint, parseNumber:parseNumber, defForLabel:defForLabel, reconcileFields:reconcileFields},
   ce:function(){ return CE; }, ceTestMask:function(o){ ceTestMask=o||null; }, getPhoto:getPhoto}; // test hooks (ceTestMask: fake segmentation when no model is available)
 init();
 })();
