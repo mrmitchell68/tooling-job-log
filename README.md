@@ -8,12 +8,22 @@ manifest.webmanifest   PWA manifest (name, short_name "Job Log", start_url ./, s
 sw.js                  service worker: caches the app shell + CDN libs (OCR, pdf.js, fonts) for offline use,
                        plus the background-removal model in its own runtime cache (not precached)
 bgworker.js            Web Worker that loads @imgly/background-removal on first use and returns the cutout mask
+vendor/                jsPDF 4.2.1 UMD (MIT, see jspdf.LICENSE.txt): builds scan PDFs on the phone, precached for offline
 icons/                 icon-192.png, icon-512.png, icon-maskable-512.png, apple-touch-icon.png, favicon-64.png
 shots/                 412×915 phone screenshots
 tests/                 Playwright end-to-end tests (test.py, test_refsheet.py, test_arrange.py, test_cleanup.py, test_scanfields.py, test_realforms.py, test_drive.py) + fixture generators
 ```
 
 All URLs are relative, so it runs from any path: `https://<user>.github.io/<repo>/`, a subfolder, or localhost.
+
+## What's new in 2.3.7 — Scans upload to Google Drive as PDF (DCT / Building Material)
+
+- Each scan is made into a **PDF on the phone** and sent to Drive → **DCT / Building Material** through the owner's Google Apps Script web app (`saveDocPdf`). The Drive folder is fixed on the server; the app never picks a folder.
+- Photos are downscaled (long side 2000 px, JPEG 0.8). All pages scanned together become **one PDF**. A scanned PDF is sent as is. File name: `<part no. or job> <yyyy-mm-dd> <hhmmss>.pdf`. That name stays the same on every retry, and the script skips a name that's already in the folder.
+- Review scanned values → **Scan image on this phone** → **Upload PDF to Drive (DCT / Building Material)**. Job ⋮ menu → **Upload scans to Drive as PDF**.
+- Settings → **Upload scans to Drive as PDF**: **Upload every scan to Drive automatically** (on by default; sends after Apply selected / Create job), and **Upload all saved scans to Drive** (one PDF per scan, skips scans this phone already sent).
+- The post uses `fetch` `no-cors` (text/plain JSON), so the phone can't read Google's reply. "Sent to Drive" means the PDF was handed to Google. With no signal it says "Saved on this phone. Upload will retry." The queue keeps only names and scan ids, never PDF bytes. It retries when the app opens, when the phone comes back online, and before the next upload.
+- The 2.3.6 save-to-phone buttons are still there. No share sheet opens without a tap.
 
 ## What's new in 2.3.6 — Save scan images to the phone (DCT Document)
 
@@ -220,6 +230,7 @@ python tests/make_cleanup_sample.py  # synthetic "part on a busy workbench" phot
 python tests/make_scan_fixtures.py   # sample mold sheet PDF (text layer) + PNG (for OCR) in tests/fixtures/
 python tests/test_realforms.py       # 2.3.2 the 3 real phone-photo forms (tests/fixtures), merge/conflicts, apply, detail, sheet, update flow
 python tests/test_phone.py           # 2.3.6 save scans to DCT Document folder / Download folder
+python tests/test_docpdf.py          # 2.3.7 scan → PDF → Apps Script post (script.google.com is intercepted, never reached), offline queue
 python tests/test_drive.py           # 2.3.5 auto-save scan on the job + Drive copy (share sheet or mocked upload)
 python tests/test_scanfields.py      # 2.3.1 scan labels/units, review + assign, apply, detail, both print layouts, page 2, migration
 python tests/test_cleanup.py         # ✨ Clean up: every entry point, REAL background removal (downloads the model), backgrounds,
