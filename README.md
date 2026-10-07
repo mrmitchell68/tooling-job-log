@@ -16,6 +16,14 @@ tests/                 Playwright end-to-end tests (test.py, test_refsheet.py, t
 
 All URLs are relative, so it runs from any path: `https://<user>.github.io/<repo>/`, a subfolder, or localhost.
 
+## What's new in 2.3.10 — Keep scan originals after Drive copy; show missing photos
+
+- **Bug fix:** “Save a copy to Drive” (direct Google upload when a client id is set) was **deleting the local scan files** after a successful upload. That looked like “copy” but acted like “move,” so older jobs lost their stored scans / local previews after a Drive save — and PDF upload / Re-send / Save to phone could no longer find the originals. Instant share-sheet and PDF upload already kept them; direct upload now does too. Toast: “Saved a copy to Drive. Original still on this phone.”
+- **Skip Drive copy** still removes the stored scans from the phone (by design — the button says so).
+- Job / list photos whose IndexedDB blob is gone (phone cleared storage, low space, etc.) show a clear **Missing** placeholder instead of a blank tile.
+- Scan keep asks the browser for persistent storage so the phone is less likely to wipe photos when space is low.
+- PDF “Sent to Drive” never removed local scans (unchanged). If images already disappeared on the phone, the **Drive PDFs in DCT / Building Material** are the backup.
+
 ## What's new in 2.3.9 — Drive PDFs are named by Part name
 
 - Each PDF is named **`<Part name> <YYYY-MM-DD>.pdf`**, using the **Part name** on the job sheet (the job's `partName` field, shown under the tool # on the job sheet and job card). If the part name is empty, the part number is used, then the tool / mold #. Slashes, quotes and `: * ? < > |` are replaced with spaces.
@@ -57,7 +65,7 @@ When you scan or photograph a document (camera, gallery, PDF, or Google Drive / 
 - **Until a Google client id is set** (the app today): the Android share sheet opens once, so you can pick **Google Drive → DCT → Building Material**. If you dismiss it, the file stays on the phone and the job's ⋮ menu still has **Share to Google Drive**. Opening the job again does not pop the sheet again.
 - **Once a Google client id is set:** the file uploads straight into **DCT / Building Material**. The first time, Google asks you to sign in. If the app can't write that folder yet, you choose **Building Material** once and the phone remembers it.
 - Settings says **Scanned documents: saved on this phone. Drive copy: share sheet**, or **Drive copy: DCT / Building Material** after that folder is remembered (or when direct upload is on).
-- Paste-text scans have no file. A direct upload removes the stored copy after it succeeds. A share-sheet copy does not.
+- Paste-text scans have no file. A direct upload (and a share-sheet copy) keep the stored originals on the phone so PDF upload / re-send still works. **Skip Drive copy** is what removes them.
 
 ## What's new in 2.3.4 — ✨ Make it professional
 

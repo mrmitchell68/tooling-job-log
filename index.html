@@ -80,8 +80,10 @@ button{cursor:pointer}
 .jobs{display:flex;flex-direction:column;gap:10px}
 .jobcard{display:flex;align-items:center;gap:12px;background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:10px 4px 10px 10px;min-height:84px;box-shadow:var(--shadow)}
 .jobcard.pinned{border-left:4px solid var(--accent)}
-.thumb{width:60px;height:60px;border-radius:10px;background:var(--surface-2);flex-shrink:0;overflow:hidden;display:flex;align-items:center;justify-content:center;font-size:24px;color:var(--text-faint)}
+.thumb{position:relative;width:60px;height:60px;border-radius:10px;background:var(--surface-2);flex-shrink:0;overflow:hidden;display:flex;align-items:center;justify-content:center;font-size:24px;color:var(--text-faint)}
 .thumb img{width:100%;height:100%;object-fit:cover;display:block}
+.thumb img.noblob,.ph img.noblob,.vimg img.noblob,.rs-ph img.noblob{opacity:.4;background:repeating-linear-gradient(-45deg,#dfe4ea,#dfe4ea 6px,#c5ccd4 6px,#c5ccd4 12px)}
+.thumb:has(img.noblob)::after,.ph:has(img.noblob)::after{content:"Missing";position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);font-size:10px;font-weight:800;color:var(--danger);background:rgba(255,255,255,.85);padding:2px 6px;border-radius:6px;pointer-events:none}
 .jm{flex:1;min-width:0}
 .jm .tool{font-family:'Barlow Condensed',sans-serif;font-size:21px;font-weight:700;line-height:1.05;display:flex;align-items:center;gap:6px;flex-wrap:wrap}
 .jm .part{font-weight:600;font-size:15.5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin-top:1px}
@@ -535,7 +537,7 @@ pre.raw{white-space:pre-wrap;font-size:12px;background:var(--surface-2);padding:
 <script>
 (function(){
 "use strict";
-var APP_VERSION = "2.3.9";
+var APP_VERSION = "2.3.10";
 // Public OAuth client id (not a secret). Web client, authorized JavaScript origins:
 //   https://mrmitchell68.github.io   and   http://localhost:8766
 // Leave empty until that client exists — Save-to-Drive is hidden and the button uses the Android share sheet.
@@ -626,7 +628,10 @@ function photoUrl(id){
 function revokeUrl(id){ if(urlCache[id]){ try{ URL.revokeObjectURL(urlCache[id]); }catch(e){} delete urlCache[id]; } }
 function hydratePhotos(root){
   (root||document).querySelectorAll("img[data-pid]").forEach(function(img){
-    photoUrl(img.getAttribute("data-pid")).then(function(u){ if(u) img.src=u; });
+    photoUrl(img.getAttribute("data-pid")).then(function(u){
+      if(u){ img.classList.remove("noblob"); img.src=u; }
+      else { img.removeAttribute("src"); img.classList.add("noblob"); if(!img.alt) img.alt="Missing from phone storage"; }
+    });
   });
 }
 function blobToDataUrl(b){ return new Promise(function(res, rej){ var r=new FileReader(); r.onload=function(){ res(r.result); }; r.onerror=rej; r.readAsDataURL(b); }); }
@@ -2831,8 +2836,9 @@ function arrUndo(){
 }
 function photoReferenced(id){
   var hit=function(q){ return q.id===id || q.origId===id; };
-  if(state.jobs.some(function(j){ return (j.photos||[]).some(hit); })) return true;
-  if(state.pendingDelete && (state.pendingDelete.job.photos||[]).some(hit)) return true;
+  if(state.jobs.some(function(j){ return (j.photos||[]).some(hit) || (j.scanFiles||[]).some(function(s){ return s && s.id===id; }); })) return true;
+  if(state.pendingDelete && ((state.pendingDelete.job.photos||[]).some(hit) || (state.pendingDelete.job.scanFiles||[]).some(function(s){ return s && s.id===id; }))) return true;
+  if(state.modal && (state.modal.scanFiles||[]).some(function(s){ return s && s.id===id; })) return true;
   return state.arrUndo.some(function(u){ return u.photos.some(hit); });
 }
 // leaving the arrange screen: drop undo history and delete pictures that were replaced/rotated/deleted
@@ -3314,7 +3320,7 @@ function keepScanWithJob(job, metas){
   });
   if(!add.length) return;
   job.scanFiles=job.scanFiles.concat(add);
-  touch(job); saveJobs();
+  touch(job); saveJobs(); askPersist();
 }
 function readOffered(){ try{ var a=JSON.parse(localStorage.getItem("tjl.driveOffered")||"[]"); return Array.isArray(a)? a : []; }catch(e){ return []; } }
 function driveAlreadyOffered(ids){ var set={}; readOffered().forEach(function(id){ set[id]=1; }); return ids.length>0 && ids.every(function(id){ return set[id]; }); }
@@ -3353,10 +3359,14 @@ function scheduleAutoDriveCopy(files){
 function driveBoxHtml(){
   var label = GOOGLE_CLIENT_ID ? "Save a copy to Drive" : "Share to Google Drive";
   var sub = "DCT / Building Material";
-  var note = state.meta.driveCopy===false
+  var ids=(state.modal.scanFiles||[]).map(function(f){ return f && f.id; }).filter(Boolean);
+  var already=driveAlreadyOffered(ids);
+  var note = already
+    ? "A Drive copy was already sent. The original scan files stay on this phone (for Upload PDF / re-send)."
+    : state.meta.driveCopy===false
     ? "Only these scan files are sent — not the rest of the job. They stay on this phone until you save or skip."
     : (GOOGLE_CLIENT_ID
-        ? "A copy is sent to DCT / Building Material. Only these scan files are sent — not the rest of the job."
+        ? "A copy is sent to DCT / Building Material. Only these scan files are sent — not the rest of the job. The originals stay on this phone."
         : "Tap Share to Google Drive, then choose Google Drive → DCT → Building Material. Only these scan files are sent — not the rest of the job. They stay in this app if you cancel.");
   return '<div class="drivebox" id="driveBox"><div class="dlab" style="font-weight:800">Original scan file'+(state.modal.scanFiles.length>1?"s":"")+'</div><p>'+note+'</p>'+
     '<button class="btn primary block" id="driveSaveBtn" data-act="saveDrive"><span>'+label+'</span><small>'+sub+'</small></button>'+
@@ -3617,10 +3627,11 @@ function uploadScanFiles(ctx){
       return seq.then(function(){ return {links:links, folder:folder}; });
     });
   }).then(function(res){
-    clearStoredScans(files.map(function(f){ return f.id; }));
+    // Keep local originals: PDF upload / re-send / phone save still need them. "Save a copy" means copy, not move.
+    markDriveOffered(files.map(function(f){ return f.id; }));
     setBusy(null);
     var link=(res.links[0] && res.links[0].webViewLink) || ("https://drive.google.com/drive/folders/"+(res.folder && res.folder.id || DRIVE_FOLDER_HINT));
-    showToast(n===1 ? "Saved a copy to Drive" : ("Saved "+n+" copies to Drive"), {link:link, linkLabel:"OPEN", ms:9000});
+    showToast(n===1 ? "Saved a copy to Drive. Original still on this phone." : ("Saved "+n+" copies to Drive. Originals still on this phone."), {link:link, linkLabel:"OPEN", ms:9000});
     refreshDriveUi();
   }).catch(function(e){
     setBusy(null);
