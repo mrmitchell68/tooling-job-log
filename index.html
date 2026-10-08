@@ -101,6 +101,7 @@ button{cursor:pointer}
 .empty .big{font-size:40px}
 .fab{position:fixed;right:18px;bottom:calc(18px + env(safe-area-inset-bottom,0px));height:64px;min-width:64px;padding:0 22px;border-radius:32px;border:0;background:var(--primary);color:var(--primary-ink);font-size:18px;font-weight:700;box-shadow:0 6px 18px rgba(0,0,0,.28);z-index:45;display:flex;align-items:center;gap:8px}
 .fab .plus{font-size:30px;line-height:1;margin-top:-2px}
+.banner .bbtns{display:flex;flex-direction:column;gap:6px;flex-shrink:0}
 .banner{display:flex;align-items:center;gap:10px;border-radius:var(--radius);padding:10px 12px;margin-top:10px;font-size:14px;font-weight:500;background:var(--surface-2);border:1px solid var(--border)}
 .banner.warn{background:var(--warn-dim);border-color:transparent;color:var(--warn)}
 .banner.info{background:var(--primary-dim);border-color:transparent;color:var(--primary)}
@@ -540,7 +541,7 @@ pre.raw{white-space:pre-wrap;font-size:12px;background:var(--surface-2);padding:
 <script>
 (function(){
 "use strict";
-var APP_VERSION = "2.3.11";
+var APP_VERSION = "2.3.12";
 // Public OAuth client id (not a secret). Web client, authorized JavaScript origins:
 //   https://mrmitchell68.github.io   and   http://localhost:8766
 // Leave empty until that client exists — Save-to-Drive is hidden and the button uses the Android share sheet.
@@ -1074,7 +1075,13 @@ function loadScript(src, globalName){
   });
   return libP[src];
 }
-function pdfLib(){ return loadScript(CDN.pdf, "pdfjsLib").then(function(l){ l.GlobalWorkerOptions.workerSrc = CDN.pdfWorker; return l; }); }
+// v2.3.12: pdf.js 3.11.174 is kept in vendor/ (same build as the CDN copy) so PDFs open even when the CDN is slow; CDN is the fallback
+var PDFJS_LOCAL = {lib:"vendor/pdf.min.js", worker:"vendor/pdf.worker.min.js"}, pdfFrom = "";
+function pdfLib(){
+  return loadScript(PDFJS_LOCAL.lib, "pdfjsLib").then(function(l){ if(!pdfFrom) pdfFrom="local"; return l; }, function(){
+    return loadScript(CDN.pdf, "pdfjsLib").then(function(l){ if(!pdfFrom) pdfFrom="cdn"; return l; });
+  }).then(function(l){ l.GlobalWorkerOptions.workerSrc = pdfFrom==="cdn"? CDN.pdfWorker : PDFJS_LOCAL.worker; return l; });
+}
 var tessWorkerP = null, ocrProgressCb = null;
 function tessWorker(){
   if(tessWorkerP) return tessWorkerP;
@@ -2403,6 +2410,9 @@ function viewSettings(){
     '<label class="prefrow"><input type="checkbox" id="prefPhotoAuto" data-meta-bool="photoAuto"'+(photoAutoOn()?' checked':'')+'><span>Upload every job photo to Drive automatically<small>Right after you take or pick it (once the job has a Part name, part no. or tool #)</small></span></label>'+
     '<button class="btn '+(pn?'primary':'ghost')+' block" data-act="photoUploadAll" id="photoAllBtn"'+(docFgBusy()?' disabled':'')+'><span>Upload all saved photos to Drive (DCT / Photos)</span><small>'+(pn? pn+' job photo'+(pn>1?'s':'')+' on this phone not sent yet' : (pall? 'All '+pall+' saved photos were sent · tap to check Drive' : 'No job photos on this phone yet'))+'</small></button>'+
     '<p class="faint" style="margin-bottom:0">One photo at a time (JPEG, up to 2000 px), with a Stop button. Photos already in Drive are skipped. <a href="'+PHOTO_FOLDER_URL+'" target="_blank" rel="noopener">Open the Photos folder</a></p></div></div>';
+  h += '<div class="card" id="restoreCard"><div class="sec-hd"><h2>Missing pictures</h2></div><div class="card-bd"><p class="muted" id="restoreLine" style="margin-top:0">Checking for jobs with missing pictures…</p>'+
+    '<button class="btn primary block" data-act="restoreAll" id="restoreAllBtn"><span>Restore missing images from Drive</span><small>Uses the scan PDFs in '+DOC_DEST+'</small></button>'+
+    '<p class="faint" style="margin-bottom:0">Only jobs whose pictures show <b>Missing</b> are changed. Pictures that are on this phone are never replaced, nothing is deleted, and the restored pages are not uploaded again.</p></div></div>';
   h += '<div class="card" id="driveCard"><div class="sec-hd"><h2>Google Drive copy</h2></div><div class="card-bd"><p class="muted" id="driveCopyLine" style="margin-top:0"><b>'+esc(driveStatusLine())+'</b></p><p class="muted" id="driveSetupNote">'+(GOOGLE_CLIENT_ID
     ? 'Scans can be saved straight into <b>DCT / Building Material</b>. The first time, Google asks you to sign in. If this app cannot see that folder yet, choose <b>Building Material</b> once.'
     : 'Drive save needs a one-time Google setup. Until then, <b>Share to Google Drive</b> uses the Android share sheet so you can drop the scan in DCT / Building Material today.')+'</p>'+
@@ -2431,7 +2441,7 @@ function viewSettings(){
   var exN = state.jobs.filter(function(j){ return j.example; }).length + state.templates.filter(function(t){ return t.example; }).length;
   if(exN) h += '<div class="sp"></div><button class="btn ghost block" data-act="deleteExamples">🧹 Remove example jobs & template ('+exN+')</button>';
   h += '<p class="hint">Tooling Job Log v'+APP_VERSION+' · no login · jobs are kept on this phone; scans and photos you upload go to your Drive</p>';
-  setTimeout(fillSettingsStatus, 0);
+  setTimeout(fillSettingsStatus, 0); setTimeout(fillRestoreLine, 0);
   return h;
 }
 function fillSettingsStatus(){
@@ -2522,6 +2532,7 @@ function renderModal(){
       ((j.scanFiles||[]).length? '<button data-act="saveDrive" id="driveSaveBtn"><span class="ic">☁️</span><span>'+(GOOGLE_CLIENT_ID?'Save a copy to Drive':'Share to Google Drive')+'<small>'+j.scanFiles.length+' original scan file'+(j.scanFiles.length>1?'s':'')+' → DCT / Building Material</small></span></button><button data-act="skipDrive" id="driveSkipBtn"><span class="ic">⏭️</span><span>Skip Drive copy<small>Remove the stored scan files from this phone</small></span></button>' : '')+
       (photoItemsFor([j], true).length? '<button data-act="photoUploadJob" id="photoJobBtn"'+(docFgBusy()?' disabled':'')+'><span class="ic">🖼️</span><span>Upload photos to Drive<small>'+photoItemsFor([j], true).length+' photo'+(photoItemsFor([j], true).length>1?'s':'')+' → '+PHOTO_DEST+(photoItemsFor([j], false).length? '' : ' · already sent')+'</small></span></button>' : '')+
       '<button data-act="findDrivePdf" id="drivePdfBtn"><span class="ic">🔎</span><span>Open Drive PDF<small>Find this job’s scan PDF in '+DOC_DEST+'</small></span></button>'+
+      '<button data-act="restoreJob" id="restoreJobBtn"><span class="ic">♻️</span><span>Restore images from Drive<small>Puts the scan PDF’s pages back where pictures are Missing</small></span></button>'+
       '<button data-act="saveTemplate"><span class="ic">📑</span>Save as mold template</button>'+
       '<button data-act="duplicate"><span class="ic">⧉</span>Duplicate job<small>Copies sheet & photos, clears checklist & log</small></button>'+
       '<button data-act="exportJob"><span class="ic">💾</span>Export this job (.json)</button>'+
@@ -2590,7 +2601,7 @@ function renderModal(){
       (j.photos.length>1? '<div class="vmove"><button class="btn ghost" data-act="photoMove" data-i="'+m.i+'" data-d="-1"'+(m.i?'':' disabled')+'>◀ Move earlier</button><button class="btn ghost" data-act="photoMove" data-i="'+m.i+'" data-d="1"'+(m.i<j.photos.length-1?'':' disabled')+'>Move later ▶</button></div>' : '')+
       '<div class="vbot"><button class="btn ghost" style="flex:1" data-act="photoNav" data-d="-1"'+(m.i?'':' disabled')+'>‹ Prev</button><span style="opacity:.7;font-size:13px;min-width:80px;text-align:center">'+esc(fmtBytes(p.bytes||0))+'</span><button class="btn ghost" style="flex:1" data-act="photoNav" data-d="1"'+(m.i<j.photos.length-1?'':' disabled')+'>Next ›</button></div></div>';
     hydratePhotos(root); bindSwipe();
-    hasBlob(p.id).then(function(have){ var vt=root.querySelector(".vtools"); if(have || !vt || state.modal!==m || $("viewerPdfBtn")) return; vt.insertAdjacentHTML("afterbegin", '<button class="btn primary" data-act="findDrivePdf" id="viewerPdfBtn">📄 Open Drive PDF</button>'); });
+    hasBlob(p.id).then(function(have){ var vt=root.querySelector(".vtools"); if(have || !vt || state.modal!==m || $("viewerPdfBtn")) return; vt.insertAdjacentHTML("afterbegin", '<button class="btn primary" data-act="findDrivePdf" id="viewerPdfBtn">📄 Open Drive PDF</button><button class="btn ghost" data-act="restoreJob" id="viewerRestoreBtn">♻️ Restore images from Drive</button>'); });
     return;
   } else if(m.type==="log"){
     var e = m.entry;
@@ -4462,12 +4473,14 @@ function photoUploadBlob(blob){
 }
 // JSONP GET to the script -> the reply object, or null (old script version that doesn't know the action, no signal, timeout)
 var docJsonpSeq=0;
-function docJsonp(params, ms){
+function docJsonp(params, ms){ return docJsonpRaw(params, ms).then(function(d){ return d && typeof d==="object" && !d.error ? d : null; }); }
+// v2.3.12: the reply object as is (also {error:…}), or null when the script never called back (no signal / old script)
+function docJsonpRaw(params, ms){
   return new Promise(function(res){
     var cb="__tjlJp"+(++docJsonpSeq)+"_"+Date.now(), s=document.createElement("script"), done=false, t=null;
     function fin(v){ if(done) return; done=true; clearTimeout(t); window[cb]=function(){}; if(s.parentNode) s.parentNode.removeChild(s); res(v); }
     t=setTimeout(function(){ fin(null); }, ms || 15000);
-    window[cb]=function(d){ fin(d && typeof d==="object" && !d.error ? d : null); };
+    window[cb]=function(d){ fin(d && typeof d==="object" ? d : null); };
     s.onerror=function(){ fin(null); };
     s.onload=function(){ setTimeout(function(){ fin(null); }, 50); };
     var q="?token="+encodeURIComponent(DOC_TOKEN)+"&callback="+cb;
@@ -4487,7 +4500,7 @@ function docServerInfo(force){
     state.docInfoNoAt=Date.now(); return null;
   });
 }
-function realPhoto(p){ return !!(p && p.id && !/^ex_/.test(p.id)); } // the example jobs' placeholder pictures never go to Drive
+function realPhoto(p){ return !!(p && p.id && !/^ex_/.test(p.id) && !p.restoredFrom); } // the example jobs' placeholder pictures never go to Drive; v2.3.12: nor pages restored from a Drive PDF
 function photoItemsFor(jobs, all){
   var up=readPhotoUploaded(), out=[];
   (jobs||[]).forEach(function(j){ (j.photos||[]).forEach(function(p){ if(realPhoto(p) && (all || !up[p.id])) out.push({job:j, photo:p}); }); });
@@ -4639,6 +4652,11 @@ function autoPhotoUpload(job, ids){
   }, window.__tjlPhotoAutoMs!=null? window.__tjlPhotoAutoMs : 1500);
 }
 function photoLineHtml(j){
+  var rn=(j.photos||[]).filter(function(p){ return p && p.restoredFrom; }).length;
+  var rnote=rn? '<span id="restoredNote">'+rn+' picture'+(rn>1?'s were':' was')+' restored from the scan PDF in '+DOC_DEST+' (not sent to Drive again).</span>' : '';
+  var base=photoLineBase(j); return base && rnote? base+' '+rnote : (base || rnote);
+}
+function photoLineBase(j){
   var ps=(j.photos||[]).filter(realPhoto); if(!ps.length) return "";
   var up=readPhotoUploaded(), q={}; readPhotoQueue().forEach(function(id){ q[id]=1; });
   var sent=ps.filter(function(p){ return up[p.id]; }).length, waiting=ps.filter(function(p){ return !up[p.id] && q[p.id]; }).length;
@@ -4686,7 +4704,7 @@ function fillMissingBox(j){
     var el=$("missingBox"); if(!el || curJob()!==j || state.route.view!=="detail") return;
     if(!m.photos && !m.scans){ el.innerHTML=""; return; }
     var what=[]; if(m.photos) what.push(m.photos+" photo"+(m.photos>1?"s":"")); if(m.scans) what.push(m.scans+" scan"+(m.scans>1?"s":""));
-    el.innerHTML='<div class="banner warn" id="missingBanner"><span>🖼️</span><span class="grow">'+esc(what.join(" and "))+' for this job '+((m.photos+m.scans)>1?'are':'is')+' no longer on this phone. The scan PDF in Drive is the backup.</span><button class="btn primary" data-act="findDrivePdf" id="missingPdfBtn">📄 Open Drive PDF</button></div>';
+    el.innerHTML='<div class="banner warn" id="missingBanner"><span>🖼️</span><span class="grow">'+esc(what.join(" and "))+' for this job '+((m.photos+m.scans)>1?'are':'is')+' no longer on this phone. The scan PDF in Drive is the backup.</span><span class="bbtns"><button class="btn primary" data-act="findDrivePdf" id="missingPdfBtn">📄 Open Drive PDF</button><button class="btn ghost" data-act="restoreJob" id="missingRestoreBtn">♻️ Restore images from Drive</button></span></div>';
   });
 }
 function jobSearchTerms(j){
@@ -4724,6 +4742,272 @@ function drivePdfHtml(m){
     m.files.map(function(f){ var pdf=/pdf/i.test(f.mime||"") || /\.pdf$/i.test(f.name||""); return '<a class="dpfile" href="'+esc(safeDriveUrl(f.url))+'" target="_blank" rel="noopener"><span class="ic">'+(pdf?'📄':'🖼️')+'</span><span>'+esc(f.name)+(f.updated? '<small>'+esc(fmtDate(new Date(+f.updated).toISOString()))+'</small>' : '')+'</span></a>'; }).join("")+'</div>';
   h+='<div class="menu" style="margin-top:8px"><a id="dpFolder" href="'+DOC_FOLDER_URL+'" target="_blank" rel="noopener"><span class="ic">📁</span><span>Open Building Material folder<small>'+DOC_DEST+' in Google Drive</small></span></a></div>';
   return h+'<div class="actions"><button class="btn ghost" data-act="'+(m.backTo!=null?'drivePdfBack':'closeModal')+'">Close</button></div>';
+}
+
+/* ---------- Restore missing images from Drive (v2.3.12; needs Code.gs 2.3.12 doGet action=getDoc) ---------- */
+// For jobs whose pictures show Missing (gone from this phone). The app finds the job's scan PDF in DCT / Building Material
+// (findDocs: Part name, then part no., then tool #), downloads it (getDoc: JSONP, ~3 MB per reply), draws each page as a
+// JPEG on this phone (pdf.js in vendor/) and puts the pages back: first into the Missing photo slots (same ids, so they
+// show again where they were), then any extra pages are added at the end. Missing original scans that were sent as that
+// PDF get their pages back too. Never replaces a picture that is on the phone, never deletes anything, and restored pages
+// are never uploaded again (they are already in Drive as the PDF).
+var RESTORE_MAX_SIDE=2000, RESTORE_JPEG_Q=0.85, RESTORE_MAX_PAGES=60, RESTORE_MAX_FILES=10;
+function restoreCheckCancel(){ var r=state.restoreRun; if(r && r.cancel){ var e=new Error("cancelled"); e.cancelled=true; throw e; } }
+function restoreSay(text, pct){
+  var r=state.restoreRun; if(r){ r.text=text; if(pct!=null) r.pct=pct; }
+  var p=(pct!=null)? pct : (r? r.pct : 0);
+  if(state.busy && state.busy.cancelAct==="restoreCancel"){ state.busy.text=text; state.busy.pct=p; renderBusy(); }
+  else setBusy(text, {pct:p, cancel:true, cancelAct:"restoreCancel"});
+}
+// write only if nothing is stored under this id (one transaction, so a picture that is there is never replaced) -> true if written
+function putPhotoIfAbsent(id, blob){
+  return db().then(function(d){ return new Promise(function(res, rej){
+    var tx=d.transaction("photos","readwrite"), st=tx.objectStore("photos"), wrote=false;
+    var r=st.count(id); r.onsuccess=function(){ if(r.result>0) return; st.put(blob, id); wrote=true; };
+    tx.oncomplete=function(){ res(wrote); }; tx.onerror=function(){ rej(tx.error); }; tx.onabort=function(){ rej(tx.error || new Error("Couldn't save the picture (phone storage full?).")); };
+  }); });
+}
+function driveFileId(f){
+  if(f && typeof f.id==="string" && /^[A-Za-z0-9_-]{10,200}$/.test(f.id)) return f.id;
+  var u=String((f && f.url)||""), m=/\/d\/([A-Za-z0-9_-]{10,200})/.exec(u) || /[?&]id=([A-Za-z0-9_-]{10,200})/.exec(u);
+  return m? m[1] : "";
+}
+function b64ToBytes(s){ var bin=atob(String(s||"")), n=bin.length, out=new Uint8Array(n); for(var i=0;i<n;i++) out[i]=bin.charCodeAt(i); return out; }
+// one Drive file -> {blob, name, mime}. e.net = no reply (no signal, or the script doesn't know getDoc yet); e.code = the script said no
+function getDriveFile(id, onPart){
+  var chunks=[], meta=null;
+  function next(k){
+    restoreCheckCancel();
+    return docJsonpRaw({action:"getDoc", id:id, part:k}, window.__tjlGetMs || 90000).then(function(d){
+      if(!d){ var e=new Error("Couldn't download the PDF from Drive."); e.net=true; throw e; }
+      if(d.error || typeof d.data!=="string"){ var e2=new Error("Drive wouldn't send this file ("+(d.error||"bad reply")+")."); e2.code=String(d.error||"bad"); throw e2; }
+      if(!meta) meta=d;
+      chunks.push(b64ToBytes(d.data));
+      var parts=Math.max(1, +meta.parts||1);
+      if(onPart) onPart(k+1, parts);
+      if(k+1 < parts) return next(k+1);
+      var blob=new Blob(chunks, {type:String(meta.mime||"application/pdf")});
+      if(meta.size!=null && blob.size!==+meta.size){ var e3=new Error("The download from Drive was incomplete."); e3.net=true; throw e3; }
+      return {blob:blob, name:String(meta.name||""), mime:String(meta.mime||"")};
+    });
+  }
+  return next(0);
+}
+function restoreCanvasPage(c){ var w=c.width, h=c.height; return canvasJpeg(c, RESTORE_JPEG_Q).then(function(b){ c.width=c.height=1; return {blob:b, w:w, h:h}; }); }
+// downloaded file -> [{blob (JPEG), w, h}] one per page (a picture file is one page)
+function restorePagesOf(file){
+  var mime=String(file.mime || (file.blob && file.blob.type) || "").toLowerCase();
+  if(mime.indexOf("image/")===0){
+    return decodeScanImage(file.blob).then(function(img){
+      var w=img.naturalWidth||img.width, h=img.naturalHeight||img.height; if(!w || !h) throw new Error("Couldn't read the picture from Drive.");
+      var s=Math.min(1, RESTORE_MAX_SIDE/Math.max(w,h)), c=mkCanvas(w*s, h*s), g=c.getContext("2d");
+      g.fillStyle="#ffffff"; g.fillRect(0,0,c.width,c.height); g.imageSmoothingQuality="high"; g.drawImage(img,0,0,c.width,c.height);
+      if(img.close) try{ img.close(); }catch(e){}
+      return restoreCanvasPage(c).then(function(p){ return [p]; });
+    });
+  }
+  return pdfLib().then(function(lib){
+    return file.blob.arrayBuffer().then(function(buf){ return lib.getDocument({data:new Uint8Array(buf)}).promise; }).then(function(pdf){
+      var n=Math.min(pdf.numPages, RESTORE_MAX_PAGES), pages=[], seq=Promise.resolve();
+      for(var i=1;i<=n;i++) (function(i){ seq=seq.then(function(){
+        restoreCheckCancel();
+        return pdf.getPage(i).then(function(page){
+          var vp1=page.getViewport({scale:1}), sc=Math.min(4, RESTORE_MAX_SIDE/Math.max(vp1.width, vp1.height)), vp=page.getViewport({scale:sc});
+          var c=mkCanvas(vp.width, vp.height), g=c.getContext("2d"); g.fillStyle="#ffffff"; g.fillRect(0,0,c.width,c.height);
+          return page.render({canvasContext:g, viewport:vp}).promise.then(function(){ return restoreCanvasPage(c); }).then(function(p){ if(page.cleanup) try{ page.cleanup(); }catch(e){} pages.push(p); });
+        });
+      }); })(i);
+      return seq.then(function(){ try{ pdf.destroy(); }catch(e){} return pages; }, function(e){ try{ pdf.destroy(); }catch(x){} throw e; });
+    });
+  });
+}
+// "X 2026-10-05 part 2 of 3.pdf" -> {base:"X 2026-10-05.pdf", k:2, n:3}
+function restorePartOf(name){ name=String(name||""); var m=/^(.*) part (\d+) of (\d+)(\.pdf)$/i.exec(name); return m? {base:m[1]+m[4], k:+m[2], n:+m[3]} : {base:name, k:1, n:1}; }
+// "Closet Flange 2026-10-07 0611.pdf" -> "closet flange" (name without date / time / (2) / part)
+function restoreStem(name){ return normKey(restorePartOf(name).base.replace(/\.(pdf|jpe?g|png|webp)$/i,"").replace(/\s+\d{4}-\d{2}-\d{2}(\s+\d{4,6})?(\s+\(\d+\))?$/,"")); }
+// PDF names this phone gave the job's scans (saved on the scan, or the name it was sent under) -> {lowercase name: [scan ids]}
+function jobDocNames(j){
+  var out={}, up=readDocUploaded();
+  (j.scanFiles||[]).forEach(function(s){
+    if(!s || !s.id) return;
+    [s.docName, typeof up[s.id]==="string"? up[s.id] : ""].forEach(function(n){ if(!n) return; var k=String(n).toLowerCase(); out[k]=out[k]||[]; if(out[k].indexOf(s.id)<0) out[k].push(s.id); });
+  });
+  return out;
+}
+// which of the found files are this job's: names this phone sent for it, else "<term> <date>.pdf", else the best match (with its other parts)
+function restorePickFiles(j, files, term){
+  var cand=(files||[]).filter(function(f){ return f && driveFileId(f) && (/pdf/i.test(f.mime||"") || /\.pdf$/i.test(f.name||"") || /^image\/(jpeg|png|webp)$/i.test(f.mime||"")); });
+  if(!cand.length) return [];
+  var known=jobDocNames(j), pick=cand.filter(function(f){ return known[restorePartOf(f.name).base.toLowerCase()]; });
+  if(!pick.length){ var t=normKey(term); pick=cand.filter(function(f){ return restoreStem(f.name)===t; }); }
+  if(!pick.length){ var top=restorePartOf(cand[0].name).base.toLowerCase(); pick=cand.filter(function(f){ return restorePartOf(f.name).base.toLowerCase()===top; }); }
+  return pick.slice().sort(function(a,b){
+    var pa=restorePartOf(a.name), pb=restorePartOf(b.name), ka=pa.base.toLowerCase(), kb=pb.base.toLowerCase();
+    return ka<kb? -1 : ka>kb? 1 : (pa.k-pb.k) || ((+a.updated||0)-(+b.updated||0));
+  }).slice(0, RESTORE_MAX_FILES);
+}
+// what is missing in a job -> {photos:[photo records without a picture], scans:[scan metas without a file], nPhotos}
+function restoreNeed(j){
+  var ps=(j.photos||[]).filter(function(p){ return p && p.id; }), ss=(j.scanFiles||[]).filter(function(s){ return s && s.id && !s._blob; });
+  return Promise.all(ps.map(function(p){ return hasBlob(p.id); })).then(function(a){
+    return Promise.all(ss.map(function(s){ return hasBlob(s.id); })).then(function(b){
+      return {photos:ps.filter(function(p, i){ return !a[i]; }), scans:ss.filter(function(s, i){ return !b[i]; }), nPhotos:ps.length};
+    });
+  });
+}
+function restoreNeedsWork(n){ return !!(n && (n.photos.length || n.scans.length)); }
+// put the downloaded pages into the job. got: [{name, blob, mime, pages:[{blob,w,h}]}] -> {photos, added, scans, pages, files}
+function restoreApply(j, need, got){
+  var all=[]; got.forEach(function(g){ g.pages.forEach(function(p, i){ all.push({p:p, from:g.name, n:i+1}); }); });
+  var res={photos:0, added:0, scans:0, pages:all.length, files:got.map(function(g){ return g.name; })};
+  if(!all.length) return Promise.resolve(res);
+  var now=nowIso(), up=readDocUploaded(), missingScan={}, used={}, puts=[];
+  need.scans.forEach(function(s){ missingScan[s.id]=1; });
+  // 1. original scans, matched by the PDF name they were sent under (page i of that PDF = picture i of that scan)
+  var byName=jobDocNames(j), groups={}, order=[];
+  got.forEach(function(g){ var pp=restorePartOf(g.name), k=pp.base.toLowerCase(); if(!groups[k]){ groups[k]={base:pp.base, files:[]}; order.push(k); } groups[k].files.push({g:g, part:pp}); });
+  order.forEach(function(k){
+    var ids=byName[k]; if(!ids) return;
+    var gr=groups[k], metas=(j.scanFiles||[]).filter(function(s){ return s && ids.indexOf(s.id)>=0; });
+    var pdfs=metas.filter(function(s){ return isPdfMeta(s); }), imgs=metas.filter(function(s){ return !isPdfMeta(s); });
+    metas.forEach(function(s){ used[s.id]=1; });
+    if(pdfs.length===1 && !imgs.length){ // an original PDF that went as is: the Drive file is that PDF
+      var f=gr.files[0];
+      if(gr.files.length===1 && f.part.n===1 && missingScan[pdfs[0].id] && /pdf/i.test(f.g.mime || f.g.blob.type || "")) puts.push({meta:pdfs[0], blob:new Blob([f.g.blob], {type:"application/pdf"}), pdf:true, from:gr.base});
+      return;
+    }
+    var pages=[]; gr.files.forEach(function(x){ x.g.pages.forEach(function(p){ pages.push(p); }); });
+    imgs.forEach(function(s, i){ if(missingScan[s.id] && pages[i]) puts.push({meta:s, blob:pages[i].blob, from:gr.base}); });
+  });
+  need.scans.filter(function(s){ return !used[s.id] && !isPdfMeta(s); }).forEach(function(s, i){ if(all[i]) puts.push({meta:s, blob:all[i].p.blob, from:all[i].from}); });
+  var seq=Promise.resolve();
+  puts.forEach(function(x){ seq=seq.then(function(){
+    return putPhotoIfAbsent(x.meta.id, x.blob).then(function(w){
+      if(!w) return;
+      res.scans++; x.meta.bytes=x.blob.size; x.meta.restoredFrom=x.from; x.meta.restoredAt=now; if(!x.pdf) x.meta.type="image/jpeg";
+      if(!up[x.meta.id]) markDocUploaded([x.meta.id], x.meta.docName || x.from); // it is in Drive already: never sent again
+    });
+  }); });
+  // 2. job photos: the Missing slots first (same id, same place, same label), extra pages added at the end
+  var slots=need.photos, addExtra=slots.length>0 || need.nPhotos===0;
+  slots.forEach(function(p, i){ if(!all[i]) return; seq=seq.then(function(){
+    var pg=all[i];
+    return putPhotoIfAbsent(p.id, pg.p.blob).then(function(w){
+      if(!w) return;
+      res.photos++; p.bytes=pg.p.blob.size; p.w=pg.p.w; p.h=pg.p.h; p.restoredFrom=pg.from; p.restoredAt=now;
+      unqueuePhoto(p.id); markPhotoUploaded(p.id);
+      if(p.origId) return hasBlob(p.origId).then(function(have){ if(!have){ ["origId","origBytes","origW","origH"].forEach(function(k){ delete p[k]; }); } });
+    });
+  }); });
+  if(addExtra) all.slice(slots.length).forEach(function(pg){ seq=seq.then(function(){
+    var id="rst"+uid();
+    return putPhotoIfAbsent(id, pg.p.blob).then(function(w){
+      if(!w) return;
+      j.photos=j.photos||[];
+      j.photos.push({id:id, label:"Drive PDF page "+pg.n, addedAt:now, bytes:pg.p.blob.size, w:pg.p.w, h:pg.p.h, restoredFrom:pg.from, restoredAt:now});
+      markPhotoUploaded(id); res.added++;
+    });
+  }); });
+  return seq.then(function(){ if(res.photos || res.added || res.scans){ touch(j); saveJobs(); askPersist(); } return res; });
+}
+// one job -> {status:"restored"|"nofile"|"noterms"|"offline"|"partial", ...restoreApply result}
+function restoreJob(j, need, lead){
+  var terms=jobSearchTerms(j);
+  if(!terms.length) return Promise.resolve({status:"noterms"});
+  var k=0, replied=false;
+  function nextTerm(){ // Part name, then part number, then tool #
+    if(k>=terms.length) return Promise.resolve(null);
+    var t=terms[k++];
+    restoreCheckCancel(); restoreSay(lead+"looking in Drive for “"+t+"”…");
+    return findDocs([t]).then(function(r){ if(r) replied=true; var pick=r? restorePickFiles(j, r.files, t) : []; return pick.length? {term:t, files:pick} : nextTerm(); });
+  }
+  return nextTerm().then(function(f){
+    if(!f) return {status: replied? "nofile" : "offline"};
+    var got=[], seq=Promise.resolve();
+    f.files.forEach(function(file){ seq=seq.then(function(){
+      restoreSay(lead+"downloading "+file.name+"…");
+      return getDriveFile(driveFileId(file), function(a, b){ if(b>1) restoreSay(lead+"downloading "+file.name+" ("+a+" of "+b+")…"); }).then(function(dl){
+        restoreSay(lead+"drawing the pages of "+(dl.name||file.name)+"…");
+        return restorePagesOf(dl).then(function(pages){ got.push({name:dl.name||file.name, blob:dl.blob, mime:dl.mime, pages:pages}); });
+      });
+    }); });
+    return seq.then(function(){ return restoreApply(j, need, got); }).then(function(r){ r.status=(r.photos||r.added||r.scans)? "restored" : "nothing"; r.term=f.term; return r; });
+  });
+}
+function restoreSummaryHtml(t){
+  var h='';
+  if(t.restored.length){
+    h+='<p id="rsDone"><b>Restored '+t.restored.length+' job'+(t.restored.length>1?'s':'')+'</b> ('+t.pics+' picture'+(t.pics===1?'':'s')+' back on this phone):</p><ul id="rsDoneList">'+
+      t.restored.map(function(x){ var bits=[]; if(x.r.photos) bits.push(x.r.photos+' put back where '+(x.r.photos>1?'they were':'it was')); if(x.r.added) bits.push(x.r.added+' extra page'+(x.r.added>1?'s':'')+' added'); if(x.r.scans) bits.push(x.r.scans+' original scan'+(x.r.scans>1?'s':'')); return '<li><b>'+esc(x.title)+'</b>: '+esc(bits.join(', '))+' — from '+esc(x.r.files.join(', '))+'</li>'; }).join('')+'</ul>';
+  } else h+='<p id="rsDone"><b>No pictures were restored.</b></p>';
+  if(t.nofile.length) h+='<p id="rsNoFile"><b>Could not find a PDF for:</b> '+esc(t.nofile.join(', '))+'. Open the Building Material folder and check how those PDFs are named.</p>';
+  if(t.nothing.length) h+='<p id="rsNothing">The PDF had no pages that could be used for: '+esc(t.nothing.join(', '))+'.</p>';
+  if(t.failed.length) h+='<p id="rsFailed"><b>Couldn’t finish:</b> '+t.failed.map(function(x){ return esc(x.title)+' ('+esc(x.why)+')'; }).join(', ')+'. Tap Restore again with good signal.</p>';
+  if(t.notReady) h+='<p id="rsNotReady" style="color:var(--warn);font-weight:700">Drive didn’t send the PDF. Either there’s no signal, or the Drive script hasn’t been updated for restoring yet. Your jobs were not changed.</p>';
+  if(t.cancelled) h+='<p id="rsStopped">Stopped. Tap Restore again to do the rest.</p>';
+  h+='<p class="faint">Restored pictures are the pages of the scan PDF in '+DOC_DEST+'. They stay on this phone and are not uploaded again. Pictures that were on the phone were not touched.</p>';
+  return h;
+}
+// only: [job] for one job, or null for every job
+function runRestore(only){
+  if(state.restoreRun){ showToast("Restore is already running."); return Promise.resolve(null); }
+  if(docFgBusy()){ showToast("Wait for the upload to finish, then tap Restore again.", {err:true}); return Promise.resolve(null); }
+  if(navigator.onLine===false){ showToast("No signal. Restoring needs Drive — try again with signal.", {err:true}); return Promise.resolve(null); }
+  if(state.modal && state.modal.type!=="info"){ state.modal=null; renderModal(); }
+  var run={cancel:false, text:"", pct:0}; state.restoreRun=run;
+  var t={restored:[], nofile:[], nothing:[], failed:[], pics:0, notReady:false, cancelled:false, checked:0};
+  var jobs=(only || state.jobs).filter(function(j){ return j && (!j.example || j._touched); }), targets=[];
+  restoreSay("Checking which jobs have missing pictures…", 0);
+  var seq=Promise.resolve();
+  jobs.forEach(function(j){ seq=seq.then(function(){ return restoreNeed(j).then(function(n){ t.checked++; if(restoreNeedsWork(n)) targets.push({j:j, n:n}); }); }); });
+  return seq.then(function(){
+    t.total=targets.length;
+    if(!targets.length) return;
+    var netFails=0, s2=Promise.resolve();
+    targets.forEach(function(x, i){ s2=s2.then(function(){
+      if(run.cancel || t.notReady) return;
+      var title=jobTitle(x.j)+(x.j.partName && x.j.partName!==jobTitle(x.j)? " ("+x.j.partName+")" : "");
+      var lead=(targets.length>1? "Job "+(i+1)+" of "+targets.length+" · " : "")+jobTitle(x.j)+": ";
+      run.pct=Math.round(i/targets.length*100);
+      return restoreJob(x.j, x.n, lead).then(function(r){
+        if(r.status==="restored"){ t.restored.push({title:title, r:r}); t.pics+=(r.photos||0)+(r.added||0); netFails=0; }
+        else if(r.status==="nofile" || r.status==="noterms") t.nofile.push(title+(r.status==="noterms"? " (no part name, part no. or tool #)" : ""));
+        else if(r.status==="offline"){ t.failed.push({title:title, why:"no signal"}); if(++netFails>=2) t.notReady=true; }
+        else t.nothing.push(title);
+      }).catch(function(e){
+        if(e && e.cancelled) throw e;
+        if(e && e.net){ t.failed.push({title:title, why:"Drive didn’t send the PDF"}); if(!t.restored.length || ++netFails>=2) t.notReady=true; return; }
+        console.warn(e); t.failed.push({title:title, why:(e && e.message) || "error"});
+      });
+    }); });
+    return s2;
+  }).catch(function(e){ if(!(e && e.cancelled)) throw e; }).then(function(){
+    t.cancelled=run.cancel; return t;
+  }, function(e){ console.warn(e); t.failed.push({title:"Restore", why:(e && e.message) || "error"}); return t; }).then(function(t){
+    state.restoreRun=null; if(state.busy && state.busy.cancelAct==="restoreCancel") setBusy(null);
+    state.restoreLast=t;
+    var y=window.scrollY; render(); window.scrollTo(0, y);
+    if(!t.total){
+      showToast(only? "This job’s pictures are all on this phone. Nothing to restore." : "No job has missing pictures. Nothing to restore.");
+      return t;
+    }
+    openModal({type:"info", title:"Restore from Drive", html:restoreSummaryHtml(t)});
+    return t;
+  });
+}
+ACT.restoreAll=function(){ runRestore(null); };
+ACT.restoreJob=function(){ var j=curJob(); if(!j) return; runRestore([j]); };
+ACT.restoreCancel=function(){ var r=state.restoreRun; if(!r){ if(state.busy && state.busy.cancelAct==="restoreCancel") setBusy(null); return; } r.cancel=true; if(state.busy && state.busy.cancelAct==="restoreCancel"){ state.busy.text="Stopping…"; renderBusy(); } };
+function fillRestoreLine(){
+  var el=$("restoreLine"); if(!el) return;
+  var jobs=state.jobs.filter(function(j){ return !j.example || j._touched; }), names=[], seq=Promise.resolve();
+  jobs.forEach(function(j){ seq=seq.then(function(){ return restoreNeed(j).then(function(n){ if(restoreNeedsWork(n)) names.push(jobTitle(j)+(j.partName && j.partName!==jobTitle(j)? " ("+j.partName+")" : "")); }); }); });
+  seq.then(function(){
+    el=$("restoreLine"); if(!el) return;
+    el.innerHTML = names.length
+      ? '<b style="color:var(--warn)">'+names.length+' job'+(names.length>1?'s have':' has')+' missing pictures:</b> '+esc(names.slice(0,8).join(", "))+(names.length>8? '…' : '')+'. Tap below to put them back from the scan PDFs in Drive.'
+      : '<span style="color:var(--good);font-weight:700">✓ No job has missing pictures.</span>';
+  }).catch(function(){});
 }
 
 /* ---------- ✨ Clean up editor: on-device background removal + touch-ups for one photo ---------- */
@@ -5544,6 +5828,7 @@ function init(){
 window.__tjl = {state:state, googleClientId:GOOGLE_CLIENT_ID, phone:{storeAlbumHandle:storeAlbumHandle, albumName:albumName, readPhoneSaved:readPhoneSaved},
   doc:{url:DOC_SCRIPT_URL, readQueue:readDocQueue, readUploaded:readDocUploaded, readSent:readDocSent, baseName:docBaseName, renameable:function(){ return renameableDocs().map(function(d){ return {sent:d.sentName, name:d.docName}; }); }, flush:flushDocQueue, docsForCtx:docsForCtx, buildDocPdf:buildDocPdf, buildDocParts:buildDocParts, exists:docExists, uploadAll:uploadAllDocs, limits:function(){ return {page:DOC_PAGE_MAX, part:DOC_PART_BYTES, asis:DOC_PDF_ASIS, side:DOC_MAX_SIDE}; }}, parseLines:parseLines, buildReview:buildReview, render:render, scan:{buildSynIndex:buildSynIndex, labelUnitHint:labelUnitHint, parseNumber:parseNumber, defForLabel:defForLabel, reconcileFields:reconcileFields},
   photo:{readQueue:readPhotoQueue, readUploaded:readPhotoUploaded, readOk:readPhotoOk, flush:flushPhotoQueue, name:photoDriveName, prep:photoUploadBlob, info:docServerInfo, items:function(){ return photoItemsFor(state.jobs, false).map(function(it){ return {job:it.job.id, id:it.photo.id, name:it.photo.driveName||""}; }); }, terms:jobSearchTerms, find:findDocs, missing:jobMissing},
+  restore:{need:restoreNeed, run:runRestore, pick:restorePickFiles, stem:restoreStem, partOf:restorePartOf, fileId:driveFileId, getFile:getDriveFile, pages:restorePagesOf, last:function(){ return state.restoreLast||null; }},
   ce:function(){ return CE; }, ceTestMask:function(o){ ceTestMask=o||null; }, getPhoto:getPhoto}; // test hooks (ceTestMask: fake segmentation when no model is available)
 init();
 })();

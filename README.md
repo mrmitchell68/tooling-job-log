@@ -8,13 +8,36 @@ manifest.webmanifest   PWA manifest (name, short_name "Job Log", start_url ./, s
 sw.js                  service worker: caches the app shell + CDN libs (OCR, pdf.js, fonts) for offline use,
                        plus the background-removal model in its own runtime cache (not precached)
 bgworker.js            Web Worker that loads @imgly/background-removal on first use and returns the cutout mask
-vendor/                jsPDF 4.2.1 UMD (MIT, see jspdf.LICENSE.txt): builds scan PDFs on the phone, precached for offline
+vendor/                jsPDF 4.2.1 UMD (MIT, see jspdf.LICENSE.txt): builds scan PDFs on the phone, precached for offline;
+                       pdf.js 3.11.174 (pdf.min.js + pdf.worker.min.js, Apache-2.0, see pdfjs.LICENSE.txt): reads PDFs
+                       (scanning, shrinking big PDFs, restoring pictures); loaded from here first, CDN as fallback
 icons/                 icon-192.png, icon-512.png, icon-maskable-512.png, apple-touch-icon.png, favicon-64.png
 shots/                 412×915 phone screenshots
 tests/                 Playwright end-to-end tests (test.py, test_refsheet.py, test_arrange.py, test_cleanup.py, test_scanfields.py, test_realforms.py, test_drive.py) + fixture generators
 ```
 
 All URLs are relative, so it runs from any path: `https://<user>.github.io/<repo>/`, a subfolder, or localhost.
+
+## What's new in 2.3.12 — Restore missing images from Drive
+
+Jobs whose pictures show **Missing** (the phone copy is gone) can get them back from the scan PDF in DCT / Building Material.
+
+- ⚙️ → **Missing pictures** card → **Restore missing images from Drive** does every job with Missing pictures. Per job: the
+  Missing banner, job ⋮ and the photo viewer of a Missing picture have **♻️ Restore images from Drive** next to **📄 Open Drive PDF**.
+- **Finding the PDF:** `findDocs` with the Part name, then the part number, then the tool #. Of the matches, the app takes the
+  PDF name(s) this phone sent for the job's scans; else `<term> <date>[ time].pdf`; else the best match (with its "part k of n" files).
+- **Downloading:** new Apps Script action `getDoc` (JSONP like findDocs, ~3 MB per reply, big files in parts).
+- **Putting them back:** each page is drawn on the phone with pdf.js (vendor/) as a JPEG (long side ≤ 2000 px). Page 1 goes into
+  the first Missing photo slot, page 2 into the next… (same photo id, place and label, so it shows where it was). If the PDF has
+  more pages than Missing slots, the extra pages are added at the end ("Drive PDF page N"). Missing original scans that were sent
+  as that PDF get their own pages back (an original PDF scan gets the PDF itself), so Upload/Re-send still work.
+- **Safe:** a picture that is on the phone is never replaced (checked in the same IndexedDB transaction as the write); nothing is
+  deleted; jobs with no Missing pictures are skipped; restored pages are never uploaded again (not to DCT / Photos, and restored
+  scans keep their "sent" mark). Progress with **Stop**, then a summary: restored N jobs, "Could not find a PDF for: …".
+- Older script (no `getDoc` yet) or no signal → nothing changes and the summary says so.
+
+**Code.gs 2.3.12** (deploy as a new version of the same web app): doGet `getDoc` → `getDoc_` (`getDocAllowed_`, `DOC_GET_CHUNK`,
+`DOC_GET_MAX`). Token-protected, read-only, only PDF/JPEG/PNG/WebP files inside DCT / Building Material or DCT / Photos (not trashed).
 
 ## What's new in 2.3.11 — Job photos go to Drive (DCT / Photos); Open Drive PDF for missing pictures
 
