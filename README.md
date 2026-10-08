@@ -16,6 +16,37 @@ tests/                 Playwright end-to-end tests (test.py, test_refsheet.py, t
 
 All URLs are relative, so it runs from any path: `https://<user>.github.io/<repo>/`, a subfolder, or localhost.
 
+## What's new in 2.3.11 — Job photos go to Drive (DCT / Photos); Open Drive PDF for missing pictures
+
+**Why job photos never reached Drive:** before 2.3.11 there was no photo upload at all. Job photos lived only in the phone's
+IndexedDB. The **📁 Drive / Files** button in Photos only *picks* pictures from Drive, and the only Drive upload code (Google
+sign-in) needs `GOOGLE_CLIENT_ID`, which is empty on the live app. Only scan PDFs had a working path (the Apps Script, 2.3.7+).
+
+- **Photos → DCT / Photos.** Each job photo is posted to the same Apps Script as the scan PDFs (`action: "saveDocPhoto"`,
+  no-cors, one at a time, time limit + 2 retries, progress “Uploading photo 2 of 6” with **Stop**). The script saves it in
+  **DCT / Photos** (folder fixed on the server). It accepts only JPEG / PNG / WebP (checked by content) and skips a name it already has.
+- **Automatic** right after you take or pick a photo (⚙️ → *Upload every job photo to Drive automatically*, on by default).
+  If the job has no Part name, part number or tool # yet, the photo waits and goes as soon as you fill one in.
+- **Name:** `<Part name> <YYYY-MM-DD> photo N.jpg`, e.g. `Closet Flange 2026-10-08 photo 1.jpg`. Part name, else part number,
+  else tool / mold # (same as the PDFs); the date the photo was added; N = next free number. The name is saved on the photo,
+  so retries never make copies.
+- **Small posts:** photos are sent as JPEG, long side at most 2000 px (most are already 1280 px and go as they are; cleaned-up PNGs go on white).
+- **Never deletes:** the photo always stays on the phone.
+- **Waiting / retry:** no signal or Google unreachable → kept in a queue and sent when the app opens or the phone is back online.
+- ⚙️ → **Upload all saved photos to Drive (DCT / Photos)** checks Drive first (re-sends any photo that didn't arrive) and sends
+  every photo not sent yet. Job ⋮ → **Upload photos to Drive** sends that job's photos.
+- **Safe before the script update:** photos are only sent once the script answers `docInfo` with `photos:true` (Code.gs 2.3.11).
+  With the older script they wait on the phone (no false “sent”), and go by themselves once the new version is live.
+- **Open Drive PDF.** A job with Missing photos/scans shows a banner with **📄 Open Drive PDF**; the photo viewer of a Missing photo
+  and job ⋮ also have it. The script (`action=findDocs`, JSONP) searches DCT / Building Material for the Part name, part number
+  and tool # (case-insensitive, punctuation ignored, whole words first, newest first, at most 20) and the app lists the matches;
+  tap one to open it. No match → **Open Building Material folder**. Older script / no signal → the folder plus a Google Drive search link.
+- Example-job placeholder pictures are never uploaded.
+
+**Code.gs 2.3.11** (deploy as a new version of the same web app): `DOC_PHOTO_FOLDER_ID`; doPost `saveDocPhoto` → `saveDocPhoto_`
+(`imageType_`, `photoName_`); doGet `docInfo` → `docInfo_`, `findDocs` → `findDocs_` (`findNorm_`, `jsonpOut_`);
+`docExists_` takes `kind=photo` to check DCT / Photos.
+
 ## What's new in 2.3.10 — Keep scan originals after Drive copy; show missing photos
 
 - **Bug fix:** “Save a copy to Drive” (direct Google upload when a client id is set) was **deleting the local scan files** after a successful upload. That looked like “copy” but acted like “move,” so older jobs lost their stored scans / local previews after a Drive save — and PDF upload / Re-send / Save to phone could no longer find the originals. Instant share-sheet and PDF upload already kept them; direct upload now does too. Toast: “Saved a copy to Drive. Original still on this phone.”

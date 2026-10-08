@@ -1,5 +1,5 @@
 /* Tooling Job Log v2 service worker — offline app shell + CDN libraries. */
-const VERSION = "tjl-v2.3.10";
+const VERSION = "tjl-v2.3.11";
 const SHELL_CACHE = VERSION + "-shell";
 const LIB_CACHE = "tjl-libs-v1";           // CDN libs are version-pinned, so this cache survives app updates
 // ✨ Clean up: background-removal model + ONNX runtime (~56 MB, fetched in 4 MB chunks) are cached at RUNTIME on first use,
