@@ -8,7 +8,8 @@ manifest.webmanifest   PWA manifest (name, short_name "Job Log", start_url ./, s
 sw.js                  service worker: caches the app shell + CDN libs (OCR, pdf.js, fonts) for offline use,
                        plus the background-removal model in its own runtime cache (not precached)
 bgworker.js            Web Worker that loads @imgly/background-removal on first use and returns the cutout mask
-vendor/                jsPDF 4.2.1 UMD (MIT, see jspdf.LICENSE.txt): builds scan PDFs on the phone, precached for offline;
+vendor/                digits.json: small handwritten-digit reader (int8 weights, trained on MNIST) for machine settings sheets;
+                       jsPDF 4.2.1 UMD (MIT, see jspdf.LICENSE.txt): builds scan PDFs on the phone, precached for offline;
                        pdf.js 3.11.174 (pdf.min.js + pdf.worker.min.js, Apache-2.0, see pdfjs.LICENSE.txt): reads PDFs
                        (scanning, shrinking big PDFs, restoring pictures); loaded from here first, CDN as fallback
 icons/                 icon-192.png, icon-512.png, icon-maskable-512.png, apple-touch-icon.png, favicon-64.png
@@ -17,6 +18,30 @@ tests/                 Playwright end-to-end tests (test.py, test_refsheet.py, t
 ```
 
 All URLs are relative, so it runs from any path: `https://<user>.github.io/<repo>/`, a subfolder, or localhost.
+
+## What's new in 2.4.0 — Machine Settings (your machine setup sheet)
+
+A **Machine settings** section that matches the paper setup sheet: Part Number / Machine / Date, then **Clamp, Ejection,
+Injection, Charging** (each value has stages **1 / 2 / 3**, plus an optional 4th after a "/") and **Temperature, Production**
+(one value; air blast / corepull / intrusion are check boxes), a core pull note and notes.
+
+- **Job:** card **Machine settings** right above Photos. Tap a section to open it. **=all** = the same value for all 3 stages
+  (like the ←→ arrow on the paper). **＋4th** adds the value after the slash. Changing a value that was already set shows up in
+  "unlogged changes" like other sheet edits. Older jobs get an empty section; nothing else changes.
+- **Templates:** 📑 Templates → **⚙️ Settings** on a template = its default machine settings. A new job from that template gets a
+  copy (the date is left blank). "Save as template" copies the job's settings (or none if "with values" is off).
+- **Setup mode:** a **Machine settings** card lists every set value; tap each one when it is set on the press. Reset clears them.
+  The setup step progress is unchanged.
+- **Print:** the reference sheet gets a **MACHINE SETTINGS** page laid out like the form (two tables side by side, Value(s) in
+  3 sub-columns, blank cells blank, same-for-all as one "← 70 →" cell). The process sheet gets the same block at the end. Jobs
+  without machine settings print exactly as before.
+- **Scan / photo:** use Scan fill (or 📷 Scan on the card) as usual. A photo of this sheet is recognized by its printed words, and a
+  sideways or upside-down photo is turned the right way. Every printed row is found by its typed label, and each handwritten
+  value is read from its own cell (digit reader in `vendor/digits.json` plus OCR). Slashes / blanks = empty; arrows = same for all.
+  The review screen shows **the picture of each cell next to the value read**. Hard-to-read rows are red and unchecked, and so
+  are rows that differ from what the job already has. Unchecked rows are never saved, and a blank never erases a value. The
+  handwritten part number / machine / date go to the job's fields (with the usual "documents disagree" choice when they differ).
+  Handwriting reading is not perfect: on the test photo about 9 of 10 values were right. **Always compare with the cell pictures.**
 
 ## What's new in 2.3.12 — Restore missing images from Drive
 

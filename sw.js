@@ -1,5 +1,5 @@
 /* Tooling Job Log v2 service worker — offline app shell + CDN libraries. */
-const VERSION = "tjl-v2.3.12";
+const VERSION = "tjl-v2.4.0";
 const SHELL_CACHE = VERSION + "-shell";
 const LIB_CACHE = "tjl-libs-v1";           // CDN libs are version-pinned, so this cache survives app updates
 // ✨ Clean up: background-removal model + ONNX runtime (~56 MB, fetched in 4 MB chunks) are cached at RUNTIME on first use,
@@ -16,7 +16,8 @@ const SHELL = [
   "./icons/apple-touch-icon.png",
   "./icons/favicon-64.png",
   "./bgworker.js",
-  "./vendor/jspdf.umd.min.js"
+  "./vendor/jspdf.umd.min.js",
+  "./vendor/digits.json"
 ];
 // Small libs precached best-effort at install. The big OCR engine + English data
 // (~7 MB) are cached at runtime the first time OCR runs or when the app warms them.

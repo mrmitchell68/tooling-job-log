@@ -520,6 +520,81 @@ pre.raw{white-space:pre-wrap;font-size:12px;background:var(--surface-2);padding:
   .rs-page+.rs-page{break-before:page;page-break-before:always}
   .no-print{display:none!important}
 }
+/* ---- Machine settings: editor ---- */
+.ms-hdr{display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-bottom:8px}
+.ms-hdr .inp{min-height:44px;font-size:16px;padding:8px 9px}
+.ms-sec{border:1px solid var(--border);border-radius:10px;margin-top:8px;overflow:hidden;background:var(--surface)}
+.ms-sh{display:flex;align-items:center;gap:8px;width:100%;min-height:52px;padding:8px 12px;border:0;background:var(--surface-2);text-align:left;font-size:17px;font-weight:800;color:var(--text)}
+.ms-sh .t{flex:1}
+.ms-sh .n{font-size:12.5px;font-weight:700;color:var(--text-dim)}
+.ms-sh .chev{font-size:22px;color:var(--text-faint);transition:transform .15s}
+.ms-sec.open .ms-sh .chev{transform:rotate(90deg)}
+.ms-bd{display:none;padding:4px 10px 10px}
+.ms-sec.open .ms-bd{display:block}
+.ms-colhd{display:grid;grid-template-columns:minmax(0,1fr) 54px 54px 54px 50px;gap:5px;font-size:11px;font-weight:800;color:var(--text-faint);text-align:center;padding:4px 0 0}
+.ms-row{display:grid;grid-template-columns:minmax(0,1fr) 54px 54px 54px 50px;gap:5px;align-items:center;padding:5px 0;border-top:1px solid var(--border)}
+.ms-row:first-of-type{border-top:0}
+.ms-row .lab{font-size:14.5px;font-weight:600;line-height:1.2;color:var(--text)}
+.ms-row.one{grid-template-columns:minmax(0,1fr) 120px}
+.ms-row.chk{grid-template-columns:minmax(0,1fr) 44px;min-height:48px;cursor:pointer}
+.ms-row.chk input{width:28px;height:28px;justify-self:center;accent-color:var(--primary)}
+.msv{width:100%;min-width:0;min-height:44px;border:1px solid var(--border);border-radius:8px;background:var(--surface-2);padding:0 4px;font-size:16px;font-weight:700;text-align:center;color:var(--text)}
+.msv:focus{border-color:var(--primary);outline:2px solid var(--primary-dim)}
+.ms-row.same .msv[data-msi="1"],.ms-row.same .msv[data-msi="2"]{background:var(--primary-dim);color:var(--primary)}
+.ms-same{min-height:44px;border:1px solid var(--border);border-radius:8px;background:var(--surface);font-size:12.5px;font-weight:800;color:var(--text-dim);padding:0}
+.ms-same.on{background:var(--primary);border-color:var(--primary);color:var(--primary-ink)}
+.ms-add4{grid-column:2 / span 3;justify-self:start;border:0;background:none;color:var(--primary);font-size:13px;font-weight:700;min-height:32px;padding:0 2px}
+.ms-x{grid-column:1 / -1;display:grid;grid-template-columns:minmax(0,1fr) 120px;gap:5px;align-items:center;font-size:13px;color:var(--text-dim)}
+.ms-x span{text-align:right;padding-right:6px}
+.ms-note{margin-top:10px}
+.ms-note textarea.inp{min-height:64px;font-size:15px}
+/* setup mode */
+.ms-sgrp{padding:8px 14px 2px;font-size:12px;letter-spacing:.08em;text-transform:uppercase;color:var(--primary);font-weight:800;border-top:1px solid var(--border)}
+.sstep.ms-step{min-height:64px;font-size:20px}
+.sstep.ms-step small{display:block;font-size:13px;font-weight:600;color:var(--text-dim)}
+/* review */
+.msr{display:flex;gap:10px;align-items:flex-start;padding:10px 6px;border-top:1px solid var(--border);border-radius:8px}
+.msr>input[type=checkbox]{width:26px;height:26px;margin:4px 0 0;flex-shrink:0;accent-color:var(--primary)}
+.msr .b{flex:1;min-width:0}
+.msr .k{display:flex;flex-wrap:wrap;align-items:center;gap:6px;font-size:13px;font-weight:800;color:var(--text)}
+.msr .crop{display:block;width:100%;max-height:70px;object-fit:contain;object-position:left center;background:#fff;border:1px solid var(--border);border-radius:6px;margin:6px 0}
+.msr .crop.tall{max-height:220px}
+.msr .ins{display:grid;grid-template-columns:repeat(3,minmax(0,1fr)) 50px 64px;gap:5px}
+.msr .ins .msv.one{grid-column:1 / span 2}
+.msr .ins .msr-cb{grid-column:1 / -1;display:flex;gap:10px;align-items:center;min-height:44px;font-size:15px;font-weight:600}
+.msr .ins .msr-cb input{width:26px;height:26px}
+.msr .was{font-size:12.5px;color:var(--text-dim);margin-top:3px}
+.msr.lo{background:var(--danger-dim);box-shadow:inset 4px 0 0 var(--danger)}
+.msr.md{background:var(--warn-dim);box-shadow:inset 4px 0 0 var(--warn)}
+.msr.off .ins,.msr.off .crop{opacity:.75}
+.msr-sec{margin:12px 0 0;font-size:12px;font-weight:800;letter-spacing:.06em;text-transform:uppercase;color:var(--text-dim)}
+.msr-empty{margin-top:10px}
+.msr-empty summary{min-height:44px;display:flex;align-items:center}
+.rv .crop{display:block;width:100%;max-height:80px;object-fit:contain;object-position:left center;background:#fff;border:1px solid var(--border);border-radius:6px;margin:6px 0}
+/* printed sheet: two tables like the paper form */
+.ms-sheet{font-family:'Barlow',Arial,sans-serif;color:#111;font-size:8.6px;line-height:1.2}
+.ms-sh-hd{display:flex;gap:.3in;align-items:baseline;font-size:11px;margin:.04in 0 .06in}
+.ms-sh-hd u{display:inline-block;min-width:1.1in;text-decoration:none;border-bottom:1px solid #111;padding:0 4px;font-weight:600}
+.ms-tables{display:flex;gap:.12in;align-items:flex-start}
+.ms-t{flex:1;border-collapse:collapse;table-layout:fixed;width:50%}
+.ms-t col.cf{width:22%} .ms-t col.cp{width:38%} .ms-t col.c1,.ms-t col.c2,.ms-t col.c3{width:13.33%}
+.ms-t th{border:1.3px solid #111;padding:2px 3px;font-size:9.5px;font-weight:700;background:#fff}
+.ms-t td{border:1px solid #111;padding:2px 3px;height:.205in;vertical-align:middle}
+.ms-t td.f{vertical-align:top;font-style:italic}
+.ms-t td.f b{font-style:italic}
+.ms-t td.f .cp{font-style:normal;font-size:7.6px;margin-top:3px;white-space:pre-wrap;color:#222}
+.ms-t td.p{font-style:italic}
+.ms-t td.v{text-align:center;font-weight:700;font-size:9.2px}
+.ms-t td.v.s{border-left:1px dotted #777;border-right:1px dotted #777}
+.ms-t td.v .x{font-weight:700}
+.ms-t td.v.same{letter-spacing:.02em}
+.ms-notes{margin-top:.08in;font-size:10px}
+.ms-notes .nl{min-height:.5in;border-bottom:1px solid #111;white-space:pre-wrap;padding:2px 0}
+.rs-page.msp{min-height:10.25in}
+.rs-page.msp .ms-sheet{padding:0 .02in}
+.ps-ms{columns:1;padding:0 10px}
+.ps-ms .ms-sheet{padding:4px 0}
+
 </style>
 </head>
 <body>
@@ -541,7 +616,7 @@ pre.raw{white-space:pre-wrap;font-size:12px;background:var(--surface-2);padding:
 <script>
 (function(){
 "use strict";
-var APP_VERSION = "2.3.12";
+var APP_VERSION = "2.4.0";
 // Public OAuth client id (not a secret). Web client, authorized JavaScript origins:
 //   https://mrmitchell68.github.io   and   http://localhost:8766
 // Leave empty until that client exists — Save-to-Drive is hidden and the button uses the Android share sheet.
@@ -726,7 +801,7 @@ function migrateJob(j){
 function newJob(over){
   var now = nowIso();
   var j = {id:uid(), toolNumber:"", partName:"", customer:"", press:"", status:"active", pinned:false,
-    createdAt:now, updatedAt:now, sections:defaultSections(state.meta.units), photos:[], runLog:[], pendingChanges:[], schema:SCHEMA};
+    createdAt:now, updatedAt:now, sections:defaultSections(state.meta.units), photos:[], runLog:[], pendingChanges:[], machineSettings:msEmpty(), schema:SCHEMA};
   return Object.assign(j, over||{});
 }
 function normalizeJob(j){
@@ -747,6 +822,7 @@ function normalizeJob(j){
   ["toolNumber","partName","customer","press"].forEach(function(k){ if(j[k]==null) j[k]=""; });
   if((j.schema||0) < SCHEMA) migrateJob(j);
   j.scanFiles = (Array.isArray(j.scanFiles)? j.scanFiles : []).filter(function(s){ return s && s.id; }).map(scanMetaCopy);
+  j.machineSettings = msNormalize(j.machineSettings); // older jobs: empty machine settings
   return j;
 }
 function scanMetaCopy(s){ var o={id:s.id, name:s.name||"scan", type:s.type||"", bytes:s.bytes||0}; if(s.batch) o.batch=s.batch; if(s.at) o.at=s.at; if(s.docName) o.docName=s.docName; return o; }
@@ -819,6 +895,7 @@ function haystack(j){
     if(s.type==="table") (s.rows||[]).forEach(function(r){ parts.push(r.desc+" "+r.qty); });
   });
   (j.photos||[]).forEach(function(p){ parts.push(p.label); });
+  parts.push(msSearchText(j.machineSettings));
   (j.runLog||[]).forEach(function(e){ parts.push(e.operator+" "+e.change+" "+e.issues); });
   return parts.join(" \n ").toLowerCase();
 }
@@ -958,17 +1035,17 @@ function makeTemplate(job, name, example){
   var snap = clone(job);
   snap.sections.forEach(function(s){ s.id=uid(); if(s.fields) s.fields.forEach(function(f){ f.id=uid(); }); if(s.items) s.items.forEach(function(it){ it.id=uid(); it.done=false; }); if(s.rows) s.rows.forEach(function(r){ r.id=uid(); }); });
   return {id:uid(), name:name, example:!!example, createdAt:nowIso(), updatedAt:nowIso(),
-    data:{toolNumber:snap.toolNumber, partName:snap.partName, customer:snap.customer, press:snap.press, sections:snap.sections, schema:snap.schema||0}};
+    data:{toolNumber:snap.toolNumber, partName:snap.partName, customer:snap.customer, press:snap.press, sections:snap.sections, schema:snap.schema||0, machineSettings:msForTemplate(snap.machineSettings)}};
 }
 function jobFromTemplate(t){
   var d = clone(t.data);
   d.sections.forEach(function(s){ s.id=uid(); if(s.fields) s.fields.forEach(function(f){ f.id=uid(); }); if(s.items) s.items.forEach(function(it){ it.id=uid(); it.done=false; }); if(s.rows) s.rows.forEach(function(r){ r.id=uid(); }); });
-  return normalizeJob(newJob({toolNumber:d.toolNumber||"", partName:d.partName||"", customer:(d.customer||"").replace(/\s*\(Example\)$/,""), press:"", status:"setup", sections:d.sections, fromTemplate:t.name, schema:d.schema||0}));
+  return normalizeJob(newJob({toolNumber:d.toolNumber||"", partName:d.partName||"", customer:(d.customer||"").replace(/\s*\(Example\)$/,""), press:"", status:"setup", sections:d.sections, fromTemplate:t.name, schema:d.schema||0, machineSettings:msFromTemplate(d.machineSettings)}));
 }
 function duplicateJob(job){
   var c = clone(job);
   c.id = uid(); c.createdAt=c.updatedAt=nowIso(); c.pinned=false; c.example=false; c.runLog=[]; c.pendingChanges=[];
-  c.partName = c.partName; c.status="setup";
+  c.partName = c.partName; c.status="setup"; if(c.machineSettings) delete c.machineSettings.verified;
   c.sections.forEach(function(s){ s.id=uid(); if(s.fields) s.fields.forEach(function(f){ f.id=uid(); }); if(s.items) s.items.forEach(function(it){ it.id=uid(); it.done=false; }); if(s.rows) s.rows.forEach(function(r){ r.id=uid(); }); });
   var newPhotos = [];
   var jobs = (job.photos||[]).map(function(p){
@@ -979,6 +1056,878 @@ function duplicateJob(job){
   c.scanFiles = []; // originals stay with the job they were scanned into
   return Promise.all(jobs).then(function(){ return c; });
 }
+
+/* ---------- Machine settings (setup sheet: Clamp, Ejection, Injection, Charging, Temperature, Production) ---------- */
+var MS_DIGITS_URL="vendor/digits.json";
+/* ---------- Machine Settings (machine setup sheet: Clamp / Ejection / Injection / Charging / Temperature / Production) ---------- */
+// staged sections: each parameter has up to 3 values (stage 1/2/3) + an optional 4th written after a slash ("0/70")
+var MS_DEFS = [
+  {id:"clamp", title:"Clamp", staged:true, side:"L", params:[["mold_open_time","Mold open time"],["open_press","Opening pressures"],["open_int","Opening intervals"],["open_speed","Opening speeds"],["mold_close_time","Mold close time"],["close_press","Closing pressures"],["close_int","Closing intervals"],["close_speed","Closing speeds"],["clamp_tonnage","Clamp tonnage"]]},
+  {id:"ejection", title:"Ejection", staged:true, side:"L", params:[["ej_strokes","Number of strokes"],["ej_fwd_press","Forward pressures"],["ej_fwd_int","Forward intervals"],["ej_fwd_speed","Forward speeds"],["ej_back_set","Backward setpoint"],["ej_back_press","Backward pressure"],["ej_back_speed","Backward speed"]]},
+  {id:"injection", title:"Injection", staged:true, side:"L", params:[["inj_speed","Injection speeds"],["inj_int","Injection intervals"],["inj_press","Injection pressures"],["switchover","Switchover setpoint"],["hold_press","Hold pressure"],["hold_time","Hold times"],["hold_speed","Hold speeds"],["cushion","Actual cushion value"]]},
+  {id:"charging", title:"Charging", staged:true, side:"R", params:[["charge_delay","Charge delay time"],["back_press","Backpressure"],["screw_speed","Screw speeds"],["screw_int","Screw intervals"],["suck_back","Suck back interval"]]},
+  {id:"temperature", title:"Temperature", staged:false, side:"R", params:[["zone1","Setpoint: zone 1"],["zone2","Setpoint: zone 2"],["zone3","Setpoint: zone 3"],["zone4","Setpoint: zone 4"],["zone5","Setpoint: zone 5"],["zone6","Setpoint: zone 6"],["zone7","Setpoint: zone 7"],["zone8","Setpoint: zone 8"],["nozzle","Nozzle htr setting"],["hot_runner","Hot runner settings"],["thermolator","Thermolator setting"],["dryer","Dryer setting"]]},
+  {id:"production", title:"Production", staged:false, side:"R", params:[["cooling","Cooling time"],["cycle","Overall cycle time"],["cavities","Number of cavities"],["cycle_int","Cycle interval time"],["air_blast","Air blast?","check"],["corepull","Corepull?","check"],["intrusion","Intrusion?","check"]]}
+];
+var MS_P = {}; MS_DEFS.forEach(function(s){ s.params.forEach(function(p, i){ MS_P[p[0]] = {id:p[0], label:p[1], check:p[2]==="check", sec:s, staged:s.staged, idx:i}; }); });
+function msEmpty(){ return {v:1, header:{partNumber:"", machine:"", date:""}, rows:{}, corePull:"", notes:""}; }
+function msNormalize(ms){
+  var o = (ms && typeof ms==="object") ? ms : {};
+  var out = msEmpty();
+  if(o.header) ["partNumber","machine","date"].forEach(function(k){ if(o.header[k]!=null) out.header[k]=String(o.header[k]); });
+  Object.keys(o.rows||{}).forEach(function(id){
+    var r=o.rows[id]; if(!r) return;
+    var vals = (Array.isArray(r.vals)? r.vals : []).map(function(x){ return x==null? "" : String(x); });
+    if(MS_P[id] && MS_P[id].staged){ while(vals.length<3) vals.push(""); vals=vals.slice(0,3); } else vals=[vals[0]||""];
+    out.rows[id] = {vals:vals, extra:r.extra!=null? String(r.extra) : "", same:!!r.same};
+  });
+  out.corePull = o.corePull!=null? String(o.corePull) : ""; out.notes = o.notes!=null? String(o.notes) : "";
+  if(o.verified && typeof o.verified==="object"){ out.verified={}; Object.keys(o.verified).forEach(function(k){ if(o.verified[k]) out.verified[k]=true; }); }
+  if(o.updatedAt) out.updatedAt=o.updatedAt;
+  return out;
+}
+function msRow(ms, id){ var p=MS_P[id]; if(!ms.rows[id]) ms.rows[id]={vals: p && p.staged? ["","",""] : [""], extra:"", same:false}; return ms.rows[id]; }
+function msHas(ms){
+  if(!ms) return false;
+  if(["partNumber","machine","date"].some(function(k){ return String((ms.header||{})[k]||"").trim(); })) return true;
+  if(String(ms.corePull||"").trim() || String(ms.notes||"").trim()) return true;
+  return Object.keys(ms.rows||{}).some(function(id){ var r=ms.rows[id]; return (r.vals||[]).some(function(v){ return String(v||"").trim(); }) || String(r.extra||"").trim(); });
+}
+function msFilled(ms){ var n=0; Object.keys((ms&&ms.rows)||{}).forEach(function(id){ var r=ms.rows[id]; if((r.vals||[]).some(function(v){ return String(v||"").trim(); }) || String(r.extra||"").trim()) n++; }); return n; }
+function msIsCheckOn(v){ return /^(y|yes|x|✓|✔|on|true|1)$/i.test(String(v||"").trim()); }
+
+/* ---- scan: form detection ---- */
+var MS_KEYS = [/\bclamp\b/i, /\beject/i, /\binjection\b/i, /\bcharging\b/i, /\btemperature\b/i, /\bproduction\b/i, /mold\s*open\s*time/i, /set\s*point\s*[:;.]?\s*zone/i, /screw\s*(speeds|intervals)/i, /suck\s*back/i, /switch\s*over\s*set/i, /thermolator/i, /number\s*of\s*strokes/i, /cushion\s*value/i, /opening\s*(pressures|intervals|speeds)/i, /closing\s*(pressures|intervals|speeds)/i];
+function msFormScore(text){ var t=String(text||""); return MS_KEYS.filter(function(re){ return re.test(t); }).length; }
+function msIsForm(text){ return msFormScore(text) >= 5; }
+
+/* ---- scan: rotation ---- */
+// A sideways photo (page turned 90°): ink runs in columns instead of rows. Cheap check on a small copy first; only if it
+// looks sideways (or unsure) are the candidate turns OCR'd at low resolution and scored by form keywords + real words.
+function rotCanvas(src, deg){
+  var w=src.naturalWidth||src.width, h=src.naturalHeight||src.height, c=document.createElement("canvas");
+  var q = ((deg%360)+360)%360; c.width = (q===90||q===270)? h : w; c.height = (q===90||q===270)? w : h;
+  var g=c.getContext("2d"); g.translate(c.width/2, c.height/2); g.rotate(q*Math.PI/180); g.drawImage(src, -w/2, -h/2);
+  return c;
+}
+function orientScore(src){ // >1 = text rows horizontal (upright / upside down); <1 = sideways
+  var w=src.naturalWidth||src.width, h=src.naturalHeight||src.height, s=Math.min(1, 700/Math.max(w,h)), aw=Math.max(1,Math.round(w*s)), ah=Math.max(1,Math.round(h*s));
+  var c=document.createElement("canvas"); c.width=aw; c.height=ah; var g=c.getContext("2d"); g.drawImage(src,0,0,aw,ah);
+  var d=g.getImageData(0,0,aw,ah).data, G=new Uint8Array(aw*ah), i, x, y, sum=0;
+  for(i=0;i<aw*ah;i++){ G[i]=(d[i*4]*0.299+d[i*4+1]*0.587+d[i*4+2]*0.114)|0; sum+=G[i]; }
+  var thr=Math.min(150, sum/(aw*ah)*0.72), rows=new Float64Array(ah), cols=new Float64Array(aw);
+  // ink pixels, but skip long straight runs (table rules) — they are equally strong both ways
+  var B=new Uint8Array(aw*ah); for(i=0;i<aw*ah;i++) B[i]=G[i]<thr?1:0;
+  var E=new Uint8Array(aw*ah), L=Math.round(Math.min(aw,ah)/10), s0, k;
+  for(y=0;y<ah;y++){ x=0; while(x<aw){ if(!B[y*aw+x]){ x++; continue; } s0=x; while(x<aw && B[y*aw+x]) x++; if(x-s0>=L) for(k=s0;k<x;k++) E[y*aw+k]=1; } }
+  for(x=0;x<aw;x++){ y=0; while(y<ah){ if(!B[y*aw+x]){ y++; continue; } s0=y; while(y<ah && B[y*aw+x]) y++; if(y-s0>=L) for(k=s0;k<y;k++) E[k*aw+x]=1; } }
+  for(y=0;y<ah;y++) for(x=0;x<aw;x++){ i=y*aw+x; if(B[i] && !E[i]){ rows[y]++; cols[x]++; } }
+  // text lines give a "comb" profile: sharp jumps between ink rows and blank gaps
+  var jr=0, jc=0; for(y=1;y<ah;y++){ var a=rows[y]-rows[y-1]; jr+=a*a; } for(x=1;x<aw;x++){ var b=cols[x]-cols[x-1]; jc+=b*b; }
+  jr/=Math.max(1,aw); jc/=Math.max(1,ah);
+  return jc>0 ? jr/jc : 9;
+}
+function wordScore(words){
+  var txt=(words||[]).filter(function(w){ return (w.confidence||0)>=55; }).map(function(w){ return w.text; }).join(" ");
+  var real=(txt.match(/\b[a-z]{4,}\b/gi)||[]).length;
+  return real + 6*msFormScore(txt);
+}
+function orientForOcr(src, onStep){
+  var r=orientScore(src);
+  if(r>=1.0) return Promise.resolve({canvas:null, rot:0, ratio:r});
+  // sideways or unsure: try the turns on a small copy and keep the one that reads best
+  var cands = r<0.75 ? [90,270] : [0,90,270]; // 0.75–1: unsure
+  var w=src.naturalWidth||src.width, h=src.naturalHeight||src.height, s=Math.min(1, 1400/Math.max(w,h));
+  var small=document.createElement("canvas"); small.width=Math.round(w*s); small.height=Math.round(h*s); small.getContext("2d").drawImage(src,0,0,small.width,small.height);
+  var scores={};
+  return tessWorker().then(function(wk){
+    return cands.reduce(function(p, deg){ return p.then(function(){ if(onStep) onStep(deg);
+      return wk.setParameters({tessedit_pageseg_mode:"6"}).then(function(){ return wk.recognize(rotCanvas(small, deg)); }).then(function(res){ scores[deg]=wordScore(res.data.words); }); }); }, Promise.resolve());
+  }).then(function(){
+    var best=cands[0]; cands.forEach(function(d){ if(scores[d]>scores[best]) best=d; });
+    return {canvas: best? rotCanvas(src, best) : null, rot:best, ratio:r, scores:scores};
+  });
+}
+
+/* ---- scan: read the grid ---- */
+function msNorm(s){ return String(s||"").toLowerCase().replace(/[^a-z0-9]/g,""); }
+function msLev(a, b){
+  var m=a.length, n=b.length; if(!m) return n; if(!n) return m;
+  var prev=new Array(n+1), cur=new Array(n+1), i, j; for(j=0;j<=n;j++) prev[j]=j;
+  for(i=1;i<=m;i++){ cur[0]=i; for(j=1;j<=n;j++){ cur[j]=Math.min(prev[j]+1, cur[j-1]+1, prev[j-1]+(a.charCodeAt(i-1)===b.charCodeAt(j-1)?0:1)); } var t=prev; prev=cur; cur=t; }
+  return prev[n];
+}
+function msSim(a, b){ if(!a||!b) return 0; return 1 - msLev(a,b)/Math.max(a.length,b.length); }
+function msLabelSim(win, lab){
+  var dw=(win.match(/\d+/g)||[]).join(","), dl=(lab.match(/\d+/g)||[]).join(",");
+  if(dl && dw!==dl) return 0; // zone 1 ≠ zone 2
+  return msSim(win.replace(/[0-9]/g,"").replace(/l/g,"i"), lab.replace(/[0-9]/g,"").replace(/l/g,"i"));
+}
+function msWords(words){
+  return (words||[]).filter(function(w){ return w && w.bbox && String(w.text||"").trim(); }).map(function(w){
+    return {t:String(w.text).trim(), x0:w.bbox.x0, y0:w.bbox.y0, x1:w.bbox.x1, y1:w.bbox.y1, c:(w.confidence||0)/100, cy:(w.bbox.y0+w.bbox.y1)/2};
+  });
+}
+function msRowsOf(ws){
+  var hs=ws.map(function(w){ return w.y1-w.y0; }).sort(function(a,b){ return a-b; }), mh=hs[hs.length>>1]||20;
+  var rows=[]; ws.slice().sort(function(a,b){ return a.cy-b.cy; }).forEach(function(w){
+    var r=rows.length? rows[rows.length-1] : null;
+    if(r && Math.abs(w.cy-r.cy)<mh*0.55){ r.ws.push(w); r.cy=(r.cy*(r.ws.length-1)+w.cy)/r.ws.length; } else rows.push({ws:[w], cy:w.cy});
+  });
+  rows.forEach(function(r){ r.ws.sort(function(a,b){ return a.x0-b.x0; }); });
+  return {rows:rows, mh:mh};
+}
+// typed parameter labels → their word boxes (greedy best match, each label and word used once)
+function msFindLabels(ws, pageW){
+  var R=msRowsOf(ws), cands=[];
+  var labs=Object.keys(MS_P).map(function(id){ return {id:id, n:msNorm(MS_P[id].label)}; });
+  R.rows.forEach(function(r, ri){
+    for(var i=0;i<r.ws.length;i++) for(var k=1;k<=5 && i+k<=r.ws.length;k++){
+      var ww=r.ws.slice(i,i+k), gap=false; for(var q=1;q<ww.length;q++) if(ww[q].x0-ww[q-1].x1 > R.mh*1.6) gap=true; if(gap) break;
+      var txt=msNorm(ww.map(function(w){ return w.t; }).join(" "));
+      if(txt.length<4) continue;
+      labs.forEach(function(L){ if(Math.abs(txt.length-L.n.length)>4) return; var s=msLabelSim(txt, L.n); if(s>=0.72) cands.push({id:L.id, s:s, ri:ri, i:i, k:k, ws:ww}); });
+    }
+  });
+  cands.sort(function(a,b){ return b.s-a.s || b.k-a.k; });
+  var used={}, got={};
+  cands.forEach(function(c){
+    if(got[c.id]) return; var side=MS_P[c.id].sec.side, cx=(c.ws[0].x0+c.ws[c.ws.length-1].x1)/2;
+    if(side==="L" && c.ws[0].x0>pageW*0.55) return; if(side==="R" && c.ws[c.ws.length-1].x1<pageW*0.45) return;
+    if(c.ws.some(function(w){ return used[w.x0+","+w.y0]; })) return;
+    c.ws.forEach(function(w){ used[w.x0+","+w.y0]=1; });
+    got[c.id]={id:c.id, s:c.s, x0:c.ws[0].x0, x1:c.ws[c.ws.length-1].x1, y0:Math.min.apply(null,c.ws.map(function(w){ return w.y0; })), y1:Math.max.apply(null,c.ws.map(function(w){ return w.y1; })), cy:R.rows[c.ri].cy};
+  });
+  return {got:got, mh:R.mh, rows:R.rows};
+}
+function msSideOrder(side){ var out=[]; MS_DEFS.forEach(function(s){ if(s.side===side) s.params.forEach(function(p){ out.push(p[0]); }); }); return out; }
+// least-squares line through (index, y) with one round of outlier removal → y for every row on that side
+function msFitRows(order, got){
+  var pts=order.map(function(id, i){ return got[id]? [i, got[id].cy] : null; }).filter(Boolean);
+  if(pts.length<4) return null;
+  function fit(p){ var n=p.length, sx=0, sy=0, sxx=0, sxy=0; p.forEach(function(q){ sx+=q[0]; sy+=q[1]; sxx+=q[0]*q[0]; sxy+=q[0]*q[1]; }); var b=(n*sxy-sx*sy)/Math.max(1e-9,(n*sxx-sx*sx)); return {a:(sy-b*sx)/n, b:b}; }
+  var f=fit(pts); var keep=pts.filter(function(q){ return Math.abs(q[1]-(f.a+f.b*q[0])) < Math.abs(f.b)*0.45; });
+  if(keep.length>=4 && keep.length<pts.length) f=fit(keep);
+  return f;
+}
+function msBinarize(canvas){
+  var w=canvas.width, h=canvas.height, d=canvas.getContext("2d").getImageData(0,0,w,h).data, N=w*h, G=new Uint8Array(N), B=new Uint8Array(N), i, x, y;
+  for(i=0;i<N;i++) G[i]=(d[i*4]*0.299+d[i*4+1]*0.587+d[i*4+2]*0.114)|0;
+  var ii=new Uint32Array((w+1)*(h+1)), r=Math.max(8,Math.round(w/50));
+  for(y=0;y<h;y++){ var rs=0, o1=(y+1)*(w+1), o0=y*(w+1); for(x=0;x<w;x++){ rs+=G[y*w+x]; ii[o1+x+1]=ii[o0+x+1]+rs; } }
+  for(y=0;y<h;y++){ var y0=Math.max(0,y-r), y1=Math.min(h-1,y+r);
+    for(x=0;x<w;x++){ var x0=Math.max(0,x-r), x1=Math.min(w-1,x+r), cnt=(x1-x0+1)*(y1-y0+1), s=ii[(y1+1)*(w+1)+x1+1]-ii[y0*(w+1)+x1+1]-ii[(y1+1)*(w+1)+x0]+ii[y0*(w+1)+x0];
+      B[y*w+x]=(G[y*w+x]*cnt < s*0.82 && G[y*w+x]<200)?1:0; } }
+  return {w:w, h:h, B:B};
+}
+// ruled lines: columns (rows) where most pixels in the band are ink
+function msLines(bin, axis, a0, a1, b0, b1, frac){
+  var w=bin.w, B=bin.B, out=[], prof=[], i, k;
+  a0=Math.max(0,Math.round(a0)); b0=Math.max(0,Math.round(b0)); a1=Math.min(axis==="v"? w-1 : bin.h-1, Math.round(a1)); b1=Math.min(axis==="v"? bin.h-1 : w-1, Math.round(b1));
+  var span=Math.max(1,b1-b0+1);
+  for(i=a0;i<=a1;i++){ var n=0; if(axis==="v"){ for(k=b0;k<=b1;k++) n+=B[k*w+i]; } else { var o=i*w; for(k=b0;k<=b1;k++) n+=B[o+k]; } prof.push(n/span); }
+  for(i=0;i<prof.length;i++){ if(prof[i]<frac) continue; var s=i; while(i+1<prof.length && prof[i+1]>=frac*0.6) i++; out.push({c:a0+(s+i)/2, t:i-s+1}); }
+  return out;
+}
+function msInk(bin, x0, y0, x1, y1){
+  var w=bin.w, B=bin.B, n=0, sx=0, sy=0, sxx=0, syy=0, sxy=0, bx0=1e9, by0=1e9, bx1=-1, by1=-1, run=0, x, y;
+  x0=Math.max(0,Math.round(x0)); y0=Math.max(0,Math.round(y0)); x1=Math.min(bin.w-1,Math.round(x1)); y1=Math.min(bin.h-1,Math.round(y1));
+  for(y=y0;y<=y1;y++){ var cur=0, gap=0;
+    for(x=x0;x<=x1;x++){ if(B[y*w+x]){ n++; sx+=x; sy+=y; sxx+=x*x; syy+=y*y; sxy+=x*y; if(x<bx0) bx0=x; if(x>bx1) bx1=x; if(y<by0) by0=y; if(y>by1) by1=y; cur+=1+gap; gap=0; if(cur>run) run=cur; } else if(cur){ gap++; if(gap>3){ cur=0; gap=0; } } } }
+  var corr=0; if(n>5){ var vx=sxx/n-(sx/n)*(sx/n), vy=syy/n-(sy/n)*(sy/n), cv=sxy/n-(sx/n)*(sy/n); corr = vx>1 && vy>1 ? cv/Math.sqrt(vx*vy) : 0; }
+  return {n:n, bw:bx1>=bx0? bx1-bx0+1 : 0, bh:by1>=by0? by1-by0+1 : 0, bx0:bx0, bx1:bx1, corr:corr, run:run, w:x1-x0+1, h:y1-y0+1};
+}
+function msCrop(src, x0, y0, x1, y1, scale, pad, bg){
+  var w=Math.max(1,Math.round(x1-x0)), h=Math.max(1,Math.round(y1-y0)), c=document.createElement("canvas"); pad=pad||0;
+  c.width=Math.round(w*scale)+pad*2; c.height=Math.round(h*scale)+pad*2; var g=c.getContext("2d");
+  g.fillStyle=bg||"#fff"; g.fillRect(0,0,c.width,c.height); g.imageSmoothingQuality="high";
+  g.drawImage(src, Math.round(x0), Math.round(y0), w, h, pad, pad, Math.round(w*scale), Math.round(h*scale));
+  return c;
+}
+function msOcrCell(wk, canvas, white, psm){
+  return wk.setParameters({tessedit_pageseg_mode:psm||"7", tessedit_char_whitelist:white||""}).then(function(){ return wk.recognize(canvas); }).then(function(r){
+    var ws=(r.data.words||[]).filter(function(w){ return String(w.text||"").trim(); }).map(function(w){ return {t:String(w.text).trim(), x0:w.bbox.x0, x1:w.bbox.x1, c:(w.confidence||0)/100}; });
+    return {text:String(r.data.text||"").trim(), conf:(r.data.confidence||0)/100, words:ws};
+  });
+}
+function msCleanTok(t){ return String(t||"").replace(/^[.\-,'`]+/,"").replace(/[.\-,'`]+$/,"").replace(/^0(\d)/,"$1").replace(/\.{2,}/g,"."); }
+// OCR tokens of one value cell → stage values (by position: left / middle / right third)
+function msSplit(words, cellW, staged){
+  var toks=[]; (words||[]).forEach(function(w){
+    var parts=String(w.t).split("/"); var span=(w.x1-w.x0)/Math.max(1,parts.length);
+    parts.forEach(function(p, i){ var t=msCleanTok(p); if(t && /\d/.test(t)) toks.push({t:t, cx:w.x0+span*(i+0.5), c:w.c, slash:i>0}); });
+  });
+  if(!staged){ return {vals:[toks.map(function(t){ return t.t; }).join(" ")], extra:"", n:toks.length, toks:toks}; }
+  var vals=["","",""], extra=[], main=toks.filter(function(t){ return !t.slash; }), sl=toks.filter(function(t){ return t.slash; });
+  if(main.length>3){ extra=main.slice(3).map(function(t){ return t.t; }); main=main.slice(0,3); }
+  if(main.length===3) main.forEach(function(t,i){ vals[i]=t.t; });
+  else main.forEach(function(t){ var third=Math.min(2,Math.max(0,Math.floor(t.cx/(cellW/3)))); if(main.length===1 && third===1) third=0; while(third<3 && vals[third]) third++; if(third>2){ third=vals.indexOf(""); } if(third>=0) vals[third]=t.t; });
+  sl.forEach(function(t){ extra.push(t.t); });
+  return {vals:vals, extra:extra.join(" "), n:toks.length, toks:toks};
+}
+// one value cell: split into handwritten numbers, read each with the digit net and Tesseract, combine
+function msReadCell(wk, Wn, cl, bin, prep, S){
+  var ch=cl.y1-cl.y0, cw=cl.x1-cl.x0, iy=Math.max(5, ch*0.14), ix=Math.max(5, cw*0.012), p=S.pitch;
+  var G=msGroups(bin, cl.x0+ix, cl.y0+iy, cl.x1-ix, cl.y1-iy, Math.round(p*0.42));
+  var arrow = G.longRun > cw*0.12;
+  var lines=S.hls.filter(function(l){ return Math.abs(l.c-cl.y0)<p*0.6 || Math.abs(l.c-cl.y1)<p*0.6; });
+  if(!lines.length) lines=[{c:cl.y0-2, t:3}, {c:cl.y1+2, t:3}];
+  var toks=[], dbg=[], slashOnly=false, seq=Promise.resolve();
+  G.groups.forEach(function(g){ seq=seq.then(function(){
+    if(arrow && g.onShaft>0.5) { dbg.push("head"); return; }        // arrowhead
+    var net = Wn? msReadNumber(Wn, bin, Math.max(cl.x0+1, g.ax0-6), Math.min(cl.x1-1, g.ax1+6), cl.y0-p*0.3, cl.y1+p*0.3, cl.y0+2, cl.y1-2, lines, arrow? G.shafts : null) : null;
+    var crop=msCrop(prep, g.ax0-8, cl.y0-p*0.22, g.ax1+8, cl.y1+p*0.22, 80/p, 18);
+    return msOcrCell(wk, crop, "0123456789.~/", "7").then(function(o){
+      var tt=msCleanTok(String(o.text||"").replace(/\s+/g,"")), td=msDigits(tt), nt=net? net.text : "", nd=msDigits(nt), t="", c=0;
+      if(nd && nd===td){ t = nt.length>=tt.length? nt : tt; c = 0.55 + 0.42*Math.max(net.pmin, Math.min(1,o.conf||0)); }
+      else if(nd && net.pmin>=0.9){ t=nt; c = (td && o.conf>=0.7)? 0.62 : 0.8; }
+      else if(td && o.conf>=0.85){ t=tt; c=0.62; }
+      else if(nd && (!td || net.pmin>=0.6)){ t=nt; c=0.3+0.3*net.pmin; }
+      else if(td){ t=tt; c=0.25+0.3*o.conf; }
+      dbg.push((nt||"·")+"|"+(tt||"·")+":"+(net? net.pmin.toFixed(2) : "-")+"/"+(o.conf||0).toFixed(2));
+      if(!t){ if(net && net.parts.length && net.parts.every(function(q){ return q.kind==="slash"; })) slashOnly=true; return; }
+      if(arrow && c<0.6 && msDigits(t).length<2) return;               // stray mark next to an arrow
+      if(arrow) t=t.replace(/~/g,"");
+      g.slashy = !arrow && Math.abs(g.corr)>0.85 && g.n < g.bw*g.bh*0.3 && g.bw>g.bh*0.5;
+      if(g.slashy && !(msDigits(t).length>=2 && c>=0.8)){ slashOnly=true; return; }
+      var lead=/^\//.test(t); t=t.replace(/^\/+|\/+$/g,"");
+      var parts=t.split("/").filter(Boolean);
+      parts.forEach(function(q, i){ q=msCleanTok(q); if(q && /\d/.test(q)) toks.push({t:q, cx:g.cx, c:c, slash:lead || i>0}); });
+      if(!parts.length) slashOnly=true;
+    });
+  }); });
+  return seq.then(function(){ if(toks.length) slashOnly=false; return {toks:toks, arrow:arrow, slashOnly:slashOnly, dbg:dbg.join("  "), groups:G.groups.length}; });
+}
+function msDigits(s){ return String(s||"").replace(/[^0-9]/g,""); }
+// main entry: prepped page canvas (lines erased) + raw aligned canvas + page OCR words
+function msExtract(prep, raw, words, onProg){
+  var W=prep.width, H=prep.height, ws=msWords(words), F=msFindLabels(ws, W), got=F.got, res={rows:[], header:{}, found:Object.keys(got).length, total:Object.keys(MS_P).length, missing:[]};
+  var bin=msBinarize(raw||prep), sides={};
+  ["L","R"].forEach(function(side){
+    var order=msSideOrder(side), fit=msFitRows(order, got); if(!fit) return;
+    var pitch=Math.abs(fit.b), ids=order.filter(function(id){ return got[id]; });
+    var lx0=Math.min.apply(null, ids.map(function(id){ return got[id].x0; })), lx1=Math.max.apply(null, ids.map(function(id){ return got[id].x1; }));
+    var yTop=fit.a-pitch*0.5, yBot=fit.a+fit.b*(order.length-1)+pitch*0.5;
+    var vls=msLines(bin, "v", side==="L"? 0 : W*0.4, side==="L"? W*0.62 : W-1, yTop, yBot, 0.5);
+    var lxs=ids.map(function(id){ return got[id].x0; }).sort(function(a,b){ return a-b; }), lxm=lxs[lxs.length>>1]; lx0=Math.max(lx0, lxm-3);
+    var parL=vls.filter(function(l){ return l.c<lx0; }).pop(), valL=vls.find(function(l){ return l.c>lx1-4; }), valR=valL? vls.find(function(l){ return l.c>valL.c+pitch*2; }) : null;
+    var vx0 = valL? valL.c+valL.t/2+2 : lx1+pitch*0.4, vx1 = valR? valR.c-valR.t/2-2 : vx0+(lx1-lx0)*1.05;
+    var px0 = parL? parL.c+parL.t/2+2 : lx0-pitch*0.2;
+    var hls=msLines(bin, "h", yTop-pitch, yBot+pitch, px0+4, vx0-6, 0.55);
+    var funcX0 = (function(){ var l=parL? vls.filter(function(x){ return x.c<parL.c-pitch; }).pop() : null; return l? l.c+l.t/2+2 : Math.max(0, px0-(lx1-lx0)*0.75); })();
+    sides[side]={fit:fit, pitch:pitch, vx0:vx0, vx1:vx1, px0:px0, fx0:funcX0, hls:hls, vls:vls, order:order};
+  });
+  res.sides={}; Object.keys(sides).forEach(function(k){ var s=sides[k]; res.sides[k]={pitch:+s.pitch.toFixed(1), vx0:Math.round(s.vx0), vx1:Math.round(s.vx1), px0:Math.round(s.px0), fx0:Math.round(s.fx0), hl:s.hls.length, vl:s.vls.length, vls:s.vls.map(function(l){ return Math.round(l.c); })}; });
+  var cells=[];
+  Object.keys(MS_P).forEach(function(id){
+    var P=MS_P[id], S=sides[P.sec.side]; if(!S){ res.missing.push(id); return; }
+    var idx=S.order.indexOf(id), cy = got[id]? got[id].cy : S.fit.a+S.fit.b*idx;
+    if(!got[id]) res.missing.push(id);
+    var up=S.hls.filter(function(l){ return l.c<cy-S.pitch*0.15 && l.c>cy-S.pitch*0.95; }).pop(), dn=S.hls.find(function(l){ return l.c>cy+S.pitch*0.15 && l.c<cy+S.pitch*0.95; });
+    var y0 = up? up.c+up.t/2+1 : cy-S.pitch*0.5, y1 = dn? dn.c-dn.t/2-1 : cy+S.pitch*0.5;
+    cells.push({id:id, P:P, x0:S.vx0, x1:S.vx1, y0:y0, y1:y1, cy:cy, typed:!!got[id], lab:got[id]||null, S:S});
+  });
+  var wkP=tessWorker(), out=res.rows, netP=msDigitNet().catch(function(){ return null; });
+  function pageWordsIn(x0, y0, x1, y1){ return ws.filter(function(w){ var cx=(w.x0+w.x1)/2; return cx>x0 && cx<x1 && w.cy>y0 && w.cy<y1; }); }
+  function cropUrl(x0, y0, x1, y1){ var sc=Math.min(1, 520/Math.max(1,x1-x0)); return msCrop(raw||prep, x0, y0, x1, y1, sc, 0).toDataURL("image/jpeg", 0.72); }
+  var seq=Promise.resolve(), done=0;
+  cells.forEach(function(cl){
+    seq=seq.then(function(){
+      var ch=cl.y1-cl.y0, cw=cl.x1-cl.x0, iy=Math.max(5, ch*0.14), ix=Math.max(5, cw*0.012);
+      var ink=msInk(bin, cl.x0+ix, cl.y0+iy, cl.x1-ix, cl.y1-iy);
+      var row={id:cl.id, label:cl.P.label, sec:cl.P.sec.id, staged:cl.P.staged, check:cl.P.check, typed:cl.typed, vals:cl.P.staged? ["","",""] : [""], extra:"", same:false, conf:0.95, state:"blank", ocr:"", page:"",
+        box:[Math.round(cl.x0),Math.round(cl.y0),Math.round(cl.x1),Math.round(cl.y1)], ink:{n:ink.n, bw:ink.bw, corr:+ink.corr.toFixed(2), run:ink.run}};
+      row.crop = cropUrl(cl.x0-4, cl.y0-3, cl.x1+4, cl.y1+3);
+      out.push(row);
+      var minInk=Math.max(25, cw*ch*0.004);
+      if(ink.n<minInk){ done++; return; } // empty cell
+      var pw=pageWordsIn(cl.x0, cl.y0, cl.x1, cl.y1); row.page=pw.map(function(w){ return w.t; }).join(" ");
+      var diag = Math.abs(ink.corr)>0.8 && ink.bw>cw*0.1 && ink.n < ink.bw*ink.bh*0.25;
+      var arrow = ink.run > cw*0.17;
+      return Promise.all([wkP, netP]).then(function(rs){
+        var wk=rs[0], Wn=rs[1];
+        var pageAlpha = pw.filter(function(w){ return /[a-z]{3,}/i.test(w.t) && w.c>=0.4; }); // a word ("NONE") — not a number
+        if(cl.P.check){
+          var isSlash = Math.abs(ink.corr)>0.9 && ink.bw>cw*0.1;
+          if(isSlash){ row.state="na"; row.conf=0.75; }
+          else { row.state="check"; row.vals=["yes"]; row.conf=Math.abs(ink.corr)<0.85? 0.7 : 0.5; }
+          done++; if(onProg) onProg(done, cells.length); return;
+        }
+        if(pageAlpha.length && !msDigits(row.page)){ row.state="text"; row.vals[0]=pageAlpha.map(function(w){ return w.t; }).join(" "); row.conf=Math.min(0.9, pageAlpha[0].c); done++; if(onProg) onProg(done, cells.length); return; }
+        return msReadCell(wk, Wn, cl, bin, prep, cl.S).then(function(rc){
+          done++; if(onProg) onProg(done, cells.length);
+          row.ocr=rc.dbg; row.arrow=rc.arrow;
+          var toks=rc.toks;
+          if(!toks.length){
+            if(rc.slashOnly || diag || ink.bw<cw*0.5){ row.state="na"; row.conf=(rc.slashOnly||diag)? 0.8 : 0.5; } else { row.state="unread"; row.conf=0.2; }
+            return;
+          }
+          row.state="read";
+          if(!cl.P.staged){ row.vals=[toks.filter(function(t){ return !t.slash; }).map(function(t){ return t.t; }).join(" ") || toks[0].t]; }
+          else {
+            var main=toks.filter(function(t){ return !t.slash; }), sl=toks.filter(function(t){ return t.slash; }), vals=["","",""], extra=[];
+            if(main.length>3){ extra=main.slice(3).map(function(t){ return t.t; }); main=main.slice(0,3); }
+            if(main.length===3) main.forEach(function(t,i){ vals[i]=t.t; });
+            else main.forEach(function(t){ var third=Math.min(2,Math.max(0,Math.floor(t.cx*3))); if(main.length===1 && third===1) third=0; while(third<3 && vals[third]) third++; if(third>2) third=vals.indexOf(""); if(third>=0) vals[third]=t.t; });
+            sl.forEach(function(t){ extra.push(t.t); });
+            if(rc.arrow && main.length===1 && main[0].cx>0.25 && main[0].cx<0.75){ vals=[main[0].t, main[0].t, main[0].t]; row.same=true; }
+            else if(rc.arrow && main.length===2){ vals=[main[0].t, "", main[1].t]; }
+            row.vals=vals; row.extra=extra.join(" ");
+          }
+          var c=Math.min.apply(null, toks.map(function(t){ return t.c; }));
+          if(rc.arrow) c*=0.9;
+          row.conf=+c.toFixed(2);
+        });
+      });
+    });
+  });
+  // header (handwritten part number, machine, date) and the core-pull margin note
+  seq=seq.then(function(){ return wkP; }).then(function(wk){
+    var hdr=msHeaderBoxes(ws, W, F, sides);
+    res.headerBoxes=hdr;
+    return ["partNumber","machine","date"].reduce(function(p, k){ return p.then(function(){
+      var b=hdr[k]; if(!b) return;
+      var c=msCrop(prep, b[0], b[1], b[2], b[3], 1.2, 14);
+      var wl = k==="date"? "0123456789/-." : k==="machine"? "0123456789-#" : "";
+      return msOcrCell(wk, c, wl, "7").then(function(o){
+        var pw=pageWordsIn(b[0], b[1], b[2], b[3]).map(function(w){ return w.t; }).join(" ");
+        var v=o.text.replace(/\s+/g," ").trim(); if(k==="partNumber") v=v.replace(/[^A-Za-z0-9 \-\/.#]/g,"").trim();
+        if(k==="date") v=msDate(v);
+        var conf=Math.min(0.9,(o.conf||0)*(msNorm(pw)===msNorm(v)? 1.2 : 0.85)), nv="";
+        return netP.then(function(Wn){
+          if(Wn && k!=="partNumber"){
+            var nr=msReadNumber(Wn, bin, b[0], b[2], b[1], b[3], b[1], b[3], null, null);
+            if(nr){ nv=nr.parts.map(function(q){ return q.kind==="digit"? q.ch : q.kind==="slash"? "/" : q.kind==="tilde"? "-" : q.kind==="dot"? "." : ""; }).join("").replace(/^[\/.\-]+|[\/.\-]+$/g,"");
+              var okShape = k==="date"? /^\d{1,2}\/\d{1,2}\/\d{2,4}$/.test(nv) : /^\d+(-\d+)?$/.test(nv);
+              if(okShape && nr.pmin>=0.6){ if(msDigits(nv)===msDigits(v)) conf=Math.max(conf, 0.9); else { v=nv; conf=0.45+0.3*nr.pmin; } }
+            }
+          }
+          res.header[k]={value:v, conf:+conf.toFixed(2), ocr:o.text, net:nv, page:pw, crop:cropUrl(b[0], b[1], b[2], b[3])};
+        });
+      });
+    }); }, Promise.resolve()).then(function(){
+      var L=sides.L; if(!L) return;
+      var e0=L.order.indexOf("ej_strokes"), e1=L.order.indexOf("ej_back_speed");
+      var y0=L.fit.a+L.fit.b*e0+L.pitch*0.45, y1=L.fit.a+L.fit.b*e1+L.pitch*0.5, x0=L.fx0, x1=L.px0-4;
+      var pw=pageWordsIn(x0, y0, x1, y1).filter(function(w){ return !/^ejection$/i.test(w.t); });
+      var ink=msInk(bin, x0+4, y0+4, x1-4, y1-4);
+      res.corePull={value:"", conf:0.3, crop:cropUrl(x0, y0, x1+6, y1), ink:ink.n};
+      if(ink.n<60) { res.corePull.conf=0.95; return; }
+      var c=msCrop(prep, x0, y0, x1, y1, 1.4, 14);
+      return msOcrCell(wk, c, "", "6").then(function(o){
+        res.corePull.ocr=o.text; res.corePull.page=pw.map(function(w){ return w.t; }).join(" ");
+        res.corePull.value=msCoreGuess(o.text);
+        res.corePull.conf=0.35;
+      });
+    });
+  }).then(function(){
+    return wkP.then(function(wk){ return wk.setParameters({tessedit_char_whitelist:"", tessedit_pageseg_mode:"6"}); });
+  }, function(e){ return wkP.then(function(wk){ return wk.setParameters({tessedit_char_whitelist:"", tessedit_pageseg_mode:"6"}); }).then(function(){ throw e; }); });
+  return seq.then(function(){ return res; });
+}
+function msDate(v){ var m=String(v||"").replace(/\s+/g,"").match(/(\d{1,2})[\/\-.](\d{1,2})[\/\-.](\d{2,4})/); return m? m[1]+"/"+m[2]+"/"+m[3] : String(v||"").trim(); }
+function msCoreGuess(t){
+  var s=String(t||"").replace(/[|_~=«»]/g," ").split(/\n/).map(function(l){ return l.replace(/\s+/g," ").trim(); }).filter(function(l){ return /[a-z0-9]/i.test(l); });
+  return s.join(" · ");
+}
+// header value boxes: right of "Part Number:", "Machine:", "Date:" (handwriting sits on the same line, above the table)
+function msHeaderBoxes(ws, W, F, sides){
+  var out={}, find=function(re){ return ws.filter(function(w){ return re.test(w.t); }).sort(function(a,b){ return a.cy-b.cy; })[0]; };
+  var num=find(/^number:?$/i), mach=find(/^machine:?$/i), date=find(/^date:?$/i);
+  var tops=[sides.L, sides.R].filter(Boolean).map(function(S){ return S.fit.a-S.pitch*1.6; }), topY = tops.length? Math.min.apply(null, tops) : W*0.2;
+  var H=F.mh*3.2;
+  function box(lab, x1){ if(!lab) return null; var h=lab.y1-lab.y0; return [lab.x1+6, lab.y0-h*0.9, Math.min(W-2, x1), Math.min(lab.y1+h*0.45, topY)]; }
+  if(num) out.partNumber=box(num, mach? mach.x0-10 : W*0.55);
+  if(mach) out.machine=box(mach, date? date.x0-10 : W*0.8);
+  if(date) out.date=box(date, Math.min(W-2, date.x1+(date.x1-date.x0)*3.2));
+  return out;
+}
+
+// ink groups (one per handwritten number) along a value cell: column profile with long horizontal strokes (arrows) removed
+function msGroups(bin, x0, y0, x1, y1, gap){
+  var w=bin.w, B=bin.B, x, y, k; x0=Math.max(0,Math.round(x0)); y0=Math.max(0,Math.round(y0)); x1=Math.min(bin.w-1,Math.round(x1)); y1=Math.min(bin.h-1,Math.round(y1));
+  var cw=x1-x0+1, ch=y1-y0+1, M=new Uint8Array(cw*ch), longRun=0, L=Math.max(40, Math.round(cw*0.1)), shafts=[];
+  for(y=0;y<ch;y++){ for(x=0;x<cw;x++) M[y*cw+x]=B[(y0+y)*w+x0+x]; }
+  for(y=0;y<ch;y++){ x=0; while(x<cw){ if(!M[y*cw+x]){ x++; continue; } var s=x; while(x<cw && (M[y*cw+x] || (x+2<cw && (M[y*cw+x+1]||M[y*cw+x+2])))) x++; if(x-s>=L){ if(y>ch*0.2 && y<ch*0.8){ if(x-s>longRun) longRun=x-s; shafts.push([s,x-1]); } for(k=s;k<x;k++) M[y*cw+k]=2; } } }
+  // a little vertical halo around removed shafts (arrow shaft is 2-4 px thick)
+  for(y=0;y<ch;y++) for(x=0;x<cw;x++) if(M[y*cw+x]===2){ for(k=-3;k<=3;k++){ var yy=y+k; if(yy>=0 && yy<ch && M[yy*cw+x]===1) M[yy*cw+x]=3; } }
+  var col=new Uint16Array(cw); for(x=0;x<cw;x++){ var n=0; for(y=0;y<ch;y++) if(M[y*cw+x]===1) n++; col[x]=n; }
+  var groups=[], cur=null, lastInk=-1e9;
+  for(x=0;x<cw;x++){ if(col[x]<1) continue; if(cur && x-lastInk<=gap){ cur.x1=x; } else { cur={x0:x, x1:x}; groups.push(cur); } lastInk=x; }
+  groups.forEach(function(g){
+    var n=0, sx=0, sy=0, sxx=0, syy=0, sxy=0, by0=1e9, by1=-1;
+    for(y=0;y<ch;y++) for(x=g.x0;x<=g.x1;x++) if(M[y*cw+x]===1){ n++; sx+=x; sy+=y; sxx+=x*x; syy+=y*y; sxy+=x*y; if(y<by0) by0=y; if(y>by1) by1=y; }
+    var vx=n? sxx/n-(sx/n)*(sx/n) : 0, vy=n? syy/n-(sy/n)*(sy/n) : 0, cv=n? sxy/n-(sx/n)*(sy/n) : 0;
+    g.n=n; g.corr = vx>1&&vy>1? cv/Math.sqrt(vx*vy) : 0; g.bh=by1-by0+1; g.bw=g.x1-g.x0+1; g.by0=by0; g.by1=by1;
+    g.ax0=x0+g.x0; g.ax1=x0+g.x1; g.cx=(g.x0+g.x1)/2/cw;
+    var on=0, tot=0; for(x=g.x0;x<=g.x1;x++){ if(!col[x]) continue; tot++; if(shafts.some(function(r){ return x>=r[0]-2 && x<=r[1]+2; })) on++; } g.onShaft = tot? on/tot : 0;
+  });
+  return {groups:groups.filter(function(g){ return g.n>=Math.max(18, ch*0.6); }), longRun:longRun, cw:cw, ch:ch, shafts:shafts.map(function(r){ return [x0+r[0], x0+r[1]]; })};
+}
+
+/* ---- Machine Settings: editor (job detail, template editor) ---- */
+function msOwner(key){ // "job" → current job; "tpl:<id>" → template
+  if(key==="job"){ var j=curJob(); if(!j) return null; j.machineSettings=msNormalize(j.machineSettings); return {ms:j.machineSettings, save:function(){ touch(j); saveJobsSoon(); }, saveNow:function(){ touch(j); saveJobs(); }, job:j}; }
+  var m=String(key||"").match(/^tpl:(.+)$/); if(!m) return null;
+  var t=state.templates.find(function(x){ return x.id===m[1]; }); if(!t) return null;
+  t.data.machineSettings=msNormalize(t.data.machineSettings);
+  return {ms:t.data.machineSettings, save:function(){ t.updatedAt=nowIso(); saveTemplates(); }, saveNow:function(){ t.updatedAt=nowIso(); saveTemplates(); }, tpl:t};
+}
+function msSecCount(ms, sec){ var n=0; sec.params.forEach(function(p){ var r=ms.rows[p[0]]; if(r && ((r.vals||[]).some(function(v){ return String(v||"").trim(); }) || String(r.extra||"").trim())) n++; }); return n; }
+function msEditorHtml(ms, owner, opts){
+  opts=opts||{}; ms=msNormalize(ms); var o=esc(owner), open=state.msOpen||{};
+  var h='<div class="ms-ed" data-msowner="'+o+'">';
+  h+='<div class="ms-hdr"><div><label class="fl" for="msh_pn_'+o+'">Part number</label><input class="inp" id="msh_pn_'+o+'" data-msh="partNumber" data-msown="'+o+'" value="'+esc(ms.header.partNumber)+'" placeholder="e.g. PSP 36" autocomplete="off"></div>'+
+     '<div><label class="fl" for="msh_mc_'+o+'">Machine</label><input class="inp" id="msh_mc_'+o+'" data-msh="machine" data-msown="'+o+'" value="'+esc(ms.header.machine)+'" placeholder="e.g. 1-250" autocomplete="off"></div>'+
+     '<div><label class="fl" for="msh_dt_'+o+'">Date</label><input class="inp" id="msh_dt_'+o+'" data-msh="date" data-msown="'+o+'" value="'+esc(ms.header.date)+'" placeholder="mm/dd/yy" autocomplete="off"></div></div>';
+  MS_DEFS.forEach(function(sec){
+    var isOpen=!!open[sec.id], cnt=msSecCount(ms, sec);
+    h+='<div class="ms-sec'+(isOpen?' open':'')+'" data-mssec="'+sec.id+'"><button class="ms-sh" data-act="msSec" data-sec="'+sec.id+'" aria-expanded="'+isOpen+'"><span class="t">'+esc(sec.title)+'</span><span class="n">'+cnt+'/'+sec.params.length+' set</span><span class="chev">›</span></button><div class="ms-bd">';
+    if(sec.staged) h+='<div class="ms-colhd"><span></span><span>1</span><span>2</span><span>3</span><span></span></div>';
+    sec.params.forEach(function(p){
+      var P=MS_P[p[0]], r=ms.rows[p[0]] || {vals:sec.staged? ["","",""] : [""], extra:"", same:false}, id=esc(p[0]);
+      if(P.check){
+        var on=msIsCheckOn(r.vals[0]);
+        h+='<label class="ms-row chk" data-msrow="'+id+'"><span class="lab">'+esc(P.label)+'</span><input type="checkbox" data-mschk="'+id+'" data-msown="'+o+'"'+(on?' checked':'')+' aria-label="'+esc(P.label)+'"></label>';
+        return;
+      }
+      if(!sec.staged){
+        h+='<div class="ms-row one" data-msrow="'+id+'"><label class="lab" for="msv_'+o+'_'+id+'_0">'+esc(P.label)+'</label><input class="msv" id="msv_'+o+'_'+id+'_0" data-msv="'+id+'" data-msi="0" data-msown="'+o+'" value="'+esc(r.vals[0])+'" placeholder="—" inputmode="decimal" autocomplete="off"></div>';
+        return;
+      }
+      var showX = String(r.extra||"").trim() || (state.msExtra||{})[owner+"|"+p[0]];
+      h+='<div class="ms-row st'+(r.same?' same':'')+'" data-msrow="'+id+'"><span class="lab">'+esc(P.label)+'</span>';
+      for(var i=0;i<3;i++) h+='<input class="msv" data-msv="'+id+'" data-msi="'+i+'" data-msown="'+o+'" value="'+esc(r.vals[i]||"")+'" placeholder="–" inputmode="decimal" autocomplete="off" aria-label="'+esc(P.label)+' value '+(i+1)+'">';
+      h+='<button class="ms-same'+(r.same?' on':'')+'" data-act="msSame" data-p="'+id+'" data-msown="'+o+'" aria-pressed="'+!!r.same+'" title="Same value for all 3">=all</button>';
+      h+=(showX? '<div class="ms-x"><span>4th value</span><input class="msv" data-msv="'+id+'" data-msi="x" data-msown="'+o+'" value="'+esc(r.extra||"")+'" placeholder="after /" inputmode="decimal" autocomplete="off" aria-label="'+esc(P.label)+' 4th value"></div>' : '<button class="ms-add4" data-act="msAdd4" data-p="'+id+'" data-msown="'+o+'">＋4th</button>')+'</div>';
+    });
+    if(sec.id==="ejection") h+='<div class="ms-note"><label class="fl" for="msc_'+o+'">Core pull note</label><textarea class="inp" rows="2" data-auto id="msc_'+o+'" data-msnote="corePull" data-msown="'+o+'" placeholder="e.g. OUT 600 psi, PT 2900, speed 60, timer 200 · IN …">'+esc(ms.corePull)+'</textarea></div>';
+    h+='</div></div>';
+  });
+  h+='<div class="ms-note"><label class="fl" for="msn_'+o+'">Notes</label><textarea class="inp" rows="2" data-auto id="msn_'+o+'" data-msnote="notes" data-msown="'+o+'" placeholder="Notes from the setup sheet">'+esc(ms.notes)+'</textarea></div>';
+  return h+'</div>';
+}
+function msCardHtml(j){
+  var ms=j.machineSettings=msNormalize(j.machineSettings), n=msFilled(ms);
+  var h='<section class="card" id="msCard"><div class="sec-hd"><h2>Machine settings</h2><span class="meta">'+n+' set</span><button class="smallbtn" data-act="msScan" aria-label="Scan machine settings sheet">📷 Scan</button></div><div class="card-bd">';
+  h+='<p class="faint" style="margin:0 0 8px">From the machine setup sheet: Clamp, Ejection, Injection, Charging, Temperature, Production. Stages 1 / 2 / 3; tap <b>=all</b> when one value is used for all three.</p>';
+  h+=msEditorHtml(ms, "job");
+  return h+'</div></section>';
+}
+function viewTplMs(){
+  var t=state.templates.find(function(x){ return x.id===state.route.tid; });
+  if(!t) return viewTemplates();
+  t.data.machineSettings=msNormalize(t.data.machineSettings);
+  var h=topbar(backBtn("#/templates","Templates"), "Machine settings", t.name, "");
+  h+='<p class="muted" style="margin:12px 2px">Default machine settings for this template. They are copied into every new job you start from it (the date is left blank).</p>';
+  h+='<section class="card" id="msCard"><div class="sec-hd"><h2>Machine settings</h2><span class="meta">'+msFilled(t.data.machineSettings)+' set</span></div><div class="card-bd">'+msEditorHtml(t.data.machineSettings, "tpl:"+t.id)+'</div></section>';
+  return h;
+}
+function msRefreshCounts(owner){
+  var o=msOwner(owner); if(!o) return;
+  document.querySelectorAll('[data-msowner="'+owner+'"] .ms-sec').forEach(function(el){ var sec=MS_DEFS.find(function(s){ return s.id===el.getAttribute("data-mssec"); }); var n=el.querySelector(".ms-sh .n"); if(sec && n) n.textContent=msSecCount(o.ms, sec)+"/"+sec.params.length+" set"; });
+  var meta=document.querySelector("#msCard .sec-hd .meta"); if(meta) meta.textContent=msFilled(o.ms)+" set";
+}
+// input events from the editor (returns true when handled)
+function msOnInput(t){
+  var own=t.getAttribute && t.getAttribute("data-msown"); if(!own) return false;
+  var o=msOwner(own); if(!o) return true;
+  if(t.hasAttribute("data-msh")){ o.ms.header[t.getAttribute("data-msh")]=t.value; o.save(); return true; }
+  if(t.hasAttribute("data-msnote")){ o.ms[t.getAttribute("data-msnote")]=t.value; autosize(t); o.save(); return true; }
+  if(t.hasAttribute("data-mschk")){ msRow(o.ms, t.getAttribute("data-mschk")).vals=[t.checked? "yes" : ""]; o.save(); msRefreshCounts(own); return true; }
+  if(t.hasAttribute("data-msv")){
+    var id=t.getAttribute("data-msv"), i=t.getAttribute("data-msi"), r=msRow(o.ms, id);
+    if(i==="x") r.extra=t.value;
+    else {
+      i=+i; r.vals[i]=t.value;
+      var rowEl=t.closest(".ms-row");
+      if(r.same){
+        if(i===0){ r.vals[1]=r.vals[2]=t.value; if(rowEl) rowEl.querySelectorAll('input[data-msi="1"],input[data-msi="2"]').forEach(function(x){ x.value=t.value; }); }
+        else if(r.vals[i]!==r.vals[0]){ r.same=false; if(rowEl){ rowEl.classList.remove("same"); var b=rowEl.querySelector(".ms-same"); if(b){ b.classList.remove("on"); b.setAttribute("aria-pressed","false"); } } }
+      }
+    }
+    o.save(); msRefreshCounts(own); return true;
+  }
+  return true;
+}
+function msChangesForLog(j, id, before, after){ // edited value → pending change (shows in "unlogged changes" like other sheet edits)
+  var P=MS_P[id]; if(!P) return;
+  var f=function(r){ return r? msRowText(r, P) : ""; };
+  var a=f(before), b=f(after); if(a && a!==b) recordChange(j, P.sec.title+" · "+P.label, a, b, "");
+}
+function msRowText(r, P){
+  if(!r) return ""; var v=(r.vals||[]).map(function(x){ return String(x||"").trim(); });
+  if(P && P.check) return msIsCheckOn(v[0])? "✓" : "";
+  if(!P || !P.staged) return v[0]||"";
+  if(r.same && v[0]) return v[0]+" (all)";
+  while(v.length && !v[v.length-1]) v.pop();
+  var s=v.map(function(x){ return x||"–"; }).join(" / ");
+  if(String(r.extra||"").trim()) s+=(s?" / ":"")+String(r.extra).trim();
+  return s;
+}
+
+/* ---- Machine Settings: printed page (looks like the paper form: two tables, Value(s) in 3 sub-columns) ---- */
+function msValCells(r, P){
+  if(P.check) return '<td class="v" colspan="3">'+(r && msIsCheckOn(r.vals[0])? '✓' : '')+'</td>';
+  var v=r? (r.vals||[]).map(function(x){ return String(x||"").trim(); }) : [];
+  if(!P.staged) return '<td class="v" colspan="3">'+esc(v[0]||"")+'</td>';
+  var x=r? String(r.extra||"").trim() : "";
+  if(r && r.same && v[0]) return '<td class="v same" colspan="3">← '+esc(v[0])+' →</td>';
+  if(v[0] && !v[1] && !v[2] && !x) return '<td class="v" colspan="3">'+esc(v[0])+'</td>';
+  return '<td class="v s">'+esc(v[0]||"")+'</td><td class="v s">'+esc(v[1]||"")+'</td><td class="v s">'+esc(v[2]||"")+(x? ' <span class="x">/ '+esc(x)+'</span>' : '')+'</td>';
+}
+function msTableHtml(ms, side){
+  var h='<table class="ms-t"><colgroup><col class="cf"><col class="cp"><col class="c1"><col class="c2"><col class="c3"></colgroup><thead><tr><th>Function</th><th>Parameter</th><th colspan="3">Value(s)</th></tr></thead><tbody>';
+  MS_DEFS.filter(function(s){ return s.side===side; }).forEach(function(sec){
+    sec.params.forEach(function(p, i){
+      var P=MS_P[p[0]], r=ms.rows[p[0]];
+      h+='<tr'+(i===0?' class="first"':'')+'>';
+      if(i===0){
+        var note = sec.id==="ejection" && String(ms.corePull||"").trim() ? '<div class="cp">Core pull: '+esc(ms.corePull)+'</div>' : '';
+        h+='<td class="f" rowspan="'+sec.params.length+'"><b>'+esc(sec.title)+'</b>'+note+'</td>';
+      }
+      h+='<td class="p">'+esc(P.label.charAt(0).toLowerCase()+P.label.slice(1))+'</td>'+msValCells(r, P)+'</tr>';
+    });
+  });
+  return h+'</tbody></table>';
+}
+function msSheetBlock(j){
+  var ms=msNormalize(j.machineSettings), H=ms.header;
+  var pn=H.partNumber||(pfield(j,"part_no")||{f:{}}).f.value||"", mc=H.machine||(pfield(j,"machine")||{f:{}}).f.value||j.press||"", dt=H.date||"";
+  return '<div class="ms-sheet"><div class="ms-sh-hd"><span><b>Part Number:</b> <u>'+esc(pn)+'</u></span><span><b>Machine:</b> <u>'+esc(mc)+'</u></span><span><b>Date:</b> <u>'+esc(dt)+'</u></span></div>'+
+    '<div class="ms-tables">'+msTableHtml(ms,"L")+msTableHtml(ms,"R")+'</div>'+
+    '<div class="ms-notes"><b>Notes:</b><div class="nl">'+esc(ms.notes||"")+'</div></div></div>';
+}
+
+/* ---- Machine Settings: setup mode (verify each set value on the machine) ---- */
+function msSetupItems(j){
+  var ms=msNormalize(j.machineSettings), out=[];
+  MS_DEFS.forEach(function(sec){ sec.params.forEach(function(p){ var P=MS_P[p[0]], t=msRowText(ms.rows[p[0]], P); if(t) out.push({id:p[0], sec:sec.title, label:P.label, text:t, done:!!(ms.verified||{})[p[0]]}); }); });
+  return out;
+}
+function msSetupHtml(j){
+  var it=msSetupItems(j); if(!it.length) return "";
+  var d=it.filter(function(x){ return x.done; }).length;
+  var h='<div class="card" id="msSetup"><div class="sec-hd"><h2>Machine settings</h2><span class="meta">'+d+'/'+it.length+' checked</span></div>';
+  var last="";
+  it.forEach(function(x){
+    if(x.sec!==last){ h+='<div class="ms-sgrp">'+esc(x.sec)+'</div>'; last=x.sec; }
+    h+='<button class="sstep ms-step'+(x.done?' on':'')+'" data-act="msVerify" data-p="'+esc(x.id)+'"><span class="box">✓</span><span class="tx"><small>'+esc(x.label)+'</small>'+esc(x.text)+'</span></button>';
+  });
+  return h+'</div>';
+}
+
+/* ---- Machine Settings: review grid (scan) ---- */
+function msConfCls(c){ return c>=0.8? "hi" : c>=0.6? "md" : "lo"; }
+// scan result(s) → review model; several sheets in one scan fill each other's blanks (best read wins)
+function msReviewModel(results, job){
+  var rows={}, order=[], hdr={}, core=null, rot=0, found=0, total=0;
+  results.forEach(function(res){
+    rot=res.rot||rot; found=Math.max(found,res.found||0); total=res.total||total;
+    (res.rows||[]).forEach(function(r){
+      var ex=rows[r.id], val=r.state==="read"||r.state==="text"||r.state==="check";
+      if(!ex){ rows[r.id]=r; order.push(r.id); return; }
+      var exVal=ex.state==="read"||ex.state==="text"||ex.state==="check";
+      if(val && (!exVal || r.conf>ex.conf)) rows[r.id]=r;
+    });
+    Object.keys(res.header||{}).forEach(function(k){ var h=res.header[k]; if(h && h.value && (!hdr[k] || h.conf>hdr[k].conf)) hdr[k]=h; });
+    if(res.corePull && (!core || (res.corePull.value && !core.value))) core=res.corePull;
+  });
+  var cur=msNormalize(job && job.machineSettings);
+  var list=[];
+  MS_DEFS.forEach(function(sec){ sec.params.forEach(function(p){
+    var r=rows[p[0]]; if(!r) return;
+    var has = r.state==="read"||r.state==="text"||r.state==="check";
+    var prev = msRowText(cur.rows[p[0]], MS_P[p[0]]);
+    list.push({id:p[0], label:MS_P[p[0]].label, sec:sec.title, staged:sec.staged, check:MS_P[p[0]].check, vals:r.vals.slice(), extra:r.extra||"", same:!!r.same, arrow:!!r.arrow,
+      conf:has? r.conf : (r.state==="unread"? 0.2 : r.conf), state:r.state, crop:r.crop||"", typed:r.typed, prev:prev, ocr:r.ocr||"",
+      selected: has && r.conf>=0.6});
+    // the job already has a different value here: never pre-check — Allen decides
+    var it=list[list.length-1], nowT=msRowText({vals:it.vals, extra:it.extra, same:it.same}, MS_P[p[0]]);
+    if(has && prev && nowT && prev!==nowT){ it.differs=true; it.selected=false; }
+  }); });
+  var coreItem = core && core.ink>=60 ? {value:core.value||"", conf:core.conf||0.3, crop:core.crop||"", selected:false, prev:cur.corePull||""} : null;
+  return {rows:list, header:hdr, corePull:coreItem, rot:rot, found:found, total:total};
+}
+function msReviewHtml(M){
+  var rows=M.rows, val=[], empty=[];
+  rows.forEach(function(r, i){ ((r.state==="blank"||r.state==="na") && !r.selected ? empty : val).push(i); });
+  var lo=val.filter(function(i){ return !rows[i].selected; }).length;
+  var h='<div class="rv-grp" id="msRvHd">Machine settings sheet</div>';
+  h+='<p class="faint" style="margin:6px 0">'+M.found+' of '+M.total+' printed rows found'+(M.rot? ' · photo was turned '+M.rot+'°' : '')+' · '+val.length+' row'+(val.length===1?'':'s')+' with handwriting. Each row shows the picture of that cell — fix any misread number, then check the row. <b>Unchecked rows are not saved.</b></p>';
+  if(lo) h+='<p class="rv-warn" id="msRvWarn">⚠ '+lo+' row'+(lo>1?'s are':' is')+' unchecked and won’t be saved — hard to read (red) or different from what the job has. Type the right value'+(lo>1?'s':'')+' or check '+(lo>1?'them':'it')+' if correct.</p>';
+  var last="";
+  val.forEach(function(i){ var r=rows[i]; if(r.sec!==last){ h+='<div class="msr-sec">'+esc(r.sec)+'</div>'; last=r.sec; } h+=msReviewRowHtml(r, i); });
+  if(M.corePull){
+    var c=M.corePull;
+    h+='<div class="msr '+msConfCls(c.conf)+(c.selected?'':' off')+'" id="msrCore"><input type="checkbox" data-msrcore="1"'+(c.selected?' checked':'')+' aria-label="Save core pull note"><div class="b"><div class="k">Core pull note (handwritten, Ejection) <span class="conf '+msConfCls(c.conf)+'">check</span></div>'+
+      (c.crop? '<img class="crop tall" src="'+c.crop+'" alt="Core pull note on the sheet">' : '')+
+      '<textarea class="inp" rows="2" data-msrcorev="1" placeholder="Type the core pull note as written">'+esc(c.value)+'</textarea>'+(c.prev? '<div class="was">currently: '+esc(c.prev)+'</div>' : '')+'</div></div>';
+  }
+  if(empty.length){
+    h+='<details class="msr-empty"><summary class="linkbtn">Blank or crossed out (n/a): '+empty.length+' row'+(empty.length>1?'s':'')+' — tap to check</summary>';
+    empty.forEach(function(i){ h+=msReviewRowHtml(rows[i], i); });
+    h+='</details>';
+  }
+  return h;
+}
+function msReviewRowHtml(r, i){
+  var cls=msConfCls(r.conf), tag = r.state==="na"? '<span class="newtag">n/a (crossed out)</span>' : r.state==="blank"? '<span class="newtag">blank</span>' : r.state==="unread"? '<span class="newtag">couldn’t read</span>' : '';
+  if(r.same) tag+=' <span class="newtag">same for all (arrow)</span>'; else if(r.arrow) tag+=' <span class="newtag">arrow</span>';
+  if(r.differs) tag+=' <span class="newtag">differs from the job</span>';
+  var h='<div class="msr '+cls+(r.selected?'':' off')+'" data-msrrow="'+i+'" data-p="'+esc(r.id)+'"><input type="checkbox" data-msrchk="'+i+'"'+(r.selected?' checked':'')+' aria-label="Save '+esc(r.label)+'"><div class="b">';
+  h+='<div class="k">'+esc(r.label)+' '+((r.state==="read"||r.state==="text"||r.state==="check")? '<span class="conf '+cls+'">'+Math.round(r.conf*100)+'%</span>' : '')+tag+'</div>';
+  if(r.crop) h+='<img class="crop" src="'+r.crop+'" alt="'+esc(r.label)+' on the sheet">';
+  h+='<div class="ins">';
+  if(r.check) h+='<label class="msr-cb"><input type="checkbox" data-msrcb="'+i+'"'+(msIsCheckOn(r.vals[0])?' checked':'')+'> checked on the sheet</label>';
+  else if(!r.staged) h+='<input class="msv one" data-msrv="'+i+'" data-msri="0" value="'+esc(r.vals[0]||"")+'" inputmode="decimal" aria-label="'+esc(r.label)+'">';
+  else {
+    for(var k=0;k<3;k++) h+='<input class="msv" data-msrv="'+i+'" data-msri="'+k+'" value="'+esc(r.vals[k]||"")+'" placeholder="–" inputmode="decimal" aria-label="'+esc(r.label)+' value '+(k+1)+'">';
+    h+='<button class="ms-same'+(r.same?' on':'')+'" data-act="msrSame" data-i="'+i+'" aria-pressed="'+r.same+'">=all</button>';
+    h+='<input class="msv x" data-msrv="'+i+'" data-msri="x" value="'+esc(r.extra||"")+'" placeholder="4th" inputmode="decimal" aria-label="'+esc(r.label)+' 4th value">';
+  }
+  h+='</div>'+(r.prev? '<div class="was">currently: '+esc(r.prev)+'</div>' : '')+'</div></div>';
+  return h;
+}
+function msReviewInput(t){
+  var M=state.modal && state.modal.ms; if(!M) return false;
+  if(t.hasAttribute("data-msrv")){
+    var r=M.rows[+t.getAttribute("data-msrv")], k=t.getAttribute("data-msri"); if(!r) return true;
+    if(k==="x") r.extra=t.value; else { k=+k; r.vals[k]=t.value; if(r.same && k===0){ r.vals[1]=r.vals[2]=t.value; var el=t.closest(".msr"); if(el) el.querySelectorAll('input[data-msri="1"],input[data-msri="2"]').forEach(function(x){ x.value=t.value; }); } else if(r.same && k>0 && t.value!==r.vals[0]) r.same=false; }
+    r.edited=true; msReviewSel(r, t, true); return true;
+  }
+  if(t.hasAttribute("data-msrcorev")){ M.corePull.value=t.value; M.corePull.edited=true; M.corePull.selected=!!t.value.trim(); var cb=document.querySelector('[data-msrcore]'); if(cb) cb.checked=M.corePull.selected; var ce=$("msrCore"); if(ce) ce.classList.toggle("off", !M.corePull.selected); return true; }
+  return false;
+}
+function msReviewSel(r, t, on){ r.selected=on; var el=t.closest(".msr"); if(el){ el.classList.toggle("off", !on); var cb=el.querySelector('input[data-msrchk]'); if(cb) cb.checked=on; } }
+function msReviewChange(t){
+  var M=state.modal && state.modal.ms; if(!M) return false;
+  if(t.hasAttribute("data-msrchk")){ var r=M.rows[+t.getAttribute("data-msrchk")]; if(r) msReviewSel(r, t, t.checked); return true; }
+  if(t.hasAttribute("data-msrcb")){ var r2=M.rows[+t.getAttribute("data-msrcb")]; if(r2){ r2.vals=[t.checked? "yes" : ""]; r2.state=t.checked? "check" : r2.state; r2.edited=true; msReviewSel(r2, t, true); } return true; }
+  if(t.hasAttribute("data-msrcore")){ M.corePull.selected=t.checked; var ce=$("msrCore"); if(ce) ce.classList.toggle("off", !t.checked); return true; }
+  return false;
+}
+// save the checked rows into the job; a blank never erases a value the job already has
+function msApplyReview(job, M, items){
+  if(!M) return 0;
+  job.machineSettings=msNormalize(job.machineSettings);
+  var ms=job.machineSettings, n=0, isNew=!!(state.scanTarget && state.scanTarget.newJob);
+  M.rows.forEach(function(r){
+    if(!r.selected) return;
+    var P=MS_P[r.id]; if(!P) return;
+    var row=msRow(ms, r.id), before=clone(row), changed=false;
+    if(P.check){ var on=msIsCheckOn(r.vals[0]); if(on && row.vals[0]!=="yes"){ row.vals=["yes"]; changed=true; } else if(!on && r.edited && row.vals[0]){ row.vals=[""]; changed=true; } }
+    else {
+      (P.staged? [0,1,2] : [0]).forEach(function(k){ var v=String(r.vals[k]||"").trim(); if(v && v!==row.vals[k]){ row.vals[k]=v; changed=true; } });
+      var x=String(r.extra||"").trim(); if(P.staged && x && x!==row.extra){ row.extra=x; changed=true; }
+      if(P.staged && r.same!==row.same && (r.same || changed)){ row.same=!!r.same; changed=true; }
+    }
+    if(changed){ n++; if(!isNew) msChangesForLog(job, r.id, before, row); }
+  });
+  if(M.corePull && M.corePull.selected && String(M.corePull.value||"").trim()){ ms.corePull=String(M.corePull.value).trim(); n++; }
+  (items||[]).forEach(function(it){ if(it.msHeader && it.selected && String(it.value||"").trim()) ms.header[it.msHeader]=String(it.value).trim(); });
+  Object.keys(M.headerSame||{}).forEach(function(k){ if(!String(ms.header[k]||"").trim()) ms.header[k]=M.headerSame[k]; });
+  ms.updatedAt=nowIso();
+  return n;
+}
+// header (part number, machine, date) → normal review rows for the job's fields, with the cell picture
+function msHeaderItems(job, M){
+  var out=[], map={partNumber:"part_no", machine:"machine", date:"date"};
+  ["partNumber","machine","date"].forEach(function(k){
+    var h=M.header[k]; if(!h || !String(h.value||"").trim()) return;
+    var d=DEF_BY_KEY[map[k]], it=reviewItem(job, d, h.value, "", h.conf, "Machine settings sheet · handwritten "+d.label.toLowerCase());
+    it.crop=h.crop; it.msHeader=k; it.doc="Machine settings sheet";
+    var prev=String(it.prev||"").trim();
+    if(prev && simKey(prev)!==simKey(h.value)){ it.conflict=true; it.options=[{value:prev, unit:it.unit||"", doc:"Job now"},{value:String(h.value), unit:"", doc:"This sheet (handwritten)"}]; it.value=prev; it.selected=true; }
+    else if(prev && simKey(prev)===simKey(h.value)){ M.headerSame=M.headerSame||{}; M.headerSame[k]=prev; return; }
+    out.push(it);
+  });
+  return out;
+}
+
+/* ---- handwritten digit reader: small CNN (trained on MNIST + junk strokes), int8 weights in vendor/digits.json ---- */
+var msNetP=null;
+function msDigitNet(){
+  if(msNetP) return msNetP;
+  msNetP = fetch(MS_DIGITS_URL).then(function(r){ if(!r.ok) throw new Error("digits model "+r.status); return r.json(); }).then(function(js){
+    var W={}; Object.keys(js).forEach(function(k){ var t=js[k], b=atob(t.q), a=new Float32Array(b.length); for(var i=0;i<b.length;i++){ var v=b.charCodeAt(i); a[i]=(v>127? v-256 : v)*t.scale; } W[k]={a:a, shape:t.shape}; });
+    return W;
+  }).catch(function(e){ msNetP=null; throw e; });
+  return msNetP;
+}
+function msConv(inp, C, H, Wd, w, b, O, K){ // valid conv + relu
+  var oh=H-K+1, ow=Wd-K+1, out=new Float32Array(O*oh*ow);
+  for(var o=0;o<O;o++) for(var y=0;y<oh;y++) for(var x=0;x<ow;x++){
+    var s=b[o];
+    for(var c=0;c<C;c++){ var wo=((o*C+c)*K)*K, io=c*H*Wd; for(var ky=0;ky<K;ky++){ var ii=io+(y+ky)*Wd+x, wi=wo+ky*K; for(var kx=0;kx<K;kx++) s+=inp[ii+kx]*w[wi+kx]; } }
+    out[(o*oh+y)*ow+x]= s>0? s : 0;
+  }
+  return {a:out, h:oh, w:ow};
+}
+function msPool(inp, C, H, Wd){ var oh=H>>1, ow=Wd>>1, out=new Float32Array(C*oh*ow); for(var c=0;c<C;c++) for(var y=0;y<oh;y++) for(var x=0;x<ow;x++){ var i=c*H*Wd+(2*y)*Wd+2*x; out[(c*oh+y)*ow+x]=Math.max(inp[i],inp[i+1],inp[i+Wd],inp[i+Wd+1]); } return {a:out, h:oh, w:ow}; }
+function msClassify(W, img){ // img: Float32Array(784) → 11 probabilities (0-9, 10 = not a digit)
+  var a=msConv(img, 1, 28, 28, W["c1.weight"].a, W["c1.bias"].a, 16, 5); a=msPool(a.a, 16, a.h, a.w);
+  a=msConv(a.a, 16, a.h, a.w, W["c2.weight"].a, W["c2.bias"].a, 32, 5); a=msPool(a.a, 32, a.h, a.w);
+  var f=a.a, w1=W["f1.weight"].a, b1=W["f1.bias"].a, h=new Float32Array(64), i, k;
+  for(i=0;i<64;i++){ var s=b1[i]; for(k=0;k<f.length;k++) s+=f[k]*w1[i*f.length+k]; h[i]=s>0? s : 0; }
+  var w2=W["f2.weight"].a, b2=W["f2.bias"].a, z=new Float32Array(11), mx=-1e9;
+  for(i=0;i<11;i++){ var t=b2[i]; for(k=0;k<64;k++) t+=h[k]*w2[i*64+k]; z[i]=t; if(t>mx) mx=t; }
+  var sum=0; for(i=0;i<11;i++){ z[i]=Math.exp(z[i]-mx); sum+=z[i]; } for(i=0;i<11;i++) z[i]/=sum;
+  return z;
+}
+// binary component → 28x28 like MNIST (bbox, longest side 20 px, centre of mass in the middle)
+function msNorm28(mask, mw, x0, y0, x1, y1){
+  var w=x1-x0+1, h=y1-y0+1, s=20/Math.max(w,h), nw=Math.max(1,Math.round(w*s)), nh=Math.max(1,Math.round(h*s));
+  var src=document.createElement("canvas"); src.width=w; src.height=h; var sg=src.getContext("2d"), id=sg.createImageData(w,h);
+  for(var y=0;y<h;y++) for(var x=0;x<w;x++){ var v=mask[(y0+y)*mw+x0+x]? 255 : 0; var p=(y*w+x)*4; id.data[p]=id.data[p+1]=id.data[p+2]=v; id.data[p+3]=255; }
+  sg.putImageData(id,0,0);
+  var dc=document.createElement("canvas"); dc.width=nw; dc.height=nh; var dg=dc.getContext("2d"); dg.imageSmoothingEnabled=true; dg.imageSmoothingQuality="medium"; dg.drawImage(src,0,0,nw,nh);
+  var dd=dg.getImageData(0,0,nw,nh).data, a=new Float32Array(nw*nh), m=0, cx=0, cy=0;
+  for(var i=0;i<nw*nh;i++){ a[i]=dd[i*4]/255; m+=a[i]; cx+=a[i]*(i%nw); cy+=a[i]*Math.floor(i/nw); }
+  cx=m? cx/m : nw/2; cy=m? cy/m : nh/2;
+  var ox=Math.min(Math.max(Math.round(14-cx),0),28-nw), oy=Math.min(Math.max(Math.round(14-cy),0),28-nh), out=new Float32Array(784);
+  for(var yy=0;yy<nh;yy++) for(var xx=0;xx<nw;xx++) out[(oy+yy)*28+ox+xx]=a[yy*nw+xx];
+  return out;
+}
+// one handwritten number (an ink group of a value cell) → digits with probabilities
+function msReadNumber(W, bin, gx0, gx1, y0, y1, yIn0, yIn1, lines, arrow){
+  var w=bin.w, B=bin.B, x0=Math.max(0,Math.round(gx0)), x1=Math.min(bin.w-1,Math.round(gx1)), Y0=Math.max(0,Math.round(y0)), Y1=Math.min(bin.h-1,Math.round(y1));
+  var cw=x1-x0+1, ch=Y1-Y0+1, M=new Uint8Array(cw*ch), x, y, k;
+  for(y=0;y<ch;y++) for(x=0;x<cw;x++) M[y*cw+x]=B[(Y0+y)*w+x0+x];
+  // drop table rules (known line bands) and arrow shafts (long horizontal runs)
+  // table rules: rows that are (almost) all ink across the crop, and runs that run off the crop edge
+  var lineRow=new Uint8Array(ch);
+  for(y=0;y<ch;y++){ var n0=0; for(x=0;x<cw;x++) n0+=M[y*cw+x]; if(n0>=cw*0.85) lineRow[y]=1; }
+  for(y=0;y<ch;y++){ if(lineRow[y] || (y>0 && lineRow[y-1] && y<ch-1 && lineRow[y+1])) { for(x=0;x<cw;x++) M[y*cw+x]=0; } }
+  for(y=0;y<ch;y++){ if(M[y*cw]){ for(x=0;x<cw && M[y*cw+x];x++); if(x>=8) for(k=0;k<x;k++) M[y*cw+k]=0; } if(M[y*cw+cw-1]){ for(x=cw-1;x>=0 && M[y*cw+x];x--); if(cw-1-x>=8) for(k=x+1;k<cw;k++) M[y*cw+k]=0; } }
+  var L=Math.max(28, Math.round((yIn1-yIn0)*1.1)), LV=Math.round((yIn1-yIn0)*1.15);
+  for(x=0;x<cw;x++){ y=0; while(y<ch){ if(!M[y*cw+x]){ y++; continue; } var sv=y; while(y<ch && M[y*cw+x]) y++; if(y-sv>=LV) for(k=sv;k<y;k++) M[k*cw+x]=0; } } // cell borders
+  var shafts=[]; for(y=0;y<ch;y++){ x=0; while(x<cw){ if(!M[y*cw+x]){ x++; continue; } var s=x; while(x<cw && M[y*cw+x]) x++; if(x-s>=L){ for(k=s;k<x;k++) M[y*cw+k]=0; if(arrow && y+Y0>yIn0+3 && y+Y0<yIn1-3) shafts.push([s,x-1]); } } }
+  (arrow||[]).forEach(function(r){ var a=r[0]-x0, b=r[1]-x0; if(b>=0 && a<cw) shafts.push([Math.max(0,a), Math.min(cw-1,b)]); });
+  // connected components (8-neighbour)
+  var lab=new Int32Array(cw*ch), comps=[], st=[];
+  for(var i0=0;i0<cw*ch;i0++){ if(!M[i0] || lab[i0]) continue; var c={id:comps.length+1, n:0, x0:1e9, y0:1e9, x1:-1, y1:-1, inIn:0, sx:0, sy:0, sxx:0, syy:0, sxy:0}; comps.push(c); lab[i0]=c.id; st.push(i0);
+    while(st.length){ var p=st.pop(), px=p%cw, py=(p-px)/cw; c.n++; c.sx+=px; c.sy+=py; c.sxx+=px*px; c.syy+=py*py; c.sxy+=px*py; if(px<c.x0) c.x0=px; if(px>c.x1) c.x1=px; if(py<c.y0) c.y0=py; if(py>c.y1) c.y1=py; if(py+Y0>=yIn0 && py+Y0<=yIn1) c.inIn++;
+      for(var dy=-1;dy<=1;dy++) for(var dx=-1;dx<=1;dx++){ var nx=px+dx, ny=py+dy; if(nx<0||ny<0||nx>=cw||ny>=ch) continue; var q=ny*cw+nx; if(M[q] && !lab[q]){ lab[q]=c.id; st.push(q); } } } }
+  comps=comps.filter(function(c){ if(shafts.length){ var on=0; for(var xx=c.x0;xx<=c.x1;xx++) if(shafts.some(function(r){ return xx>=r[0]-3 && xx<=r[1]+3; })) on++; if(on>(c.x1-c.x0+1)*0.5) return false; } return c.n>=8 && c.inIn>=c.n*0.45; }); // must touch the row itself (not a neighbour's tail)
+  if(!comps.length) return null;
+  comps.forEach(function(c){ var vx=c.sxx/c.n-(c.sx/c.n)*(c.sx/c.n), vy=c.syy/c.n-(c.sy/c.n)*(c.sy/c.n), cv=c.sxy/c.n-(c.sx/c.n)*(c.sy/c.n); c.corr = vx>1&&vy>1? cv/Math.sqrt(vx*vy) : 0; });
+  var hs=comps.filter(function(c){ return c.n>=25; }).map(function(c){ return c.y1-c.y0+1; }).sort(function(a,b){ return a-b; }), dh=Math.min(hs.length? hs[hs.length>>1] : 1e9, (yIn1-yIn0)*0.75);
+  // merge pieces of one digit that overlap in x (a "5" drawn in two strokes)
+  comps.sort(function(a,b){ return a.x0-b.x0; });
+  var merged=[];
+  comps.forEach(function(c){ var m=merged[merged.length-1]; if(m && c.n>=8 && m.n>=8){ var ov=Math.min(m.x1,c.x1)-Math.max(m.x0,c.x0)+1, nar=Math.min(m.x1-m.x0+1, c.x1-c.x0+1); if(ov>nar*0.55 && !(c.n<dh*dh*0.12 && c.y0>m.y1-dh*0.35)){ m.ids.push(c.id); m.n+=c.n; m.x0=Math.min(m.x0,c.x0); m.x1=Math.max(m.x1,c.x1); m.y0=Math.min(m.y0,c.y0); m.y1=Math.max(m.y1,c.y1); return; } } c.ids=[c.id]; merged.push(c); });
+  for(var gi=0; gi<merged.length-1; gi++){
+    var A=merged[gi], Bc=merged[gi+1], gap=Bc.x0-A.x1-1, wA=A.x1-A.x0+1, wB=Bc.x1-Bc.x0+1;
+    if(gap>dh*0.15 || Math.max(wA,wB)>dh*0.9 || Math.min(wA,wB)>dh*0.5) continue;
+    var mk=function(cc){ var m2=new Uint8Array(cw*ch); for(var yy=cc.y0;yy<=cc.y1;yy++) for(var xx=cc.x0;xx<=cc.x1;xx++){ var li=lab[yy*cw+xx]; if(li && cc.ids.indexOf(li)>=0) m2[yy*cw+xx]=1; } return m2; };
+    var U={ids:A.ids.concat(Bc.ids), n:A.n+Bc.n, x0:A.x0, x1:Bc.x1, y0:Math.min(A.y0,Bc.y0), y1:Math.max(A.y1,Bc.y1), corr:0};
+    var pu=msClassify(W, msNorm28(mk(U), cw, U.x0, U.y0, U.x1, U.y1)), pa=msClassify(W, msNorm28(mk(A), cw, A.x0, A.y0, A.x1, A.y1)), pb=msClassify(W, msNorm28(mk(Bc), cw, Bc.x0, Bc.y0, Bc.x1, Bc.y1));
+    var mu=Math.max.apply(null, Array.prototype.slice.call(pu,0,10)), ma=Math.max.apply(null, Array.prototype.slice.call(pa,0,10)), mb=Math.max.apply(null, Array.prototype.slice.call(pb,0,10));
+    if(mu>=0.9 && (mu>ma*mb || (gap<=2 && Math.min(wA,wB)<dh*0.35))){ merged.splice(gi, 2, U); gi--; }
+  }
+  var out=[], self=null;
+  merged.forEach(function(c){
+    var cwid=c.x1-c.x0+1, chei=c.y1-c.y0+1;
+    if(c.n < dh*dh*0.16 && chei<dh*0.45 && cwid<dh*0.6){ out.push({ch:".", p:0.7, kind:"dot", x0:c.x0, y0:c.y0, y1:c.y1}); return; }
+    if(chei<dh*0.5 && cwid>chei*1.6){ out.push({ch:"~", p:0.6, kind:"tilde", x0:c.x0}); return; }
+    if(merged.length>1 && chei>dh*1.2 && cwid>chei*0.3 && Math.abs(c.corr)>0.7 && c.n<cwid*chei*0.3){ out.push({ch:"/", p:0.8, kind:"slash", x0:c.x0}); return; }
+    // touching digits: split wide blobs at the thinnest columns
+    var parts=Math.max(1, Math.round(cwid/(dh*0.78))); if(cwid<dh*1.15) parts=1;
+    var mask=new Uint8Array(cw*ch); for(var yy=c.y0;yy<=c.y1;yy++) for(var xx=c.x0;xx<=c.x1;xx++){ var li=lab[yy*cw+xx]; if(li && c.ids.indexOf(li)>=0) mask[yy*cw+xx]=1; }
+    var cuts=[c.x0];
+    if(parts>1){ var col=[]; for(var xx2=c.x0;xx2<=c.x1;xx2++){ var n=0; for(var yy2=c.y0;yy2<=c.y1;yy2++) n+=mask[yy2*cw+xx2]; col.push(n); }
+      for(var pi=1;pi<parts;pi++){ var tgt=Math.round(cwid*pi/parts), best=tgt, bv=1e9; for(var d=-Math.round(dh*0.25);d<=Math.round(dh*0.25);d++){ var t=tgt+d; if(t<=2||t>=cwid-2) continue; if(col[t]<bv){ bv=col[t]; best=t; } } cuts.push(c.x0+best); } }
+    cuts.push(c.x1+1);
+    for(var q2=0;q2<cuts.length-1;q2++){
+      var a0=cuts[q2], a1=cuts[q2+1]-1, b0=1e9, b1=-1; for(var y3=c.y0;y3<=c.y1;y3++) for(var x3=a0;x3<=a1;x3++) if(mask[y3*cw+x3]){ if(y3<b0) b0=y3; if(y3>b1) b1=y3; }
+      if(b1<0) continue;
+      var pr=msClassify(W, msNorm28(mask, cw, a0, b0, a1, b1)), bi=0; for(var z=1;z<11;z++) if(pr[z]>pr[bi]) bi=z;
+      var alt=-1; for(var z2=0;z2<10;z2++) if(z2!==bi && (alt<0 || pr[z2]>pr[alt])) alt=z2;
+      out.push({ch: bi===10? "" : String(bi), p:pr[bi], alt:String(alt), pa:pr[alt], kind: bi===10? "junk" : "digit", x0:a0, h:b1-b0+1});
+    }
+  });
+  out.sort(function(a,b){ return a.x0-b.x0; });
+  if(arrow){ // arrowheads break into short strokes: keep only full-height characters
+    var maxH=0; out.forEach(function(o){ if(o.kind==="digit" && o.p>=0.8 && o.h>maxH) maxH=o.h; });
+    out=out.filter(function(o){ return o.kind!=="tilde"; });
+    var bad=function(o){ return o.kind==="junk" || (o.kind==="digit" && (o.h<maxH*0.6 || o.p<0.6)); };
+    while(out.length && bad(out[0])) out.shift();
+    while(out.length && bad(out[out.length-1])) out.pop();
+  }
+  // a dot only counts between digits ("5.0"), a tilde only in front ("~100")
+  var txt="", ps=[], nd=0;
+  out.forEach(function(o, i){
+    if(o.kind==="digit"){ txt+=o.ch; ps.push(o.p); nd++; }
+    else if(o.kind==="dot" && nd && out.slice(i+1).some(function(z){ return z.kind==="digit"; }) && txt.indexOf(".")<0){ txt+="."; }
+    else if(o.kind==="tilde" && !nd){ txt+="~"; }
+    else if(o.kind==="slash"){ txt+="/"; }
+  });
+  var pmin=ps.length? Math.min.apply(null, ps) : 0, pavg=ps.length? ps.reduce(function(a,b){ return a+b; },0)/ps.length : 0;
+  return {text:txt, digits:nd, pmin:pmin, pavg:pavg, parts:out};
+}
+// pending-change tracking for edits on a job's machine settings (same as other sheet edits)
+function msFocusIn(t){ if(!t.getAttribute || t.getAttribute("data-msown")!=="job" || !t.hasAttribute("data-msv") || t.dataset.msorig!=null) return; t.dataset.msorig=t.value; }
+function msOnChange(t){
+  if(!t.getAttribute || !t.getAttribute("data-msown")) return false;
+  var own=t.getAttribute("data-msown"), o=msOwner(own); if(!o) return true;
+  if(own==="job" && t.hasAttribute("data-msv") && t.dataset.msorig!=null){
+    var orig=t.dataset.msorig; delete t.dataset.msorig;
+    if(orig.trim() && orig!==t.value){ // like other sheet fields: only a value that was already set counts as a change
+      var id=t.getAttribute("data-msv"), k=t.getAttribute("data-msi"), now=msRow(o.ms, id), before=clone(now);
+      if(k==="x") before.extra=orig; else { before.vals[+k]=orig; if(before.same && +k===0){ before.vals[1]=before.vals[2]=orig; } }
+      msChangesForLog(o.job, id, before, now);
+      if($("pendingBox")) $("pendingBox").innerHTML = pendingHtml(o.job);
+    }
+  }
+  o.saveNow(); return true;
+}
+// one image (file or canvas) → oriented, prepped, OCR'd page; a machine settings sheet is also read cell by cell
+function msScanImage(src, label, prog){
+  var isBlob = !(src instanceof HTMLCanvasElement), base=null;
+  function readAt(o){
+    return prepForOcr(o.canvas || src, {keepRaw:true}).then(function(c){
+      if(prog) prog(null);
+      return ocrCanvas(c, label).then(function(r){ r.rot=o.rot||0; r._c=c; return r; });
+    });
+  }
+  function textOf(r){ return (r.lines||[]).map(function(l){ return l.text; }).join("\n"); }
+  return (isBlob? loadImage(src) : Promise.resolve(src)).then(function(im){
+    base=im;
+    if(prog) prog("Checking which way up the page is…");
+    return orientForOcr(im).catch(function(){ return {canvas:null, rot:0}; });
+  }).then(readAt).then(function(r){
+    // rows of text but almost no real words: the page may be upside down — try it turned 180°
+    if(r.rot===0 && !msIsForm(textOf(r)) && wordScore(r.words) < 40){
+      if(prog) prog("Trying the page upside down…");
+      return readAt({canvas:rotCanvas(base, 180), rot:180}).then(function(r2){
+        if(wordScore(r2.words) > Math.max(30, wordScore(r.words)*2)){ r._c._raw=null; return r2; }
+        r2._c._raw=null; return r;
+      });
+    }
+    return r;
+  }).then(function(r){
+    var c=r._c; delete r._c;
+    if(!msIsForm(textOf(r))){ c._raw=null; delete r.words; return r; }
+    if(prog) prog("Reading machine settings sheet…");
+    return msExtract(c, c._raw, r.words, function(d, n){ if(prog) prog("Reading machine settings — cell "+d+" of "+n, Math.round(d/n*100)); }).then(function(res){
+      res.rot=r.rot; r.ms=res; c._raw=null; delete r.words; return r;
+    }, function(e){ console.warn("machine settings read failed", e); c._raw=null; delete r.words; return r; });
+  });
+}
+// templates carry default settings; a new job gets a copy (date left blank — it is the date of that setup)
+function msForTemplate(ms){ var c=clone(msNormalize(ms)); delete c.verified; return c; }
+function msFromTemplate(ms){ var c=clone(msNormalize(ms)); delete c.verified; c.header.date=""; c.updatedAt=""; return c; }
+function msSearchText(ms){ ms=msNormalize(ms); var out=[ms.header.partNumber, ms.header.machine, ms.corePull, ms.notes]; Object.keys(ms.rows).forEach(function(id){ var t=msRowText(ms.rows[id], MS_P[id]); if(t && MS_P[id]) out.push(MS_P[id].label+" "+t); }); return out.filter(Boolean).join(" "); }
+function msSummaryLines(ms){
+  ms=msNormalize(ms); var out=[]; if(!msHas(ms)) return out;
+  var H=ms.header; var hd=[H.partNumber? "Part "+H.partNumber : "", H.machine? "Machine "+H.machine : "", H.date? "Date "+H.date : ""].filter(Boolean).join(" · "); if(hd) out.push(hd);
+  MS_DEFS.forEach(function(sec){ var rs=sec.params.map(function(p){ var t=msRowText(ms.rows[p[0]], MS_P[p[0]]); return t? "• "+MS_P[p[0]].label+": "+t : ""; }).filter(Boolean); if(rs.length){ out.push(sec.title+":"); rs.forEach(function(x){ out.push("  "+x); }); } });
+  if(String(ms.corePull||"").trim()) out.push("Core pull: "+ms.corePull.trim());
+  if(String(ms.notes||"").trim()) out.push("Notes: "+ms.notes.trim());
+  return out;
+}
+
 
 /* ---------- image helpers ---------- */
 function loadImage(blob){
@@ -1032,6 +1981,7 @@ function prepForOcr(blobOrCanvas, opt){
     var c=document.createElement("canvas"); c.width=ow; c.height=oh; var og=c.getContext("2d");
     og.fillStyle="#fff"; og.fillRect(0,0,ow,oh); og.imageSmoothingQuality="high";
     og.translate(ow/2,oh/2); og.rotate(-angle*Math.PI/180); og.scale(s,s); og.drawImage(src, -(lef/as+cw/2), -(top/as+ch/2)); og.setTransform(1,0,0,1,0,0);
+    if(opt.keepRaw){ var rc=document.createElement("canvas"); rc.width=ow; rc.height=oh; rc.getContext("2d").drawImage(c,0,0); c._raw=rc; }
     c._prep={angle:angle, crop:[Math.round(lef/as),Math.round(top/as),Math.round(cw),Math.round(ch)], scale:+s.toFixed(3), w:ow, h:oh};
     try{
       var id=og.getImageData(0,0,ow,oh), d=id.data, N=ow*oh, G=new Uint8Array(N), B=new Uint8Array(N), M=new Uint8Array(N);
@@ -1155,7 +2105,7 @@ function ocrCanvas(canvas, label){
       // blocks, and marks column gaps with 3 spaces (like the PDF text layer) so values don't run into the next column.
       var lines = linesFromWords(data.words) || (data.lines||[]).map(function(l){ return {text:String(l.text||"").replace(/\s+$/,""), conf:(l.confidence||0)/100}; }).filter(function(l){ return l.text.trim(); });
       if(!lines.length && data.text) lines = data.text.split(/\n/).filter(function(t){ return t.trim(); }).map(function(t){ return {text:t, conf:(data.confidence||60)/100}; });
-      return {lines:lines, conf:(data.confidence||0)/100, label:label, kind:"ocr", prep:canvas._prep||null};
+      return {lines:lines, conf:(data.confidence||0)/100, label:label, kind:"ocr", prep:canvas._prep||null, words:data.words||[]};
     });
   });
 }
@@ -1858,6 +2808,7 @@ function parseRoute(){
   var h = (location.hash||"").replace(/^#\/?/,"");
   var p = h.split("/").filter(Boolean);
   if(p[0]==="job" && p[1]) return {view: p[2]||"detail", id: decodeURIComponent(p[1])};
+  if(p[0]==="templates" && p[1] && p[2]==="ms") return {view:"tplms", tid:decodeURIComponent(p[1])};
   if(p[0]==="templates") return {view:"templates"};
   if(p[0]==="settings") return {view:"settings"};
   if(p[0]==="new") return {view:"list", openNew:true};
@@ -1871,6 +2822,7 @@ function onRoute(){
   if(state.route.view==="arrange" && (r.view!=="arrange" || r.id!==state.route.id)) arrLeave();
   state.route = r; state.modal=null; state.editSec={};
   if(r.id && !getJob(r.id)){ state.route={view:"list"}; history.replaceState(null,"","#/"); }
+  if(r.view==="tplms" && !state.templates.some(function(t){ return t.id===r.tid; })){ state.route={view:"templates"}; history.replaceState(null,"","#/templates"); }
   if(r.openNew){ state.route={view:"list"}; history.replaceState(null,"","#/"); state.modal={type:"newJob"}; }
   if(state.route.view==="setup") requestWake();
   render(); window.scrollTo(0,0);
@@ -1882,7 +2834,7 @@ function render(){
   if(arrDrag) arrAbort();
   document.body.classList.toggle("setup", v==="setup");
   if(v==="detail") html=viewDetail(); else if(v==="setup") html=viewSetup(); else if(v==="log") html=viewLog();
-  else if(v==="print") html=viewPrint(); else if(v==="arrange") html=viewArrange(); else if(v==="templates") html=viewTemplates(); else if(v==="settings") html=viewSettings();
+  else if(v==="print") html=viewPrint(); else if(v==="arrange") html=viewArrange(); else if(v==="templates") html=viewTemplates(); else if(v==="tplms") html=viewTplMs(); else if(v==="settings") html=viewSettings();
   else html=viewList();
   $("app").innerHTML = html;
   $("app").querySelectorAll("textarea[data-auto]").forEach(autosize);
@@ -1985,6 +2937,7 @@ function viewDetail(){
   h += datalists();
   h += '<div id="pendingBox">'+pendingHtml(j)+'</div><div id="missingBox"></div>';
   j.sections.forEach(function(s, si){ h += sectionHtml(j, s, si); });
+  h += msCardHtml(j);
   h += photosHtml(j);
   h += '<div class="btnrow" style="margin-top:14px"><button class="btn ghost" data-act="addSection">＋ Add section</button><button class="btn ghost" data-act="saveTemplate">📑 Save as template</button></div>';
   h += '<p class="hint">Saved automatically on this phone · '+esc(shortId(j))+' · updated '+esc(ago(j.updatedAt))+'</p>';
@@ -2106,6 +3059,7 @@ function viewSetup(){
     });
     h += '</div>';
   });
+  h += msSetupHtml(j);
   if(!sp.total) h += '<div class="empty">No setup steps yet.<br><button class="btn primary" data-act="go" data-hash="#/job/'+esc(j.id)+'">Add steps on the sheet</button></div>';
   var pc=(j.pendingChanges||[]).length;
   h += '<div class="setupbar no-print"><button class="btn ghost" data-act="resetChecklist">↺ Reset</button><button class="btn '+(sp.total&&sp.done===sp.total?'good':'primary')+'" data-act="addLog">📝 Log run'+(pc?' ('+pc+')':'')+'</button></div>';
@@ -2188,7 +3142,7 @@ function rsKv(label, f){ if(f && f.unit) label=String(label).replace(/\s*(\([^)]
 function refSheetHtml(j){
   var B=getBrand(), photos=j.photos||[], first=photos.slice(0,12), rest=photos.slice(12);
   var contPages=[]; for(var i=0;i<rest.length;i+=RS.perCont) contPages.push(rest.slice(i,i+RS.perCont));
-  var pages=1+contPages.length;
+  var msOn=msHas(j.machineSettings), pages=1+contPages.length+(msOn?1:0);
   var title = j.partName || j.toolNumber || "Untitled part", tl=title.length;
   var tsize = tl<=16? 30 : tl<=22? 26 : tl<=30? 21 : 17;
   var ex = j.example? '<span class="rs-ex">EXAMPLE</span>' : '';
@@ -2254,6 +3208,7 @@ function refSheetHtml(j){
     var blk = rsPhotoBlock(list, start, 0, RS.contImgH);
     out += '<div class="rs-page cont">'+chd("PHOTOS (CONT.)")+'<div class="rs-cont">Photos '+(start+1)+'–'+(start+list.length)+' of '+photos.length+'</div><div class="rs-photos" style="height:'+blk.h.toFixed(3)+'in">'+blk.html+'</div>'+rsFooter(B, j, pi2+2, pages)+'</div>';
   });
+  if(msOn) out += '<div class="rs-page msp">'+chd("MACHINE SETTINGS")+msSheetBlock(j)+rsFooter(B, j, pages, pages)+'</div>';
   if(proc || more) out += '<template class="rs-more-tpl"><div class="rs-page more">'+chd("CONT.")+'<div class="rs-cont">Material, process &amp; other specs (continued from page 1)</div><div class="rs-morebody"></div>'+rsFooter(B, j, 2, pages+1)+'</div></template>';
   return out + '</div>';
 }
@@ -2334,14 +3289,14 @@ function processSheetHtml(j){
     '<div class="ps-id"><div class="k">JOB ID</div><div class="v">'+esc(shortId(j))+'</div></div></div>'+
     '<div class="ps-info"><div><div class="k">Customer</div><div class="v">'+esc(j.customer||"—")+'</div></div><div><div class="k">Press</div><div class="v">'+esc(j.press||"—")+'</div></div><div><div class="k">Status</div><div class="v">'+esc(statusLabel(j.status))+'</div></div><div><div class="k">Updated</div><div class="v">'+esc(fmtDate(j.updatedAt))+'</div></div></div>'+
     (photos.length? '<div class="ps-photos" style="padding-top:8px">'+photos.map(function(p){ return '<figure><img data-pid="'+esc(p.id)+'" alt=""><figcaption>'+esc(p.label||"Photo")+'</figcaption></figure>'; }).join("")+'</div>' : '')+
-    '<div class="ps-body">'+secs+'</div>'+
+    '<div class="ps-body">'+secs+'</div>'+(msHas(j.machineSettings)? '<div class="ps-sec ps-ms"><h4>Machine settings</h4>'+msSheetBlock(j)+'</div>' : '')+
     (log.length? '<div class="ps-log"><div class="ps-sec"><h4>Recent runs</h4></div><table><tr><th>Date</th><th>Operator</th><th>Change</th><th>Cycle</th><th>Issues</th></tr>'+log.map(function(e){ return '<tr><td>'+esc(e.date)+'</td><td>'+esc(e.operator)+'</td><td>'+esc(e.change)+'</td><td>'+esc(e.cycle? e.cycle+' s':'')+'</td><td>'+esc(e.issues)+'</td></tr>'; }).join("")+'</table></div>' : '')+
     (morePhotos.length? '<div class="ps-more"><div class="ps-sec"><h4>More photos ('+morePhotos.length+')</h4></div><div class="ps-photos ps-photos-more">'+morePhotos.map(function(p){ return '<figure><img data-pid="'+esc(p.id)+'" alt=""><figcaption>'+esc(p.label||"Photo")+'</figcaption></figure>'; }).join("")+'</div></div>' : '')+
     '<div class="ps-ft"><span>Tooling Job Log · '+esc(shortId(j))+'</span><span>Printed '+esc(fmtDate(nowIso()))+' — verify against the current process before running</span></div></div>';
 }
 function viewPrint(){
   var j = curJob(); if(!j) return viewList();
-  var lay = printLayout(), n=(j.photos||[]).length, pages = lay==="reference" ? 1+Math.ceil(Math.max(0,n-12)/RS.perCont) : 0;
+  var lay = printLayout(), n=(j.photos||[]).length, pages = lay==="reference" ? 1+Math.ceil(Math.max(0,n-12)/RS.perCont)+(msHas(j.machineSettings)?1:0) : 0;
   var h = topbar(backBtn("#/job/"+j.id, j.toolNumber||"Job"), "Print / share", lay==="reference"?"Mold / job reference sheet":"Process sheet", "");
   h += '<div class="seg no-print" style="grid-template-columns:1fr 1fr;margin-top:12px" role="tablist" aria-label="Sheet layout"><button class="active'+(lay==="reference"?' sel':'')+'" data-act="setLayout" data-v="reference" role="tab" aria-selected="'+(lay==="reference")+'">📋 Reference sheet</button><button class="active'+(lay==="process"?' sel':'')+'" data-act="setLayout" data-v="process" role="tab" aria-selected="'+(lay==="process")+'">⚙️ Process sheet</button></div>';
   h += '<p class="faint no-print" style="margin:6px 2px 0">'+(lay==="reference"? 'Photos ('+n+'), part info, material &amp; process, supplies, packaging, instructions, QC &amp; any other specs · Letter · <span id="rsPageCount">'+pages+' page'+(pages>1?'s':'')+'</span>. Branding: ⚙️ Settings.' : 'Specs, temperatures, pressures, setup steps and recent runs.')+'</p>';
@@ -2362,6 +3317,7 @@ function summaryText(j){
     else if(s.type==="table"){ var rw=(s.rows||[]).filter(function(r){ return String(r.desc||"").trim(); }); if(!rw.length) return; out.push(""); out.push(s.title.toUpperCase()); rw.forEach(function(r,i){ out.push((i+1)+". "+r.desc+(r.qty?" — "+r.qty:"")); }); }
     else if(s.text){ out.push(""); out.push(s.title.toUpperCase()); out.push(s.text); }
   });
+  var mst=msSummaryLines(j.machineSettings); if(mst.length){ out.push(""); out.push("MACHINE SETTINGS"); mst.forEach(function(x){ out.push(x); }); }
   var last = (j.runLog||[]).slice().sort(function(a,b){ return (b.date||"").localeCompare(a.date||""); })[0];
   if(last){ out.push(""); out.push("LAST RUN "+last.date+" ("+(last.operator||"?")+"): "+(last.change||"")+(last.cycle?" · cycle "+last.cycle+" s":"")+(last.issues?" · issues: "+last.issues:"")); }
   out.push(""); out.push("— Tooling Job Log · "+shortId(j));
@@ -2375,8 +3331,8 @@ function viewTemplates(){
   if(!state.templates.length) h += '<div class="empty"><div class="big">📑</div>No templates yet.</div>';
   else h += '<div class="jobs">'+state.templates.slice().sort(function(a,b){ return (b.updatedAt||"").localeCompare(a.updatedAt||""); }).map(function(t){
     var fcount=0; (t.data.sections||[]).forEach(function(s){ if(s.fields) fcount+=s.fields.filter(function(f){return f.value;}).length; });
-    return '<div class="jobcard"><div class="thumb">📑</div><div class="jm"><div class="tool">'+esc(t.data.toolNumber||"—")+(t.example?' <span class="exbadge">Example</span>':'')+'</div><div class="part">'+esc(t.name)+'</div><div class="sub">'+fcount+' values · saved '+esc(fmtDate(t.createdAt))+'</div></div>'+
-      '<div class="jright"><button class="btn primary" data-act="useTemplate" data-id="'+esc(t.id)+'">Use</button><button class="smallbtn danger" data-act="delTemplate" data-id="'+esc(t.id)+'" aria-label="Delete template">🗑</button></div></div>';
+    return '<div class="jobcard"><div class="thumb">📑</div><div class="jm"><div class="tool">'+esc(t.data.toolNumber||"—")+(t.example?' <span class="exbadge">Example</span>':'')+'</div><div class="part">'+esc(t.name)+'</div><div class="sub">'+fcount+' values · '+msFilled(t.data.machineSettings)+' machine settings · saved '+esc(fmtDate(t.createdAt))+'</div></div>'+
+      '<div class="jright"><button class="btn primary" data-act="useTemplate" data-id="'+esc(t.id)+'">Use</button><button class="smallbtn" data-act="tplMs" data-id="'+esc(t.id)+'" aria-label="Machine settings for this template">⚙️ Settings</button><button class="smallbtn danger" data-act="delTemplate" data-id="'+esc(t.id)+'" aria-label="Delete template">🗑</button></div></div>';
   }).join("")+'</div>';
   return h;
 }
@@ -2497,6 +3453,7 @@ function rvRowHtml(r, i){
     ? '<div class="rk">'+(r.unmatched?'Unmatched line':'Unknown label')+(r.target? ' → '+esc(r.target==="other"? "Other spec" : DEF_BY_KEY[r.target].label) : '')+'</div>'
     : '<div class="rk">'+esc(r.label)+' <span class="conf '+cls+'">'+pc+'%</span>'+(r.isNew?' <span class="newtag">new field</span>':'')+(r.header?' <span class="newtag">header</span>':'')+'</div>';
   var h = '<div class="rv'+(r.loose?' loose':'')+(r.conflict?' conflict':'')+'" data-rvrow="'+i+'"'+(r.key?' data-key="'+esc(r.key)+'"':'')+'><input type="checkbox" data-rvchk="'+i+'"'+(r.selected?' checked':'')+' aria-label="Apply '+esc(r.label||r.src)+'"><div class="rb">'+head;
+  if(r.crop) h += '<img class="crop" src="'+r.crop+'" alt="'+esc(r.label)+' on the sheet">';
   if(r.conflict) h += '<div class="rv-conf"><b>⚠ The documents disagree — tap the right value</b><div class="rv-opts">'+r.options.map(function(o, oi){ var on=String(o.value)===String(r.value) && (o.unit||"")===(r.unit||""); return '<button class="rv-opt'+(on?' sel':'')+'" data-act="rvPick" data-i="'+i+'" data-o="'+oi+'" aria-pressed="'+on+'"><b>'+esc(o.value+(o.unit?" "+o.unit:""))+'</b><small>'+esc(o.doc||"")+'</small></button>'; }).join("")+'</div></div>';
   if(r.loose) h += '<div class="rin">'+rvTargetSelect(r, i)+'</div>'+(r.target==="other"? '<div class="rin"><input class="v lab" data-rvlabel="'+i+'" value="'+esc(r.label)+'" placeholder="Label" aria-label="Label"></div>' : '');
   if(!r.loose || r.target) h += '<div class="rin"><input class="v" data-rvval="'+i+'" value="'+esc(r.value)+'" aria-label="Value">'+(r.header || (!r.unit && isNaN(parseFloat(r.value)))?'':'<input class="u" data-rvunit="'+i+'" list="unitList" value="'+esc(r.unit)+'" placeholder="unit" aria-label="Unit">')+'</div>';
@@ -2554,7 +3511,10 @@ function renderModal(){
     var items=m.items||[], main=[], loose=[];
     items.forEach(function(r, i){ (r.loose? loose : main).push(i); });
     h = '<h3>Review scanned values</h3><p class="sub">'+esc(m.summary||"")+'</p>';
-    if(!items.length){
+    if(m.ms) h += msReviewHtml(m.ms);
+    if(!items.length && m.ms){
+      h += '';
+    } else if(!items.length){
       h += '<p class="muted">No recognizable labels found. Try a straighter, closer photo in good light, or use Paste text from Google Lens.</p>';
     } else {
       var unchecked = main.filter(function(i){ return !items[i].selected; }).length;
@@ -2677,6 +3637,27 @@ function renderToast(){
 
 /* ---------- actions ---------- */
 var ACT = {};
+/* ---- Machine Settings: actions ---- */
+function msRerenderKeep(){ var y=window.scrollY; render(); window.scrollTo(0,y); }
+ACT.msSec = function(t){ var id=t.getAttribute("data-sec"), el=t.closest(".ms-sec"); state.msOpen=state.msOpen||{}; state.msOpen[id]=!state.msOpen[id]; if(el){ el.classList.toggle("open", !!state.msOpen[id]); t.setAttribute("aria-expanded", String(!!state.msOpen[id])); } };
+ACT.msSame = function(t){
+  var own=t.getAttribute("data-msown"), o=msOwner(own), id=t.getAttribute("data-p"); if(!o) return;
+  var r=msRow(o.ms, id), before=clone(r);
+  if(!r.same){ var v=r.vals.map(function(x){ return String(x||"").trim(); }).filter(Boolean)[0]||""; r.vals=[v,v,v]; r.same=true; }
+  else r.same=false;
+  o.saveNow(); msRerenderKeep();
+  var el=document.querySelector('[data-msowner="'+own+'"] input[data-msv="'+id+'"][data-msi="0"]'); if(el && r.same && !el.value) el.focus();
+};
+ACT.msAdd4 = function(t){ var own=t.getAttribute("data-msown"), id=t.getAttribute("data-p"); state.msExtra=state.msExtra||{}; state.msExtra[own+"|"+id]=1; msRerenderKeep(); var el=document.querySelector('[data-msowner="'+own+'"] input[data-msv="'+id+'"][data-msi="x"]'); if(el) el.focus(); };
+ACT.msScan = function(){ if(!curJob()) return; openModal({type:"scanMenu"}); };
+ACT.msrSame = function(t){ var M=state.modal && state.modal.ms, r=M && M.rows[+t.getAttribute("data-i")]; if(!r) return;
+  if(!r.same){ var v=r.vals.map(function(x){ return String(x||"").trim(); }).filter(Boolean)[0]||""; r.vals=[v,v,v]; r.same=true; } else r.same=false;
+  r.edited=true; r.selected=true; rvRerender(); };
+ACT.msVerify = function(t){ var j=curJob(); if(!j) return; var ms=j.machineSettings=msNormalize(j.machineSettings), id=t.getAttribute("data-p"); ms.verified=ms.verified||{}; if(ms.verified[id]) delete ms.verified[id]; else ms.verified[id]=1; touch(j); saveJobs();
+  if(navigator.vibrate) try{ navigator.vibrate(ms.verified[id]?25:10); }catch(e){}
+  msRerenderKeep(); };
+ACT.tplMs = function(t){ go("#/templates/"+encodeURIComponent(t.getAttribute("data-id"))+"/ms"); };
+
 ACT.go = function(t){ state.modal=null; go(t.getAttribute("data-hash")); };
 ACT.cycleTheme = cycleTheme;
 ACT.clearSearch = function(){ state.search=""; render(); };
@@ -2744,8 +3725,8 @@ ACT.iToggle = function(t){ var j=curJob(); var s=secById(j,t.getAttribute("data-
 ACT.iAdd = function(t){ var j=curJob(); var s=secById(j,t.getAttribute("data-sid")); var it={id:uid(), text:"", done:false}; s.items.push(it); touch(j); saveJobs(); render(); var el=document.querySelector('[data-itext="'+it.id+'"]'); if(el) el.focus(); };
 ACT.iDelete = function(t){ var j=curJob(); var s=secById(j,t.getAttribute("data-sid")); var i=s.items.findIndex(function(x){ return x.id===t.getAttribute("data-iid"); }); var it=s.items.splice(i,1)[0]; touch(j); saveJobs(); render(); showToast("Step removed", {act:function(){ s.items.splice(i,0,it); saveJobs(); render(); }}); };
 ACT.iMove = function(t){ var j=curJob(); var s=secById(j,t.getAttribute("data-sid")); var i=s.items.findIndex(function(x){ return x.id===t.getAttribute("data-iid"); }); moveIn(s.items,i,+t.getAttribute("data-d")); touch(j); saveJobs(); render(); };
-ACT.resetChecklist = function(){ var j=curJob(); var prev={}; j.sections.forEach(function(s){ if(s.type==="steps") s.items.forEach(function(it){ prev[it.id]=it.done; it.done=false; }); }); touch(j); saveJobs(); render();
-  showToast("Checklist reset for next run", {act:function(){ j.sections.forEach(function(s){ if(s.type==="steps") s.items.forEach(function(it){ if(prev[it.id]!=null) it.done=prev[it.id]; }); }); saveJobs(); render(); }}); };
+ACT.resetChecklist = function(){ var j=curJob(); var prev={}; j.sections.forEach(function(s){ if(s.type==="steps") s.items.forEach(function(it){ prev[it.id]=it.done; it.done=false; }); }); var msv=j.machineSettings && j.machineSettings.verified; if(j.machineSettings) delete j.machineSettings.verified; touch(j); saveJobs(); render();
+  showToast("Checklist reset for next run", {act:function(){ j.sections.forEach(function(s){ if(s.type==="steps") s.items.forEach(function(it){ if(prev[it.id]!=null) it.done=prev[it.id]; }); }); if(msv && j.machineSettings) j.machineSettings.verified=msv; saveJobs(); render(); }}); };
 ACT.clearPending = function(){ var j=curJob(); var old=j.pendingChanges; j.pendingChanges=[]; saveJobs(); render(); showToast("Dismissed", {act:function(){ j.pendingChanges=old; saveJobs(); render(); }}); };
 ACT.deleteJob = function(){
   var j=curJob(); if(!j) return; var idx=state.jobs.indexOf(j);
@@ -2759,7 +3740,7 @@ ACT.toastAct = function(){ var t=state.toast; state.toast=null; clearTimeout(toa
 ACT.toastAct2 = function(){ var t=state.toast; state.toast=null; clearTimeout(toastTimer); renderToast(); if(t && t.act2) t.act2(); };
 ACT.duplicate = function(){ var j=curJob(); duplicateJob(j).then(function(c){ c.toolNumber=j.toolNumber; c.partName=j.partName+(j.partName?" (copy)":""); state.jobs.unshift(c); saveJobs(); state.modal=null; go("#/job/"+c.id); showToast("Duplicated — checklist and run log cleared"); }); };
 ACT.saveTemplate = function(){ openModal({type:"saveTemplate"}); };
-ACT.saveTemplateGo = function(){ var j=curJob(), name=$("tplName").value.trim()||jobTitle(j); var t=makeTemplate(j, name, false); if(!$("tplVals").checked) t.data.sections.forEach(function(s){ if(s.fields) s.fields.forEach(function(f){ f.value=""; }); }); state.templates.push(t); saveTemplates(); closeModal(); showToast("Template saved", {act:function(){ go("#/templates"); }, actLabel:"VIEW"}); };
+ACT.saveTemplateGo = function(){ var j=curJob(), name=$("tplName").value.trim()||jobTitle(j); var t=makeTemplate(j, name, false); if(!$("tplVals").checked){ t.data.sections.forEach(function(s){ if(s.fields) s.fields.forEach(function(f){ f.value=""; }); }); t.data.machineSettings=msEmpty(); } state.templates.push(t); saveTemplates(); closeModal(); showToast("Template saved", {act:function(){ go("#/templates"); }, actLabel:"VIEW"}); };
 
 /* item/qty tables */
 function rowIdx(s, t){ return s.rows.findIndex(function(r){ return r.id===t.getAttribute("data-rid"); }); }
@@ -3228,6 +4209,7 @@ function runScanFiles(files){
     if(m.status==="recognizing text") state.busy.pct = Math.round(((state.busy.page-1) + (m.progress||0)) / Math.max(1,state.busy.pages) * 100);
     renderBusy();
   };
+  var scanProg = function(txt, pct){ if(!state.busy) return; if(txt) state.busy.text=txt; else state.busy.text="Starting OCR…"; if(pct!=null) state.busy.pct=pct; renderBusy(); };
   var seq = Promise.resolve();
   list.forEach(function(file){
     seq = seq.then(function(){ checkCancel();
@@ -3240,7 +4222,7 @@ function runScanFiles(files){
               if(chars>=25){ pages.push({lines:lines, kind:"pdf-text"}); state.busy && (state.busy.text="Reading PDF text — page "+i+" of "+n, state.busy.pct=Math.round(i/n*100)); renderBusy(); return; }
               var vp=page.getViewport({scale:window.__pdfScale||3}); var c=document.createElement("canvas"); c.width=vp.width; c.height=vp.height;
               if(state.busy){ state.busy.text="Rendering PDF page "+i+" of "+n+"…"; renderBusy(); }
-              return page.render({canvasContext:c.getContext("2d"), viewport:vp}).promise.then(function(){ return prepForOcr(c); }).then(function(pc){ checkCancel(); if(state.busy){ state.busy.page=i; state.busy.pages=n; } return ocrCanvas(pc, "PDF p"+i); }).then(function(r){ pages.push(r); });
+              return page.render({canvasContext:c.getContext("2d"), viewport:vp}).promise.then(function(){ checkCancel(); if(state.busy){ state.busy.page=i; state.busy.pages=n; } return msScanImage(c, "PDF p"+i, scanProg); }).then(function(r){ pages.push(r); });
             });
           }); }); })(i);
           total+=n;
@@ -3248,7 +4230,8 @@ function runScanFiles(files){
         });
       }
       total++;
-      return prepForOcr(file).then(function(c){ checkCancel(); if(state.busy){ state.busy.page=(state.busy.page||0)+1; state.busy.pages=list.length; state.busy.text="Starting OCR…"; renderBusy(); } return ocrCanvas(c, file.name); }).then(function(r){ pages.push(r); });
+      if(state.busy){ state.busy.page=(state.busy.page||0)+1; state.busy.pages=list.length; }
+      return msScanImage(file, file.name, scanProg).then(function(r){ checkCancel(); pages.push(r); });
     });
   });
   seq.then(function(){ checkCancel();
@@ -3271,17 +4254,21 @@ function finishScan(pages, summary, scanFiles){
   setBusy(null); ocrProgressCb=null;
   var job = scanJob(); if(!job){ if(scanFiles) dropScanMetas(scanFiles); showToast("Job not found", {err:true}); return; }
   // each page/file is read as its own document (work instructions, BOM, item record…), then merged into one job
+  var msPages = pages.filter(function(p){ return p.ms; }); pages = pages.filter(function(p){ return !p.ms; });
+  var msM = msPages.length? msReviewModel(msPages.map(function(p){ return p.ms; }), job) : null;
   var docs = pages.map(function(p, pi){ var ls=p.lines.map(function(l){ return Object.assign({kind:p.kind}, l); }); var d=parseDoc(ls, job, 0.9, p.label || ("Page "+(pi+1))); d.raw=ls.map(function(l){ return l.text; }).join("\n"); return d; });
   var cnt={}; docs.forEach(function(d){ cnt[d.label]=(cnt[d.label]||0)+1; }); var seen={};
   docs.forEach(function(d, di){ if(cnt[d.label]>1){ seen[d.label]=(seen[d.label]||0)+1; d.label += " "+seen[d.label]; } });
   var parsed = mergeDocs(docs);
   var items = buildReview(job, parsed);
+  if(msM) items = msHeaderItems(job, msM).concat(items.filter(function(it){ return !(it.key && ["part_no","machine","date"].indexOf(it.key)>=0 && msM.header[{part_no:"partNumber",machine:"machine",date:"date"}[it.key]]); }));
   var nConf = items.filter(function(i){ return i.conflict; }).length;
   var raw = docs.length>1 ? docs.map(function(d){ return "— "+d.label+" —\n"+d.raw; }).join("\n\n") : (docs[0]? docs[0].raw : "");
-  window.__lastScan = {docs:docs.map(function(d){ return {label:d.label, kind:d.kind, raw:d.raw}; }), pages:pages.map(function(p){ return {label:p.label||"", kind:p.kind, conf:p.conf, prep:p.prep||null}; })};
+  window.__lastScan = {docs:docs.map(function(d){ return {label:d.label, kind:d.kind, raw:d.raw}; }), pages:pages.concat(msPages).map(function(p){ return {label:p.label||"", kind:p.kind, conf:p.conf, prep:p.prep||null, rot:p.rot||0, ms:!!p.ms}; }), ms:msPages.map(function(p){ return p.ms; })};
+  if(msPages.length) raw = (raw? raw+"\n\n" : "") + msPages.map(function(p){ return "— Machine settings sheet ("+(p.label||"photo")+") —\n"+p.lines.map(function(l){ return l.text; }).join("\n"); }).join("\n\n");
   if(scanFiles) scanFiles._handed = true;
   keepScanWithJob(job, scanFiles||[]);
-  openModal({type:"review", items:items, raw:raw, docs:parsed.docs, conflicts:nConf, scanFiles:scanFiles||[], summary:(docs.length>1? docs.length+" documents ("+parsed.docs.join(", ")+") · " : (docs[0] && docs[0].kind? docs[0].kind+" · " : ""))+summary+" · "+items.filter(function(i){ return !i.loose; }).length+" value"+(items.length===1?"":"s")+" found"+(nConf? " · "+nConf+" conflict"+(nConf>1?"s":"") : "")});
+  openModal({type:"review", ms:msM, items:items, raw:raw, docs:parsed.docs.concat(msPages.length? ["Machine settings sheet"] : []), conflicts:nConf, scanFiles:scanFiles||[], summary:(msPages.length? "Machine settings sheet · " : "")+(docs.length>1? docs.length+" documents ("+parsed.docs.join(", ")+") · " : (docs[0] && docs[0].kind? docs[0].kind+" · " : ""))+summary+" · "+items.filter(function(i){ return !i.loose; }).length+" value"+(items.length===1?"":"s")+" found"+(nConf? " · "+nConf+" conflict"+(nConf>1?"s":"") : "")});
   scheduleAutoDriveCopy(scanFiles||[]);
 }
 ACT.rvPick = function(t){ var r=state.modal.items[+t.getAttribute("data-i")], o=r && r.options[+t.getAttribute("data-o")]; if(!o) return; r.value=o.value; r.unit=o.unit||""; r.selected=true; r.picked=true; rvRerender(); };
@@ -3295,7 +4282,7 @@ ACT.rvApply = function(){
   var job=scanJob(), m=state.modal, isNew=!!(state.scanTarget && state.scanTarget.newJob);
   if(!job || !m) return;
   if(state.driveBusy){ showToast("Wait for the Drive save to finish"); return; }
-  var n = applyReview(job, m.items);
+  var n = applyReview(job, m.items) + msApplyReview(job, m.ms, m.items);
   if(isNew) job.pendingChanges=[];
   if($("rvNotes") && $("rvNotes").checked && m.raw){ var ns=secByRole(job,"notes") || job.sections.find(function(s){ return s.type==="notes" && !s.role; }); if(!ns){ ns=roleSection("notes"); job.sections.push(ns); } ns.text = (ns.text? ns.text+"\n\n" : "") + "— Scanned "+todayStr()+" —\n"+m.raw.trim(); }
   var scans=(m.scanFiles||[]).map(scanMetaCopy);
@@ -5709,11 +6696,13 @@ document.addEventListener("keydown", function(e){
     e.preventDefault(); var all=Array.prototype.slice.call(document.querySelectorAll("[data-fval]")); var nx=all[all.indexOf(t)+1]; if(nx){ nx.focus(); nx.select && nx.select(); } else t.blur();
   }
 });
-document.addEventListener("focusin", function(e){ var t=e.target; if(t.hasAttribute && (t.hasAttribute("data-fval")||t.getAttribute("data-hdr")==="press") && t.dataset.orig==null) t.dataset.orig=t.value; });
+document.addEventListener("focusin", function(e){ var t=e.target; msFocusIn(t); if(t.hasAttribute && (t.hasAttribute("data-fval")||t.getAttribute("data-hdr")==="press") && t.dataset.orig==null) t.dataset.orig=t.value; });
 document.addEventListener("input", function(e){
   var t=e.target, j=curJob();
   if(t.hasAttribute && t.hasAttribute("data-ce")){ if(t.type!=="checkbox") ceInput(t, false); return; }
   if(t.id==="searchInput"){ state.search=t.value; $("jobList").innerHTML=jobListHtml(filteredJobs()); hydratePhotos($("jobList")); return; }
+  if(t.hasAttribute && (t.hasAttribute("data-msrv") || t.hasAttribute("data-msrcorev"))){ msReviewInput(t); return; }
+  if(t.hasAttribute && t.hasAttribute("data-msown")){ msOnInput(t); return; }
   if(t.hasAttribute("data-rvval")){ state.modal.items[+t.getAttribute("data-rvval")].value=t.value; return; }
   if(t.hasAttribute("data-rvunit")){ state.modal.items[+t.getAttribute("data-rvunit")].unit=t.value; return; }
   if(t.hasAttribute("data-rvqty")){ state.modal.items[+t.getAttribute("data-rvqty")].qty=t.value; return; }
@@ -5738,6 +6727,8 @@ document.addEventListener("input", function(e){
 document.addEventListener("change", function(e){
   var t=e.target, j=curJob();
   if(t.id==="sortSel"){ state.sort=t.value; $("jobList").innerHTML=jobListHtml(filteredJobs()); hydratePhotos($("jobList")); return; }
+  if(t.hasAttribute && (t.hasAttribute("data-msrchk") || t.hasAttribute("data-msrcb") || t.hasAttribute("data-msrcore"))){ msReviewChange(t); return; }
+  if(t.hasAttribute && t.hasAttribute("data-msown")){ msOnChange(t); return; }
   if(t.hasAttribute("data-rvchk")){ var ri=state.modal.items[+t.getAttribute("data-rvchk")]; ri.selected=t.checked; if(ri.loose && t.checked && !ri.target){ retargetItem(scanJob(), ri, ri.label? "other" : ""); if(!ri.target){ t.checked=false; ri.selected=false; showToast("Pick a field for this line first"); } else rvRerender(); } return; }
   if(t.hasAttribute("data-rvtarget")){ var rt=state.modal.items[+t.getAttribute("data-rvtarget")]; retargetItem(scanJob(), rt, t.value); rvRerender(); return; }
   if(t.hasAttribute("data-ce")){ ceInput(t, true); return; }
@@ -5825,7 +6816,7 @@ function init(){
     if(!state.meta.ocrWarmAt && !c.saveData && c.type!=="cellular") warmOcr(false);
   }, 8000);
 }
-window.__tjl = {state:state, googleClientId:GOOGLE_CLIENT_ID, phone:{storeAlbumHandle:storeAlbumHandle, albumName:albumName, readPhoneSaved:readPhoneSaved},
+window.__tjl = {state:state, googleClientId:GOOGLE_CLIENT_ID, ms:{scan:msScanImage, extract:msExtract, orient:orientForOcr, normalize:msNormalize, defs:MS_DEFS, rowText:msRowText, isForm:msIsForm}, phone:{storeAlbumHandle:storeAlbumHandle, albumName:albumName, readPhoneSaved:readPhoneSaved},
   doc:{url:DOC_SCRIPT_URL, readQueue:readDocQueue, readUploaded:readDocUploaded, readSent:readDocSent, baseName:docBaseName, renameable:function(){ return renameableDocs().map(function(d){ return {sent:d.sentName, name:d.docName}; }); }, flush:flushDocQueue, docsForCtx:docsForCtx, buildDocPdf:buildDocPdf, buildDocParts:buildDocParts, exists:docExists, uploadAll:uploadAllDocs, limits:function(){ return {page:DOC_PAGE_MAX, part:DOC_PART_BYTES, asis:DOC_PDF_ASIS, side:DOC_MAX_SIDE}; }}, parseLines:parseLines, buildReview:buildReview, render:render, scan:{buildSynIndex:buildSynIndex, labelUnitHint:labelUnitHint, parseNumber:parseNumber, defForLabel:defForLabel, reconcileFields:reconcileFields},
   photo:{readQueue:readPhotoQueue, readUploaded:readPhotoUploaded, readOk:readPhotoOk, flush:flushPhotoQueue, name:photoDriveName, prep:photoUploadBlob, info:docServerInfo, items:function(){ return photoItemsFor(state.jobs, false).map(function(it){ return {job:it.job.id, id:it.photo.id, name:it.photo.driveName||""}; }); }, terms:jobSearchTerms, find:findDocs, missing:jobMissing},
   restore:{need:restoreNeed, run:runRestore, pick:restorePickFiles, stem:restoreStem, partOf:restorePartOf, fileId:driveFileId, getFile:getDriveFile, pages:restorePagesOf, last:function(){ return state.restoreLast||null; }},
