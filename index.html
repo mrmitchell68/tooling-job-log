@@ -616,7 +616,7 @@ pre.raw{white-space:pre-wrap;font-size:12px;background:var(--surface-2);padding:
 <script>
 (function(){
 "use strict";
-var APP_VERSION = "2.4.0";
+var APP_VERSION = "2.5.0";
 // Public OAuth client id (not a secret). Web client, authorized JavaScript origins:
 //   https://mrmitchell68.github.io   and   http://localhost:8766
 // Leave empty until that client exists — Save-to-Drive is hidden and the button uses the Android share sheet.
@@ -1509,8 +1509,8 @@ function msEditorHtml(ms, owner, opts){
 }
 function msCardHtml(j){
   var ms=j.machineSettings=msNormalize(j.machineSettings), n=msFilled(ms);
-  var h='<section class="card" id="msCard"><div class="sec-hd"><h2>Machine settings</h2><span class="meta">'+n+' set</span><button class="smallbtn" data-act="msScan" aria-label="Scan machine settings sheet">📷 Scan</button></div><div class="card-bd">';
-  h+='<p class="faint" style="margin:0 0 8px">From the machine setup sheet: Clamp, Ejection, Injection, Charging, Temperature, Production. Stages 1 / 2 / 3; tap <b>=all</b> when one value is used for all three.</p>';
+  var h='<section class="card" id="msCard"><div class="sec-hd"><h2>Machine settings</h2><span class="meta">'+n+' set</span><button class="smallbtn" data-act="msScan" aria-label="Scan machine settings sheet or machine screen">📷 Scan</button></div><div class="card-bd">';
+  h+='<p class="faint" style="margin:0 0 8px">From the machine setup sheet: Clamp, Ejection, Injection, Charging, Temperature, Production. Stages 1 / 2 / 3; tap <b>=all</b> when one value is used for all three. <b>📷 Scan</b> also reads a photo of the machine’s screen (TMC 250E ejector / clamp screen).</p>';
   h+=msEditorHtml(ms, "job");
   return h+'</div></section>';
 }
@@ -1621,9 +1621,10 @@ function msSetupHtml(j){
 function msConfCls(c){ return c>=0.8? "hi" : c>=0.6? "md" : "lo"; }
 // scan result(s) → review model; several sheets in one scan fill each other's blanks (best read wins)
 function msReviewModel(results, job){
-  var rows={}, order=[], hdr={}, core=null, rot=0, found=0, total=0;
+  var rows={}, order=[], hdr={}, core=null, rot=0, found=0, total=0, screens=[], notes=[];
   results.forEach(function(res){
     rot=res.rot||rot; found=Math.max(found,res.found||0); total=res.total||total;
+    if(res.kind==='screen'){ screens.push(res.screen); if(res.notes) notes.push({text:res.notes, conf:res.noteConf||0}); }
     (res.rows||[]).forEach(function(r){
       var ex=rows[r.id], val=r.state==="read"||r.state==="text"||r.state==="check";
       if(!ex){ rows[r.id]=r; order.push(r.id); return; }
@@ -1647,14 +1648,20 @@ function msReviewModel(results, job){
     if(has && prev && nowT && prev!==nowT){ it.differs=true; it.selected=false; }
   }); });
   var coreItem = core && core.ink>=60 ? {value:core.value||"", conf:core.conf||0.3, crop:core.crop||"", selected:false, prev:cur.corePull||""} : null;
-  return {rows:list, header:hdr, corePull:coreItem, rot:rot, found:found, total:total};
+  var M={rows:list, header:hdr, corePull:coreItem, rot:rot, found:found, total:total};
+  if(screens.length){ M.screen=screens.map(function(x){ return x.title; }).join(" + "); M.kind="screen";
+    if(results.some(function(r){ return r.kind!=="screen"; })) M.kind="mixed"; }
+  if(notes.length){ var cn=msNormalize(job && job.machineSettings).notes||""; M.screenNotes={value:notes.map(function(n){ return n.text; }).join("\n"), conf:Math.min.apply(null, notes.map(function(n){ return n.conf; })), selected:true, prev:cn};
+    if(cn.indexOf(M.screenNotes.value)>=0) M.screenNotes.selected=false; }
+  return M;
 }
 function msReviewHtml(M){
   var rows=M.rows, val=[], empty=[];
   rows.forEach(function(r, i){ ((r.state==="blank"||r.state==="na") && !r.selected ? empty : val).push(i); });
   var lo=val.filter(function(i){ return !rows[i].selected; }).length;
-  var h='<div class="rv-grp" id="msRvHd">Machine settings sheet</div>';
-  h+='<p class="faint" style="margin:6px 0">'+M.found+' of '+M.total+' printed rows found'+(M.rot? ' · photo was turned '+M.rot+'°' : '')+' · '+val.length+' row'+(val.length===1?'':'s')+' with handwriting. Each row shows the picture of that cell — fix any misread number, then check the row. <b>Unchecked rows are not saved.</b></p>';
+  var h='<div class="rv-grp" id="msRvHd">'+(M.screen? 'Machine screen — '+esc(M.screen) : 'Machine settings sheet')+'</div>';
+  if(M.kind==="screen") h+='<p class="faint" style="margin:6px 0" id="msRvScreen">'+M.found+' of '+M.total+' value boxes found on the screen photo · '+val.length+' setting'+(val.length===1?'':'s')+' read. Each row shows the boxes from your photo — fix any misread number, then check the row. Boxes hidden by glare or the cursor are red. <b>Unchecked rows are not saved.</b></p>';
+  else h+='<p class="faint" style="margin:6px 0">'+M.found+' of '+M.total+' printed rows found'+(M.rot? ' · photo was turned '+M.rot+'°' : '')+' · '+val.length+' row'+(val.length===1?'':'s')+' with handwriting. Each row shows the picture of that cell — fix any misread number, then check the row. <b>Unchecked rows are not saved.</b></p>';
   if(lo) h+='<p class="rv-warn" id="msRvWarn">⚠ '+lo+' row'+(lo>1?'s are':' is')+' unchecked and won’t be saved — hard to read (red) or different from what the job has. Type the right value'+(lo>1?'s':'')+' or check '+(lo>1?'them':'it')+' if correct.</p>';
   var last="";
   val.forEach(function(i){ var r=rows[i]; if(r.sec!==last){ h+='<div class="msr-sec">'+esc(r.sec)+'</div>'; last=r.sec; } h+=msReviewRowHtml(r, i); });
@@ -1663,6 +1670,12 @@ function msReviewHtml(M){
     h+='<div class="msr '+msConfCls(c.conf)+(c.selected?'':' off')+'" id="msrCore"><input type="checkbox" data-msrcore="1"'+(c.selected?' checked':'')+' aria-label="Save core pull note"><div class="b"><div class="k">Core pull note (handwritten, Ejection) <span class="conf '+msConfCls(c.conf)+'">check</span></div>'+
       (c.crop? '<img class="crop tall" src="'+c.crop+'" alt="Core pull note on the sheet">' : '')+
       '<textarea class="inp" rows="2" data-msrcorev="1" placeholder="Type the core pull note as written">'+esc(c.value)+'</textarea>'+(c.prev? '<div class="was">currently: '+esc(c.prev)+'</div>' : '')+'</div></div>';
+  }
+  if(M.screenNotes){
+    var sn=M.screenNotes;
+    h+='<div class="msr '+msConfCls(sn.conf)+(sn.selected?'':' off')+'" id="msrNotes"><input type="checkbox" data-msrnotes="1"'+(sn.selected?' checked':'')+' aria-label="Add the other screen values to Notes"><div class="b"><div class="k">Other screen values → Notes <span class="conf '+msConfCls(sn.conf)+'">'+Math.round(sn.conf*100)+'%</span></div>'+
+      '<div class="faint" style="margin:2px 0 4px">Values with no box on the setup sheet (positions, timer…). Added to the Notes of Machine settings.</div>'+
+      '<textarea class="inp" rows="3" data-msrnotesv="1">'+esc(sn.value)+'</textarea></div></div>';
   }
   if(empty.length){
     h+='<details class="msr-empty"><summary class="linkbtn">Blank or crossed out (n/a): '+empty.length+' row'+(empty.length>1?'s':'')+' — tap to check</summary>';
@@ -1696,6 +1709,7 @@ function msReviewInput(t){
     if(k==="x") r.extra=t.value; else { k=+k; r.vals[k]=t.value; if(r.same && k===0){ r.vals[1]=r.vals[2]=t.value; var el=t.closest(".msr"); if(el) el.querySelectorAll('input[data-msri="1"],input[data-msri="2"]').forEach(function(x){ x.value=t.value; }); } else if(r.same && k>0 && t.value!==r.vals[0]) r.same=false; }
     r.edited=true; msReviewSel(r, t, true); return true;
   }
+  if(t.hasAttribute("data-msrnotesv")){ M.screenNotes.value=t.value; M.screenNotes.selected=!!t.value.trim(); var nb=document.querySelector('[data-msrnotes]'); if(nb) nb.checked=M.screenNotes.selected; var ne=$("msrNotes"); if(ne) ne.classList.toggle("off", !M.screenNotes.selected); return true; }
   if(t.hasAttribute("data-msrcorev")){ M.corePull.value=t.value; M.corePull.edited=true; M.corePull.selected=!!t.value.trim(); var cb=document.querySelector('[data-msrcore]'); if(cb) cb.checked=M.corePull.selected; var ce=$("msrCore"); if(ce) ce.classList.toggle("off", !M.corePull.selected); return true; }
   return false;
 }
@@ -1704,6 +1718,7 @@ function msReviewChange(t){
   var M=state.modal && state.modal.ms; if(!M) return false;
   if(t.hasAttribute("data-msrchk")){ var r=M.rows[+t.getAttribute("data-msrchk")]; if(r) msReviewSel(r, t, t.checked); return true; }
   if(t.hasAttribute("data-msrcb")){ var r2=M.rows[+t.getAttribute("data-msrcb")]; if(r2){ r2.vals=[t.checked? "yes" : ""]; r2.state=t.checked? "check" : r2.state; r2.edited=true; msReviewSel(r2, t, true); } return true; }
+  if(t.hasAttribute("data-msrnotes")){ M.screenNotes.selected=t.checked; var ne2=$("msrNotes"); if(ne2) ne2.classList.toggle("off", !t.checked); return true; }
   if(t.hasAttribute("data-msrcore")){ M.corePull.selected=t.checked; var ce=$("msrCore"); if(ce) ce.classList.toggle("off", !t.checked); return true; }
   return false;
 }
@@ -1725,6 +1740,7 @@ function msApplyReview(job, M, items){
     if(changed){ n++; if(!isNew) msChangesForLog(job, r.id, before, row); }
   });
   if(M.corePull && M.corePull.selected && String(M.corePull.value||"").trim()){ ms.corePull=String(M.corePull.value).trim(); n++; }
+  if(M.screenNotes && M.screenNotes.selected){ var nv=String(M.screenNotes.value||"").trim(); if(nv && String(ms.notes||"").indexOf(nv)<0){ ms.notes=(String(ms.notes||"").trim()? String(ms.notes).trim()+"\n" : "")+nv; n++; } }
   (items||[]).forEach(function(it){ if(it.msHeader && it.selected && String(it.value||"").trim()) ms.header[it.msHeader]=String(it.value).trim(); });
   Object.keys(M.headerSame||{}).forEach(function(k){ if(!String(ms.header[k]||"").trim()) ms.header[k]=M.headerSame[k]; });
   ms.updatedAt=nowIso();
@@ -1735,10 +1751,11 @@ function msHeaderItems(job, M){
   var out=[], map={partNumber:"part_no", machine:"machine", date:"date"};
   ["partNumber","machine","date"].forEach(function(k){
     var h=M.header[k]; if(!h || !String(h.value||"").trim()) return;
-    var d=DEF_BY_KEY[map[k]], it=reviewItem(job, d, h.value, "", h.conf, "Machine settings sheet · handwritten "+d.label.toLowerCase());
-    it.crop=h.crop; it.msHeader=k; it.doc="Machine settings sheet";
+    var scr=M.kind==="screen", src=scr? "Machine screen" : "Machine settings sheet";
+    var d=DEF_BY_KEY[map[k]], it=reviewItem(job, d, h.value, "", h.conf, src+(scr? " · status line "+d.label.toLowerCase() : " · handwritten "+d.label.toLowerCase()));
+    it.crop=h.crop; it.msHeader=k; it.doc=src; if(h.conf<0.6) it.selected=false;
     var prev=String(it.prev||"").trim();
-    if(prev && simKey(prev)!==simKey(h.value)){ it.conflict=true; it.options=[{value:prev, unit:it.unit||"", doc:"Job now"},{value:String(h.value), unit:"", doc:"This sheet (handwritten)"}]; it.value=prev; it.selected=true; }
+    if(prev && simKey(prev)!==simKey(h.value)){ it.conflict=true; it.options=[{value:prev, unit:it.unit||"", doc:"Job now"},{value:String(h.value), unit:"", doc:scr? "This screen photo" : "This sheet (handwritten)"}]; it.value=prev; it.selected=true; }
     else if(prev && simKey(prev)===simKey(h.value)){ M.headerSame=M.headerSame||{}; M.headerSame[k]=prev; return; }
     out.push(it);
   });
@@ -1882,6 +1899,283 @@ function msOnChange(t){
   }
   o.saveNow(); return true;
 }
+/*MSCR-BEGIN*/
+/* ---------- Machine screen reader (photo of a press controller's LCD) ---------- */
+// v2.5.0. Yellow-on-black LCD: every set value sits in a drawn box. Pipeline: colour mask (yellow = R,G high, B low; glare is
+// white so it drops out) → connected components → hollow rectangles (boxes) → the screen's box template is fitted to the boxes
+// found (affine, so tilt/angle/zoom don't matter; boxes hidden by glare or the cursor are still placed) → digit OCR of each box
+// interior → mapped onto the Machine Settings fields. To add a screen (Injection, Temp. setting…), add an entry to MSCR_DEFS:
+// header keywords, its box slots (x,y,w,h measured on a 1600-px-wide photo) and which slots fill which field.
+var MSCR_W = 1600;
+var MSCR_DEFS = [
+  {id:"tmc-ejclamp", brand:"TMC", title:"TMC 250E · Ejector / Clamp screen", keys:[/eject/i, /clamp/i, /open/i, /close/i, /setting/i, /press/i, /posit/i, /speed/i, /counter/i],
+   slots:[
+    // row 1: pressures
+    ["ejP1",196,358,78,73,3],["ejP2",294,357,76,72,3],["ejP3",391,355,75,72,3],
+    ["opP3",507,352,74,72,3],["opP2",622,349,75,72,3],["opP1",738,346,75,71,3],
+    ["clP1",872,345,77,72,3],["clP2",988,344,77,72,3],["clP3",1104,342,77,74,3],["psi",1221,340,76,72,0],
+    // row 2: positions
+    ["ejKO",388,487,92,72,4],["opX3",502,484,92,72,4],["opX2",617,482,92,72,4],["opX1",733,480,94,72,4],
+    ["clX1",858,478,93,74,4],["clX2",982,476,94,74,4],["clX3",1097,474,93,74,4],["stPos",1213,472,95,75,4],
+    // row 3: speeds
+    ["ejS1",217,652,60,72,2],["ejS2",313,651,59,72,2],["ejS3",409,649,59,71,2],
+    ["opS3",523,648,60,72,2],["opS2",638,646,60,72,2],["opS1",753,644,62,72,2],
+    ["clS1",886,641,62,75,2],["clS2",1000,639,61,75,2],["clS3",1114,638,61,72,2],["spd",1229,636,61,73,0],
+    // row 4: ejector PT1 (3), clamp open PT2 / PT1, clamp close PT1 / PT2, timer
+    ["ejT1",208,779,92,74,4],["ejT2",304,779,92,74,4],["ejT3",400,779,92,74,4],
+    ["opT2",624,775,92,71,4],["opT1",738,774,91,71,4],["clT1",870,772,91,71,4],["clT2",986,770,90,71,4],["timer",1213,766,92,72,4],
+    // row 5: ejector counter
+    ["ejCnt",515,840,94,69,4],
+    // status strip (plain text, no box): placed from the fitted layout
+    ["date",245,966,140,34,0,"text"],["cycle",517,1000,90,32,4,"text"],["shots",887,1000,124,32,6,"text"]],
+   fields:{ej_fwd_press:["ejP1","ejP2","ejP3"], ej_fwd_speed:["ejS1","ejS2","ejS3"], ej_fwd_int:["ejT1","ejT2","ejT3"], ej_strokes:["ejCnt"],
+     open_press:["opP1","opP2","opP3"], open_int:["opX1","opX2","opX3"], open_speed:["opS1","opS2","opS3"],
+     close_press:["clP1","clP2","clP3"], close_int:["clX1","clX2","clX3"], close_speed:["clS1","clS2","clS3"]},
+   notes:[["Ejector PT (K.O.)",["ejKO"]],["Clamp open PT2 / PT1",["opT2","opT1"]],["Clamp close PT",["clT1","clT2"]],["Status position",["stPos"]],["Timer",["timer"]]],
+   status:true}
+];
+function mscrMask(src, W){
+  var w0=src.naturalWidth||src.width, h0=src.naturalHeight||src.height, s=W/w0, H=Math.round(h0*s);
+  var c=document.createElement("canvas"); c.width=W; c.height=H; var g=c.getContext("2d"); g.drawImage(src,0,0,W,H);
+  var d=g.getImageData(0,0,W,H).data, M=new Uint8Array(W*H), inv=g.createImageData(W,H), o=inv.data, ny=0, dark=0;
+  for(var i=0;i<W*H;i++){ var r=d[i*4], gg=d[i*4+1], b=d[i*4+2], y=Math.min(r,gg)-b;
+    var m=(r>100 && gg>75 && r-b>65 && gg-b>40)?1:0; M[i]=m; ny+=m; if(r+gg+b<150) dark++;
+    // "ink" picture for OCR: yellowness inverted → dark digits on white
+    var v=255-Math.max(0,Math.min(255,(y-25)*2.2)); o[i*4]=o[i*4+1]=o[i*4+2]=v; o[i*4+3]=255; }
+  var ic=document.createElement("canvas"); ic.width=W; ic.height=H; ic.getContext("2d").putImageData(inv,0,0);
+  return {c:c, ink:ic, s:s, W:W, H:H, M:M, yellow:ny/(W*H), dark:dark/(W*H)};
+}
+function mscrComponents(M, W, H){
+  var L=new Int32Array(W*H), out=[], st=new Int32Array(W*H), n=0;
+  for(var p=0;p<W*H;p++){ if(!M[p]||L[p]) continue; n++; var sp=0; st[sp++]=p; L[p]=n;
+    var x0=W,y0=H,x1=0,y1=0,cnt=0;
+    while(sp){ var q=st[--sp], x=q%W, y=(q/W)|0; cnt++; if(x<x0)x0=x; if(x>x1)x1=x; if(y<y0)y0=y; if(y>y1)y1=y;
+      if(x>0&&M[q-1]&&!L[q-1]){L[q-1]=n;st[sp++]=q-1;} if(x<W-1&&M[q+1]&&!L[q+1]){L[q+1]=n;st[sp++]=q+1;}
+      if(y>0&&M[q-W]&&!L[q-W]){L[q-W]=n;st[sp++]=q-W;} if(y<H-1&&M[q+W]&&!L[q+W]){L[q+W]=n;st[sp++]=q+W;} }
+    out.push({x0:x0,y0:y0,x1:x1,y1:y1,w:x1-x0+1,h:y1-y0+1,n:cnt,id:n}); }
+  return {L:L, comps:out};
+}
+// hollow rectangles about the size of a value box; boxes touching side by side are split
+function mscrBoxes(m){
+  var C=mscrComponents(m.M, m.W, m.H), W=m.W, L=C.L, bx=[];
+  C.comps.forEach(function(k){
+    if(k.h<W*0.028 || k.h>W*0.07 || k.w<W*0.025 || k.w>W*0.3) return;
+    if(k.n/(k.w*k.h)>0.8) return;
+    var bw=Math.max(2,Math.round(k.h*0.12)), top=0, bot=0, cols=[];
+    for(var x=k.x0;x<=k.x1;x++){ var t=0,b=0,v=0; for(var e=0;e<bw;e++){ if(L[(k.y0+e)*W+x]===k.id)t=1; if(L[(k.y1-e)*W+x]===k.id)b=1; }
+      for(var y=k.y0;y<=k.y1;y++) if(L[y*W+x]===k.id) v++; top+=t; bot+=b; cols.push(v/k.h); }
+    if(top/k.w<0.7 || bot/k.w<0.6) return;
+    // vertical sides: columns that are ink almost top to bottom
+    var vs=[]; cols.forEach(function(f,i){ if(f>0.8){ if(vs.length && i-vs[vs.length-1].x1<=2) vs[vs.length-1].x1=i; else vs.push({x0:i,x1:i}); } });
+    if(vs.length<2 || vs[0].x0>k.w*0.12 || vs[vs.length-1].x1<k.w*0.88) return;
+    var n=Math.max(1,Math.round(k.w/(k.h*1.25)));
+    if(n===1 || k.w<k.h*1.9){ bx.push({x0:k.x0,y0:k.y0,x1:k.x1,y1:k.y1,w:k.w,h:k.h,cx:(k.x0+k.x1)/2,cy:(k.y0+k.y1)/2}); return; }
+    var pw=k.w/n; for(var j=0;j<n;j++){ var a=k.x0+pw*j, bb=a+pw; bx.push({x0:a,y0:k.y0,x1:bb,y1:k.y1,w:pw,h:k.h,cx:(a+bb)/2,cy:(k.y0+k.y1)/2,split:true}); }
+  });
+  return bx;
+}
+// least-squares affine fit template → photo
+function mscrAffine(P){
+  var A=[[0,0,0],[0,0,0],[0,0,0]], bx=[0,0,0], by=[0,0,0];
+  P.forEach(function(p){ var v=[p[0],p[1],1]; for(var i=0;i<3;i++){ for(var j=0;j<3;j++) A[i][j]+=v[i]*v[j]; bx[i]+=v[i]*p[2]; by[i]+=v[i]*p[3]; } });
+  function solve(A,b){ var M=A.map(function(r,i){ return r.concat([b[i]]); });
+    for(var i=0;i<3;i++){ var piv=i; for(var r=i+1;r<3;r++) if(Math.abs(M[r][i])>Math.abs(M[piv][i])) piv=r; var t=M[i]; M[i]=M[piv]; M[piv]=t; if(Math.abs(M[i][i])<1e-9) return null;
+      for(var r2=0;r2<3;r2++) if(r2!==i){ var f=M[r2][i]/M[i][i]; for(var c=i;c<4;c++) M[r2][c]-=f*M[i][c]; } }
+    return [M[0][3]/M[0][0], M[1][3]/M[1][1], M[2][3]/M[2][2]]; }
+  var ax=solve(A,bx), ay=solve(A,by); if(!ax||!ay) return null;
+  return function(x,y){ return [ax[0]*x+ax[1]*y+ax[2], ay[0]*x+ay[1]*y+ay[2]]; };
+}
+// fit a screen's slots onto the detected boxes; returns placed slots + match score
+function mscrFit(def, boxes){
+  if(boxes.length<6) return null;
+  var S=def.slots, SB=S.filter(function(s){ return s[6]!=='text'; }), sx0=Math.min.apply(null,SB.map(function(s){return s[1];})), sx1=Math.max.apply(null,SB.map(function(s){return s[1];})),
+      sy0=Math.min.apply(null,SB.map(function(s){return s[2];})), sy1=Math.max.apply(null,SB.map(function(s){return s[2];}));
+  var bx0=Math.min.apply(null,boxes.map(function(b){return b.cx;})), bx1=Math.max.apply(null,boxes.map(function(b){return b.cx;})),
+      by0=Math.min.apply(null,boxes.map(function(b){return b.cy;})), by1=Math.max.apply(null,boxes.map(function(b){return b.cy;}));
+  var T=function(x,y){ return [bx0+(x-sx0)/(sx1-sx0)*(bx1-bx0), by0+(y-sy0)/(sy1-sy0)*(by1-by0)]; }, best=null;
+  for(var it=0; it<4; it++){
+    var used={}, pairs=[], placed=S.map(function(s){
+      var p=T(s[1],s[2]), tol=Math.min(s[3],s[4])*(it? 0.45 : 0.7), bi=-1, bd=1e9;
+      if(s[6]==='text') return {key:s[0], digits:s[5], text:true, tx:s[1], ty:s[2], tw:s[3], th:s[4], p:p, box:null};
+      boxes.forEach(function(b,i){ if(used[i]) return; var d=Math.hypot(b.cx-p[0], b.cy-p[1]); if(d<bd){ bd=d; bi=i; } });
+      var m = bi>=0 && bd<tol ? boxes[bi] : null; if(m){ used[bi]=1; pairs.push([s[1],s[2],m.cx,m.cy]); }
+      return {key:s[0], digits:s[5], tx:s[1], ty:s[2], tw:s[3], th:s[4], p:p, box:m};
+    });
+    best={placed:placed, matched:pairs.length, total:S.filter(function(s){ return s[6]!=='text'; }).length, extra:boxes.length-pairs.length};
+    if(pairs.length<6) break; var F=mscrAffine(pairs); if(!F) break; T=F;
+  }
+  // final placement with the fitted transform; scale for boxes not found
+  best.placed.forEach(function(q){
+    var cc=T(q.tx,q.ty), aa=T(q.tx-q.tw/2,q.ty-q.th/2), bb2=T(q.tx+q.tw/2,q.ty+q.th/2), pw=bb2[0]-aa[0], ph=bb2[1]-aa[1];
+    if(q.box && (Math.abs(q.box.w-pw)>pw*0.22 || Math.abs(q.box.h-ph)>ph*0.22)) q.box=null; // merged with glare: use the layout
+    if(q.box){ q.x0=q.box.x0; q.y0=q.box.y0; q.x1=q.box.x1; q.y1=q.box.y1; q.found=true; return; }
+    var c=T(q.tx,q.ty), a=T(q.tx-q.tw/2,q.ty-q.th/2), b=T(q.tx+q.tw/2,q.ty+q.th/2);
+    q.x0=c[0]-(b[0]-a[0])/2; q.x1=c[0]+(b[0]-a[0])/2; q.y0=c[1]-(b[1]-a[1])/2; q.y1=c[1]+(b[1]-a[1])/2; q.found=false;
+  });
+  best.score=best.matched/best.total; return best;
+}
+// cheap test on a small copy: mostly dark picture with yellow drawing → a controller screen, not a paper sheet
+function mscrLooksLikeScreen(im){
+  var m=mscrMask(im, 400); return m.yellow>0.03 && m.yellow<0.35 && m.dark>0.25;
+}
+function mscrFixDigits(t){ return String(t||"").replace(/[oOQD]/g,"0").replace(/[Il|]/g,"1").replace(/[Ss]/g,"5").replace(/[B]/g,"8").replace(/[^0-9\-—]/g,""); }
+function mscrCropUrl(src, x0, y0, x1, y1, pad){
+  pad=pad||6; var c=msCrop(src, Math.max(0,x0-pad), Math.max(0,y0-pad), x1+pad, y1+pad, 1, 0, "#000");
+  if(c.width>380){ var s=380/c.width, d=document.createElement("canvas"); d.width=380; d.height=Math.round(c.height*s); d.getContext("2d").drawImage(c,0,0,d.width,d.height); c=d; }
+  return c.toDataURL("image/jpeg", 0.85);
+}
+// box interior from the full-size photo → black digits on white: yellowness, Otsu threshold pushed up (the LCD glow fattens
+// strokes and closes the holes in 0/8), scaled so the digits are ~TH px tall
+function mscrInk(src, s, x0, y0, x1, y1, TH, K){
+  var X0=Math.max(0,Math.round(x0/s)), Y0=Math.max(0,Math.round(y0/s)), w=Math.max(4,Math.round((x1-x0)/s)), h=Math.max(4,Math.round((y1-y0)/s));
+  var c=document.createElement("canvas"), sc=Math.min(3, (TH*1.5)/h); c.width=Math.round(w*sc); c.height=Math.round(h*sc);
+  var g=c.getContext("2d"); g.imageSmoothingQuality="high"; g.drawImage(src, X0, Y0, w, h, 0, 0, c.width, c.height);
+  var id=g.getImageData(0,0,c.width,c.height), d=id.data, N=c.width*c.height, Y=new Uint8Array(N), hist=new Array(256).fill(0);
+  for(var i=0;i<N;i++){ var v=Math.min(d[i*4],d[i*4+1])-d[i*4+2]; v=v<0?0:v>255?255:v; Y[i]=v; hist[v]++; }
+  var sum=0, sB=0, wB=0, best=0, T=128; for(var t=0;t<256;t++) sum+=t*hist[t];
+  for(t=0;t<256;t++){ wB+=hist[t]; if(!wB) continue; var wF=N-wB; if(!wF) break; sB+=t*hist[t]; var mB=sB/wB, mF=(sum-sB)/wF, bt=wB*wF*(mB-mF)*(mB-mF); if(bt>best){ best=bt; T=t; } }
+  var mx=0; for(t=255;t>0;t--) if(hist[t]){ mx=t; break; }
+  T=T+(mx-T)*(K!=null? K : 0.3);
+  var PAD=20, o=document.createElement("canvas"); o.width=c.width+PAD*2; o.height=c.height+PAD*2; var og=o.getContext("2d"); og.fillStyle="#fff"; og.fillRect(0,0,o.width,o.height);
+  var B=new Uint8Array(N), ink=0; for(i=0;i<N;i++){ if(Y[i]>T){ B[i]=1; ink++; } }
+  o._inkF=ink/N;
+  // keep only digit-shaped blobs: drop box-edge slivers, the ◆ marker and specks; each kept blob is one character
+  var C=mscrComponents(B, c.width, c.height), mh=0;
+  C.comps.forEach(function(k){ if(k.h>mh && k.w>=k.h*0.25 && k.h<c.height*0.95) mh=k.h; });
+  var keep={}, gl=[]; C.comps.forEach(function(k){
+    var edge=k.x0===0 || k.x1>=c.width-1; if(k.h<mh*0.6 || k.w<mh*0.22 || (edge && k.w<mh*0.3) || (k.y0===0 && k.y1>=c.height-1)) return;
+    keep[k.id]=1; gl.push(k); });
+  gl.sort(function(a,b){ return a.x0-b.x0; });
+  // merge pieces of one glyph stacked vertically (broken strokes)
+  var G=[]; gl.forEach(function(k){ var l=G[G.length-1]; if(l && k.x0<l.x1-(l.x1-l.x0)*0.4){ l.x0=Math.min(l.x0,k.x0); l.x1=Math.max(l.x1,k.x1); l.y0=Math.min(l.y0,k.y0); l.y1=Math.max(l.y1,k.y1); l.ids.push(k.id); } else G.push({x0:k.x0,x1:k.x1,y0:k.y0,y1:k.y1,ids:[k.id]}); });
+  // the LCD glow joins neighbouring digits: the font is fixed-pitch, so a wide blob is cut at the thinnest column near each
+  // expected boundary
+  var G2=[]; G.forEach(function(q){ var gw=q.x1-q.x0+1, gh=q.y1-q.y0+1, n=Math.round(gw/gh/0.8);
+    if(gw/gh<0.35) return;
+    if(n<=1){ G2.push(q); return; }
+    var col=function(x){ var v=0; for(var yy=q.y0; yy<=q.y1; yy++) if(q.ids.indexOf(C.L[yy*c.width+x])>=0) v++; return v; }, cuts=[q.x0];
+    for(var j=1;j<n;j++){ var e=q.x0+gw*j/n, bx=Math.round(e), bv=1e9; for(var x=Math.round(e-gw/n*0.2); x<=Math.round(e+gw/n*0.2); x++){ var v=col(x); if(v<bv){ bv=v; bx=x; } } cuts.push(bx); }
+    cuts.push(q.x1+1);
+    for(j=0;j<n;j++){ var a=cuts[j], b2=cuts[j+1]-1, yt=q.y1, yb=q.y0;
+      for(var xx=a; xx<=b2; xx++) for(var yy=q.y0; yy<=q.y1; yy++) if(q.ids.indexOf(C.L[yy*c.width+xx])>=0){ if(yy<yt) yt=yy; if(yy>yb) yb=yy; }
+      while(a<b2 && !col(a)) a++; while(b2>a && !col(b2)) b2--;
+      G2.push({x0:a, x1:b2, y0:Math.min(yt,yb), y1:Math.max(yt,yb), ids:q.ids, split:true}); }
+  });
+  var gmh=Math.max.apply(null,[0].concat(G2.map(function(q){ return q.y1-q.y0; }))); G=G2.filter(function(q){ return q.y1-q.y0>=gmh*0.75; });
+  // slashed zero (Ø) vs 8: across the middle rows an 8 has its crossbar (one run of ink), Ø has left side, slash, right side
+  G.forEach(function(q){ var W2=c.width, runs=[], ym=Math.round((q.y0+q.y1)/2), hh=q.y1-q.y0;
+    for(var yy=ym-Math.round(hh*0.06); yy<=ym+Math.round(hh*0.06); yy++){ var r=0, on=false; for(var xx=q.x0; xx<=q.x1; xx++){ var v=q.ids.indexOf(C.L[yy*W2+xx])>=0; if(v && !on) r++; on=v; } runs.push(r); }
+    runs.sort(); q.midRuns=runs[runs.length>>1];
+    var gw=q.x1-q.x0+1, gh=q.y1-q.y0+1, S=24/gh, bm=new Uint8Array(576), ox=Math.round((24-gw*S)/2);
+    for(var by=0;by<24;by++) for(var bx2=0;bx2<24;bx2++){ var sx=Math.floor((bx2-ox)/S)+q.x0, sy=Math.floor(by/S)+q.y0; if(sx<q.x0||sx>q.x1) continue; if(q.ids.indexOf(C.L[sy*W2+sx])>=0) bm[by*24+bx2]=1; }
+    q.bm=bm; q.ar=gw/gh; });
+  for(i=0;i<N;i++){ var b=keep[C.L[i]]? 0 : 255; d[i*4]=d[i*4+1]=d[i*4+2]=b; d[i*4+3]=255; }
+  g.putImageData(id,0,0); og.drawImage(c,PAD,PAD); o._glyphs=G;
+  return o;
+}
+// TMC LCD digit font (24×24 bitmaps averaged from Allen's TMC 250E photo; 6 = 9 turned over, 8 from only two samples)
+var MSCR_FONT = {"0":["01ffc003ffe007fff00ffffc1fc1fc3f83fc3f83fc3f87fc3fdffc3ffffc3ffffc3ffffc3ffffc3ffdfc3ff8fc3ff0fc3fe0fc1fc0fc1fc0fc1fc0fc1fc1fc1ffff807fff003ffe0",0.84],"1":["001c00003e00007e0000fe0001fe0007fe000ffe000ffe0007fe00007e00007e00007e00007e00007e00007e00007e00007e00007e00007e00007e0001fff007fff807fff007ffe0",0.66],"2":["01ffe001fff003fff007fffc1fe1fc1f80fc0f00fc0001fc0007f80007f0000fe0001fc0003f80007f0000fe0001fc0003f80007f80007e0780fe0fc1ffffc3ffffc1ffffc1ffff8",0.81],"3":["01ffe003ffe007ffe00ffff81f81fc1f80fc3e00fc0000fc0000fc0001fc0003f8007ff000fff000fff80001fc0001fc0001fc0000fc0700fc0f80fc1f81f81ffff807fff003ffc0",0.81],"4":["0001c00003e00007e0000fe0001fe0007ff0007ff000fff001fff003fff007fff00ffff01feff01ffff81ffffc1ffffc0ffff00007f00007f00007f00007f4000ffc000ffc000ff8",0.81],"5":["07fff80ffff83ffff83ffff03fc0003f80003f80003f80003f80003f80003fc3c03ffff03ffff01ffffc0001fc0001fc0000fc0000fc0300fc0f80fc1fc7fc1ffff803fff003ffc0",0.82],"6":["007f8000ffc003ff8403ff040fe0040fc0003f80003f80003f80003f80003fffc03fffc03ffff07ffff87f83f83f83f87f83fc7f83fc7f83fc7fbffc7fffe04fffc00fff80030000",0.86],"7":["0ffff81ffffc1ffffc3ffffc3ffffc3f83fc3f03fc0003fc0007f0000ff0001fe0003fe0007f80007f8000fe0001fe0001fe0001fe0001fe0001fe0001fe0001fe0001fe0001fe00",0.78],"8":["03fff003fff80ffffc1ffffc1fc1fe3f81fe3f81fe3f81fe3f81fe7f81fe3fc3fc1ffffc0ffffc0ffffc1fe0fe3fc0ff3fc0ff7f80ff3f80fe3f80ff3fe7ff3ffffc0ffffc0ffff8",0.87],"9":["0000c001fff003fff207fffe3ffdfe3fc1fe3fc1fe3fc1fe1fc1fc1fc1fe1ffffe0ffffc03fffc03fffc0001fc0001fc0001fc0001fc0003f02007f020ffc021ffc003ff0001fe00",0.86]}, mscrFontB=null;
+function mscrFont(){ if(mscrFontB) return mscrFontB; mscrFontB=Object.keys(MSCR_FONT).map(function(ch){ var h=MSCR_FONT[ch][0], b=new Uint8Array(576); for(var i=0;i<144;i++){ var v=parseInt(h[i],16); for(var k=0;k<4;k++) b[i*4+k]=(v>>(3-k))&1; } return {ch:ch, b:b, ar:MSCR_FONT[ch][1]}; }); return mscrFontB; }
+function mscrGlyph(q){
+  var F=mscrFont(), sc=F.map(function(t){ var best=1;
+    for(var dy=-1;dy<=1;dy++) for(var dx=-2;dx<=2;dx++){ var mis=0; for(var y=0;y<24;y++) for(var x=0;x<24;x++){ var yy=y+dy, xx=x+dx, a=(yy>=0&&yy<24&&xx>=0&&xx<24)? q.bm[yy*24+xx] : 0; if(a!==t.b[y*24+x]) mis++; } if(mis/576<best) best=mis/576; }
+    return {ch:t.ch, d:best+Math.abs(q.ar-t.ar)*0.25}; });
+  sc.sort(function(a,b){ return a.d-b.d; });
+  var d1=sc[0].d, d2=sc[1].d, c=Math.max(0, Math.min(1, (0.32-d1)/0.2)) * Math.max(0, Math.min(1, (d2-d1)/0.06));
+  if(sc[0].ch==="6"||sc[0].ch==="8") c=Math.min(c, 0.75);
+  return {ch:sc[0].ch, d:+d1.toFixed(3), c:+c.toFixed(2), alt:sc[1].ch};
+}
+function mscrReadGlyphs(G, sep){
+  var R=G.map(mscrGlyph);
+  if(sep) R.forEach(function(r){ if(r.d>0.3){ r.ch=sep; r.c=1; } });
+  while(R.length && R[R.length-1].d>0.3 && R[R.length-1].ch!==sep) R.pop();   // ◆ marker / box edge after the number
+  while(R.length && R[0].d>0.3) R.shift();
+  return {t:R.map(function(r){ return r.ch; }).join(""), c:R.length? Math.min.apply(null, R.map(function(r){ return r.c; })) : 0, g:R};
+}
+function mscrTextCanvas(m){ // headings: yellow mask → black text on white (Tesseract reads this better than the photo)
+  var c=document.createElement("canvas"); c.width=m.W; c.height=m.H; var g=c.getContext("2d"), id=g.createImageData(m.W,m.H), d=id.data;
+  for(var i=0;i<m.W*m.H;i++){ var v=m.M[i]? 0 : 255; d[i*4]=d[i*4+1]=d[i*4+2]=v; d[i*4+3]=255; } g.putImageData(id,0,0); return c; }
+// read one screen photo → same result shape as msExtract (rows / header / found / total) + screen info and notes
+function mscrRead(src, onProg){
+  var m=mscrMask(src, MSCR_W), boxes=mscrBoxes(m), wkP=tessWorker(), out={kind:"screen", rows:[], header:{}, notesList:[], boxes:boxes.length};
+  var words=[], text="";
+  return wkP.then(function(wk){
+    if(onProg) onProg("Reading the screen headings…", 5);
+    return wk.setParameters({tessedit_pageseg_mode:"11", tessedit_char_whitelist:""}).then(function(){ return wk.recognize(m.ink); }).then(function(r){
+      words=(r.data.words||[]).map(function(w){ return {t:String(w.text||"").trim(), x0:w.bbox.x0, y0:w.bbox.y0, x1:w.bbox.x1, y1:w.bbox.y1, c:(w.confidence||0)/100}; }).filter(function(w){ return w.t; });
+      text=words.map(function(w){ return w.t; }).join(" ");
+      // pick the screen: header keywords + how well its box layout fits
+      var best=null;
+      MSCR_DEFS.forEach(function(def){ var kw=def.keys.filter(function(re){ return re.test(text); }).length/def.keys.length, fit=mscrFit(def, boxes); if(!fit) return;
+        var sc=kw*0.5+fit.score*0.5; if(!best || sc>best.sc) best={def:def, fit:fit, sc:sc, kw:kw}; });
+      if(!best || best.fit.score<0.5){ out.unknown=true; return; }
+      var def=best.def, fit=best.fit, by={}; fit.placed.forEach(function(q){ by[q.key]=q; });
+      out.screen={id:def.id, title:def.title, kw:+best.kw.toFixed(2), found:fit.matched, total:fit.total};
+      out.found=fit.matched; out.total=fit.total;
+      var slotVal={}, keys=fit.placed.filter(function(q){ return q.digits && !q.text; });
+      // OCR each box interior
+      return keys.reduce(function(p, q, i){ return p.then(function(){
+        if(onProg) onProg("Reading screen values — box "+(i+1)+" of "+keys.length, Math.round(10+i/keys.length*85));
+        var bw=q.x1-q.x0, bh=q.y1-q.y0, ix=bw*0.07, iy=bh*0.13;
+        var cv=mscrInk(src, m.s, q.x0+ix, q.y0+iy, q.x1-ix, q.y1-iy, 64);
+        if(window.__mscrDbg) window.__mscrDbg.push([q.key, cv.toDataURL()]);
+        // digits are matched against the screen font (Tesseract reads the slashed zero as 8)
+        return Promise.resolve(mscrReadGlyphs(cv._glyphs||[])).then(function(rg){
+          var r={text:rg.t, conf:rg.c}, t=rg.t, c=rg.c, G=cv._glyphs||[];
+          if(q.digits && t.length>q.digits){ t=t.slice(0,q.digits); c=Math.min(c,0.7); } // marker (◆) after the number
+          var ink=0, g=cv.getContext("2d").getImageData(0,0,cv.width,cv.height).data; for(var k=0;k<g.length;k+=4) if(g[k]<128) ink++;
+          var inkF=cv._inkF, state="read";
+          if(!t){ state= inkF<0.04? "blank" : "unread"; c= state==="blank"? 0.7 : 0.2; }
+          else if(q.digits && t.length!==q.digits){ c=Math.min(c, 0.45); }
+          if(!q.found) c=Math.min(c, 0.55);   // box hidden by glare / cursor: placed from the layout, check it
+          if(inkF>0.45){ c=Math.min(c,0.3); }  // highlighted (cursor) box: dark digits on a yellow block
+          if(window.__mscrDbg) window.__mscrGl=(window.__mscrGl||[]).concat([[q.key, G.map(function(x){ return Array.from(x.bm).join(''); }), G.map(function(x){return +x.ar.toFixed(2);})]]);
+          slotVal[q.key]={v:t, c:+c.toFixed(2), state:state, q:q, raw:r.text, mr:G.map(function(x){return x.midRuns;}).join('')};
+        });
+      }); }, Promise.resolve()).then(function(){
+        out.slots={}; Object.keys(slotVal).forEach(function(k){ var s=slotVal[k]; out.slots[k]={v:s.v, c:s.c, state:s.state, found:s.q.found, raw:s.raw, mr:s.mr}; });
+        // picture for a review row: the boxes side by side in stage order 1 / 2 / 3 (the screen shows clamp open as 3 2 1)
+        function cropOf(ks){ var qs=ks.map(function(k){ return by[k]; }), pad=8, H=Math.max.apply(null, qs.map(function(q){ return q.y1-q.y0; }))+pad*2, gap=14;
+          var Wt=qs.reduce(function(a,q){ return a+(q.x1-q.x0)+pad*2; },0)+gap*(qs.length-1), c=document.createElement("canvas"); c.width=Math.round(Wt); c.height=Math.round(H);
+          var g=c.getContext("2d"); g.fillStyle="#fff"; g.fillRect(0,0,c.width,c.height); var x=0;
+          qs.forEach(function(q){ var w=q.x1-q.x0+pad*2, h=q.y1-q.y0+pad*2; g.drawImage(m.c, Math.max(0,q.x0-pad), Math.max(0,q.y0-pad), w, h, x, (H-h)/2, w, h); x+=w+gap; });
+          if(c.width>380){ var sc=380/c.width, d=document.createElement("canvas"); d.width=380; d.height=Math.round(c.height*sc); d.getContext("2d").drawImage(c,0,0,d.width,d.height); c=d; }
+          return c.toDataURL("image/jpeg", 0.85); }
+        Object.keys(def.fields).forEach(function(id){
+          var ks=def.fields[id], P=MS_P[id]; if(!P) return;
+          var ss=ks.map(function(k){ return slotVal[k]; }), vals=ss.map(function(s){ return s && s.state==="read"? s.v : ""; });
+          var any=ss.some(function(s){ return s && s.state==="read"; });
+          var row={id:id, vals:P.staged? (vals.concat(["","",""])).slice(0,3) : [vals[0]], extra:"", same:false, crop:cropOf(ks), typed:true, ocr:ss.map(function(s){ return s? s.raw : ""; }).join(" | "),
+            state: any? "read" : (ss.every(function(s){ return s && s.state==="blank"; })? "blank" : "unread"),
+            conf: +Math.min.apply(null, ss.map(function(s){ return s? (s.state==="blank"? 0.7 : s.c) : 0.2; })).toFixed(2), screen:true};
+          if(any && ss.some(function(s){ return s && s.state!=="read"; })) row.conf=Math.min(row.conf, 0.4);
+          out.rows.push(row);
+        });
+        (def.notes||[]).forEach(function(n){ var vs=n[1].map(function(k){ var s=slotVal[k]; return s && s.state==="read"? s.v : "?"; });
+          if(vs.every(function(v){ return v==="?"; })) return;
+          out.notesList.push({label:n[0], text:vs.join(" / "), conf:Math.min.apply(null, n[1].map(function(k){ return slotVal[k]? slotVal[k].c : 0; }))}); });
+        if(!def.status) return;
+        // status strip at the bottom: date, cycle time, shot count (same font, no boxes)
+        var txt={}; fit.placed.filter(function(q){ return q.text; }).forEach(function(q){
+          var cv=mscrInk(src, m.s, q.x0, q.y0, q.x1, q.y1, 48, window.__mscrK2!=null? window.__mscrK2 : 0.4); if(window.__mscrDbg) window.__mscrDbg.push([q.key, cv.toDataURL(), mscrCropUrl(m.c,q.x0,q.y0,q.x1,q.y1,0)]); var rg=mscrReadGlyphs(cv._glyphs||[], q.key==="date"? "/" : "");
+          txt[q.key]={v:rg.t, c:rg.c, q:q}; if(window.__mscrDbg) window.__mscrGl=(window.__mscrGl||[]).concat([[q.key, (cv._glyphs||[]).map(function(x){ return Array.from(x.bm).join(''); }), (cv._glyphs||[]).map(function(x){return +x.ar.toFixed(2);})]]); });
+        var dt=txt.date, dm=dt && dt.v.match(/^(\d{1,2})\/(\d{1,2})\/(\d{2})$/);
+        if(dm) out.header.date={value:dm[1]+"/"+dm[2]+"/"+dm[3], conf:Math.min(0.5, dt.c),  // small blurry status font: always let Allen check it
+ crop:mscrCropUrl(m.c, dt.q.x0, dt.q.y0, dt.q.x1, dt.q.y1, 8)};
+        else if(dt && dt.v) out.header.date={value:dt.v, conf:0.3, crop:mscrCropUrl(m.c, dt.q.x0, dt.q.y0, dt.q.x1, dt.q.y1, 8)};
+        out.status={}; Object.keys(txt).forEach(function(k){ out.status[k]={v:txt[k].v, c:txt[k].c}; });
+        if(txt.cycle && txt.cycle.v.length===4 && txt.cycle.c>=0.5) out.notesList.push({label:"Cycle time (screen)", text:txt.cycle.v, conf:txt.cycle.v.length===4? txt.cycle.c : Math.min(0.4,txt.cycle.c)});
+        if(txt.shots && txt.shots.v.length===6 && txt.shots.c>=0.5) out.notesList.push({label:"Shot count", text:txt.shots.v, conf:txt.shots.v.length===6? txt.shots.c : Math.min(0.4,txt.shots.c)});
+      });
+    }).then(function(){ return wk.setParameters({tessedit_char_whitelist:"", tessedit_pageseg_mode:"6"}); }, function(e){ return wk.setParameters({tessedit_char_whitelist:"", tessedit_pageseg_mode:"6"}).then(function(){ throw e; }); });
+  }).then(function(){
+    out.lines=words.length? [{text:text, conf:0.6}] : [];
+    out.notes = out.notesList.length? (out.screen? out.screen.title : "Machine screen")+": "+out.notesList.map(function(n){ return n.label+" "+n.text; }).join("; ") : "";
+    out.noteConf = out.notesList.length? Math.min.apply(null, out.notesList.map(function(n){ return n.c||n.conf; })) : 0;
+    return out;
+  });
+}
+/*MSCR-END*/
 // one image (file or canvas) → oriented, prepped, OCR'd page; a machine settings sheet is also read cell by cell
 function msScanImage(src, label, prog){
   var isBlob = !(src instanceof HTMLCanvasElement), base=null;
@@ -1892,11 +2186,20 @@ function msScanImage(src, label, prog){
     });
   }
   function textOf(r){ return (r.lines||[]).map(function(l){ return l.text; }).join("\n"); }
+  var screenRes=null;
   return (isBlob? loadImage(src) : Promise.resolve(src)).then(function(im){
     base=im;
+    // v2.5.0: a photo of the press controller's screen (dark LCD, yellow boxes) is read box by box, not as a paper sheet
+    var looks=false; try{ looks=mscrLooksLikeScreen(im); }catch(e){}
+    if(!looks) return im;
+    if(prog) prog("Machine screen photo — finding the value boxes…");
+    return mscrRead(im, function(t, pc){ if(prog) prog(t, pc); }).then(function(res){ if(!res.unknown){ screenRes=res; } return im; }, function(e){ console.warn("screen read failed", e); return im; });
+  }).then(function(im){
+    if(screenRes) return null;
     if(prog) prog("Checking which way up the page is…");
     return orientForOcr(im).catch(function(){ return {canvas:null, rot:0}; });
-  }).then(readAt).then(function(r){
+  }).then(function(o){ return screenRes? {screen:true} : readAt(o); }).then(function(r){
+    if(screenRes) return r;
     // rows of text but almost no real words: the page may be upside down — try it turned 180°
     if(r.rot===0 && !msIsForm(textOf(r)) && wordScore(r.words) < 40){
       if(prog) prog("Trying the page upside down…");
@@ -1907,6 +2210,7 @@ function msScanImage(src, label, prog){
     }
     return r;
   }).then(function(r){
+    if(screenRes) return {lines:screenRes.lines||[], conf:0.6, label:label, kind:"screen", ms:screenRes, rot:0};
     var c=r._c; delete r._c;
     if(!msIsForm(textOf(r))){ c._raw=null; delete r.words; return r; }
     if(prog) prog("Reading machine settings sheet…");
@@ -4265,10 +4569,10 @@ function finishScan(pages, summary, scanFiles){
   var nConf = items.filter(function(i){ return i.conflict; }).length;
   var raw = docs.length>1 ? docs.map(function(d){ return "— "+d.label+" —\n"+d.raw; }).join("\n\n") : (docs[0]? docs[0].raw : "");
   window.__lastScan = {docs:docs.map(function(d){ return {label:d.label, kind:d.kind, raw:d.raw}; }), pages:pages.concat(msPages).map(function(p){ return {label:p.label||"", kind:p.kind, conf:p.conf, prep:p.prep||null, rot:p.rot||0, ms:!!p.ms}; }), ms:msPages.map(function(p){ return p.ms; })};
-  if(msPages.length) raw = (raw? raw+"\n\n" : "") + msPages.map(function(p){ return "— Machine settings sheet ("+(p.label||"photo")+") —\n"+p.lines.map(function(l){ return l.text; }).join("\n"); }).join("\n\n");
+  if(msPages.length) raw = (raw? raw+"\n\n" : "") + msPages.map(function(p){ return "— "+(p.kind==="screen"? "Machine screen" : "Machine settings sheet")+" ("+(p.label||"photo")+") —\n"+p.lines.map(function(l){ return l.text; }).join("\n"); }).join("\n\n");
   if(scanFiles) scanFiles._handed = true;
   keepScanWithJob(job, scanFiles||[]);
-  openModal({type:"review", ms:msM, items:items, raw:raw, docs:parsed.docs.concat(msPages.length? ["Machine settings sheet"] : []), conflicts:nConf, scanFiles:scanFiles||[], summary:(msPages.length? "Machine settings sheet · " : "")+(docs.length>1? docs.length+" documents ("+parsed.docs.join(", ")+") · " : (docs[0] && docs[0].kind? docs[0].kind+" · " : ""))+summary+" · "+items.filter(function(i){ return !i.loose; }).length+" value"+(items.length===1?"":"s")+" found"+(nConf? " · "+nConf+" conflict"+(nConf>1?"s":"") : "")});
+  openModal({type:"review", ms:msM, items:items, raw:raw, docs:parsed.docs.concat(msPages.some(function(p){ return p.kind!=="screen"; })? ["Machine settings sheet"] : []).concat(msPages.some(function(p){ return p.kind==="screen"; })? ["Machine screen"] : []), conflicts:nConf, scanFiles:scanFiles||[], summary:(msM && msM.screen? "Machine screen ("+msM.screen+") · " : msPages.length? "Machine settings sheet · " : "")+(docs.length>1? docs.length+" documents ("+parsed.docs.join(", ")+") · " : (docs[0] && docs[0].kind? docs[0].kind+" · " : ""))+summary+" · "+items.filter(function(i){ return !i.loose; }).length+" value"+(items.length===1?"":"s")+" found"+(nConf? " · "+nConf+" conflict"+(nConf>1?"s":"") : "")});
   scheduleAutoDriveCopy(scanFiles||[]);
 }
 ACT.rvPick = function(t){ var r=state.modal.items[+t.getAttribute("data-i")], o=r && r.options[+t.getAttribute("data-o")]; if(!o) return; r.value=o.value; r.unit=o.unit||""; r.selected=true; r.picked=true; rvRerender(); };
@@ -6816,7 +7120,7 @@ function init(){
     if(!state.meta.ocrWarmAt && !c.saveData && c.type!=="cellular") warmOcr(false);
   }, 8000);
 }
-window.__tjl = {state:state, googleClientId:GOOGLE_CLIENT_ID, ms:{scan:msScanImage, extract:msExtract, orient:orientForOcr, normalize:msNormalize, defs:MS_DEFS, rowText:msRowText, isForm:msIsForm}, phone:{storeAlbumHandle:storeAlbumHandle, albumName:albumName, readPhoneSaved:readPhoneSaved},
+window.__tjl = {state:state, googleClientId:GOOGLE_CLIENT_ID, ms:{screenRead:function(i,p){return mscrRead(i,p);}, screenLooks:function(i){return mscrLooksLikeScreen(i);}, scan:msScanImage, extract:msExtract, orient:orientForOcr, normalize:msNormalize, defs:MS_DEFS, rowText:msRowText, isForm:msIsForm}, phone:{storeAlbumHandle:storeAlbumHandle, albumName:albumName, readPhoneSaved:readPhoneSaved},
   doc:{url:DOC_SCRIPT_URL, readQueue:readDocQueue, readUploaded:readDocUploaded, readSent:readDocSent, baseName:docBaseName, renameable:function(){ return renameableDocs().map(function(d){ return {sent:d.sentName, name:d.docName}; }); }, flush:flushDocQueue, docsForCtx:docsForCtx, buildDocPdf:buildDocPdf, buildDocParts:buildDocParts, exists:docExists, uploadAll:uploadAllDocs, limits:function(){ return {page:DOC_PAGE_MAX, part:DOC_PART_BYTES, asis:DOC_PDF_ASIS, side:DOC_MAX_SIDE}; }}, parseLines:parseLines, buildReview:buildReview, render:render, scan:{buildSynIndex:buildSynIndex, labelUnitHint:labelUnitHint, parseNumber:parseNumber, defForLabel:defForLabel, reconcileFields:reconcileFields},
   photo:{readQueue:readPhotoQueue, readUploaded:readPhotoUploaded, readOk:readPhotoOk, flush:flushPhotoQueue, name:photoDriveName, prep:photoUploadBlob, info:docServerInfo, items:function(){ return photoItemsFor(state.jobs, false).map(function(it){ return {job:it.job.id, id:it.photo.id, name:it.photo.driveName||""}; }); }, terms:jobSearchTerms, find:findDocs, missing:jobMissing},
   restore:{need:restoreNeed, run:runRestore, pick:restorePickFiles, stem:restoreStem, partOf:restorePartOf, fileId:driveFileId, getFile:getDriveFile, pages:restorePagesOf, last:function(){ return state.restoreLast||null; }},

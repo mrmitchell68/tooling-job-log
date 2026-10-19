@@ -19,6 +19,16 @@ tests/                 Playwright end-to-end tests (test.py, test_refsheet.py, t
 
 All URLs are relative, so it runs from any path: `https://<user>.github.io/<repo>/`, a subfolder, or localhost.
 
+## What's new in 2.5.0 — Scan the machine's screen (TMC 250E)
+
+The **📷 Scan** button in Machine settings now also takes a **photo of the press controller's screen**. The app tells a
+screen photo (dark LCD, yellow boxes) from a paper setup sheet on its own. Supported so far: **TMC 250E Ejector / Clamp
+screen** → Clamp opening/closing pressures, intervals (positions), speeds (stage order 1/2/3; the screen shows clamp open
+as 3 2 1), Ejection forward pressures / speeds / positions (PT1) and the ejector counter (number of strokes). Values with no
+row on the setup sheet (PT K.O., PT2, close PT, status position, timer) go to Notes. The review shows the boxes from the
+photo for every row; boxes hidden by glare or the cursor are red and unchecked. More screens (Injection, Temp. setting) are
+added in `MSCR_DEFS` in index.html. Test: `tests/test_machinescreen.py`.
+
 ## What's new in 2.4.0 — Machine Settings (your machine setup sheet)
 
 A **Machine settings** section that matches the paper setup sheet: Part Number / Machine / Date, then **Clamp, Ejection,
