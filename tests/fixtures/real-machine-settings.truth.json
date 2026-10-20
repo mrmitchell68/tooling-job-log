@@ -1,7 +1,0 @@
-{"mold_open_time":["5.0","",""],"open_press":["35","20","20"],"open_int":["2900","1500","388"],"open_speed":["20","50","10"],"mold_close_time":["5.0","",""],
-"close_press":["20","20","94"],"close_int":["1800","380","50"],"close_speed":["20","20","60"],"clamp_tonnage":["180","",""],"ej_strokes":["NONE","",""],
-"ej_fwd_press":["","",""],"ej_fwd_int":["","",""],"ej_fwd_speed":["","",""],"ej_back_set":["","",""],"ej_back_press":["","",""],"ej_back_speed":["","",""],
-"inj_speed":["15","15","15"],"inj_int":["50","","300"],"inj_press":["70","70","70"],"switchover":["150","",""],"hold_press":["20","",""],"hold_time":["50","",""],"hold_speed":["20","",""],"cushion":["","",""],
-"charge_delay":["0","",""],"back_press":["0","0","0","70"],"screw_speed":["22","22","22","95"],"screw_int":["150","250","1250","1350"],"suck_back":["","",""],
-"zone1":["330"],"zone2":["325"],"zone3":["325"],"zone4":["325"],"zone5":[""],"zone6":[""],"zone7":[""],"zone8":[""],"nozzle":["40"],"hot_runner":[""],"thermolator":[""],"dryer":[""],
-"cooling":["550"],"cycle":["~100"],"cavities":["1"],"cycle_int":["40"],"air_blast":[""],"corepull":["yes"],"intrusion":[""]}
