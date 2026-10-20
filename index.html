@@ -616,7 +616,7 @@ pre.raw{white-space:pre-wrap;font-size:12px;background:var(--surface-2);padding:
 <script>
 (function(){
 "use strict";
-var APP_VERSION = "2.5.0";
+var APP_VERSION = "2.6.0";
 // Public OAuth client id (not a secret). Web client, authorized JavaScript origins:
 //   https://mrmitchell68.github.io   and   http://localhost:8766
 // Leave empty until that client exists — Save-to-Drive is hidden and the button uses the Android share sheet.
@@ -1510,7 +1510,7 @@ function msEditorHtml(ms, owner, opts){
 function msCardHtml(j){
   var ms=j.machineSettings=msNormalize(j.machineSettings), n=msFilled(ms);
   var h='<section class="card" id="msCard"><div class="sec-hd"><h2>Machine settings</h2><span class="meta">'+n+' set</span><button class="smallbtn" data-act="msScan" aria-label="Scan machine settings sheet or machine screen">📷 Scan</button></div><div class="card-bd">';
-  h+='<p class="faint" style="margin:0 0 8px">From the machine setup sheet: Clamp, Ejection, Injection, Charging, Temperature, Production. Stages 1 / 2 / 3; tap <b>=all</b> when one value is used for all three. <b>📷 Scan</b> also reads a photo of the machine’s screen (TMC 250E ejector / clamp screen).</p>';
+  h+='<p class="faint" style="margin:0 0 8px">From the machine setup sheet: Clamp, Ejection, Injection, Charging, Temperature, Production. Stages 1 / 2 / 3; tap <b>=all</b> when one value is used for all three. <b>📷 Scan</b> also reads a photo of the machine’s screen (TMC 250E ejector / clamp screen, or the Yizumi Machine 3 Mold, Injection, Plasticize, Heating, Ejector and Nozzle screens — pick several photos at once).</p>';
   h+=msEditorHtml(ms, "job");
   return h+'</div></section>';
 }
@@ -1623,7 +1623,7 @@ function msConfCls(c){ return c>=0.8? "hi" : c>=0.6? "md" : "lo"; }
 function msReviewModel(results, job){
   var rows={}, order=[], hdr={}, core=null, rot=0, found=0, total=0, screens=[], notes=[];
   results.forEach(function(res){
-    rot=res.rot||rot; found=Math.max(found,res.found||0); total=res.total||total;
+    rot=res.rot||rot; if(res.kind==='screen'){ found+=res.found||0; total+=res.total||0; } else { found=Math.max(found,res.found||0); total=res.total||total; }
     if(res.kind==='screen'){ screens.push(res.screen); if(res.notes) notes.push({text:res.notes, conf:res.noteConf||0}); }
     (res.rows||[]).forEach(function(r){
       var ex=rows[r.id], val=r.state==="read"||r.state==="text"||r.state==="check";
@@ -2175,6 +2175,220 @@ function mscrRead(src, onProg){
     return out;
   });
 }
+/* ---------- v2.6.0: Yizumi-HPM screen reader (light-grey Windows-style HMI, dark text in white boxes) ---------- */
+// Allen's Machine 3, Yizumi-HPM UN540 A5-N. One Tesseract pass over the whole photo gives words + positions; the screen is
+// picked by the highlighted (green) tab and the panel titles; values are read by panel → column header × row (grids) or
+// label → boxes to its right (key/value), every uncertain box is OCR'd again on its own. To add a screen add a YZ_DEFS entry.
+var YZ_W = 2400;
+function yzG(h,d){ return [h,d]; }
+var YZ_COLS3 = [yzG(/^pressure/i,0), yzG(/^veloc/i,0), yzG(/^to$/i,2)], YZ_COLSF = [yzG(/^force/i,0), yzG(/^veloc/i,0), yzG(/^to$/i,2)];
+var YZ_DEFS = [
+ {id:"yz-mold", tab:/^mold$/i, title:"Yizumi Mold (clamp)", titles:[/^mold\s*close$/i, /^mold\s*open$/i],
+  grids:[{k:"cl", panel:/^mold\s*close$/i, cols:YZ_COLS3, rows:["1","2","3","pr","hp"]}, {k:"op", panel:/^mold\s*open$/i, cols:YZ_COLS3, rows:["1","2","E"]}],
+  kvs:[["prot",/mold\s*protect\s*time/i,2,2],["protFT",/protect\s*from/i,2,2],["force",/clamp\s*force/i,2,1]],
+  fields:{close_press:["cl1.0","cl2.0","cl3.0"], close_speed:["cl1.1","cl2.1","cl3.1"], close_int:["cl1.2","cl2.2","cl3.2"],
+    open_press:["op1.0","op2.0","opE.0"], open_speed:["op1.1","op2.1","opE.1"], open_int:["op1.2","op2.2","opE.2"], clamp_tonnage:["force.1"]},
+  notes:[["Mold protect psi/%/in",["clpr.0","clpr.1","clpr.2"]],["High pressure psi/%",["clhp.0","clhp.1"]],["Mold protect time s",["prot.0","prot.1"]],["Protect from-to in",["protFT.0","protFT.1"]],["Clamp force US ton (actual/set)",["force.0","force.1"]]]},
+ {id:"yz-inject", tab:/^inject/i, title:"Yizumi Injection", titles:[/^inject$/i, /^cut\s*off$/i, /allowable/i],
+  grids:[{k:"in", panel:/^inject$/i, cols:YZ_COLS3, rows:["1","2","E"]}],
+  kvs:[["stroke",/plasticize\s*stroke/i,1,2],["allow",/allowable/i,1,0],["coPos",/screw\s*position/i,1,2],["coTime",/^inject\s*time/i,1,2],["coPress",/^inject\s*pressure/i,1,0,"last"],["coAct",/activation/i,1,2]],
+  fields:{inj_press:["in1.0","in2.0","inE.0"], inj_speed:["in1.1","in2.1","inE.1"], inj_int:["in1.2","in2.2"], switchover:["coPos.0"]},
+  notes:[["Plasticize stroke in",["stroke.0"]],["Allowable inject pressure psi",["allow.0"]],["Cut off: inject time s",["coTime.0"]],["Cut off: inject pressure psi",["coPress.0"]],["Cut off activation position in",["coAct.0"]]]},
+ {id:"yz-plast", tab:/^plast/i, title:"Yizumi Plasticize", titles:[/plasticize\s*and/i, /^decompression$/i, /delay\s*plast/i],
+  grids:[{k:"pl", panel:/plasticize\s*and/i, cols:[yzG(/^back/i,0), yzG(/^charge/i,0), yzG(/^to$/i,2)], rows:["E"]}],
+  kvs:[["dly",/delay\s*plast/i,2,2],["decA",/decompression\s*after/i,3,[0,0,2]]],
+  fields:{back_press:["plE.0"], screw_speed:["plE.1"], screw_int:["plE.2"], charge_delay:["dly.1"], suck_back:["decA.2"]},
+  notes:[["Delay plast s",["dly.0","dly.1"]],["Decompression after plasticize psi/%/in",["decA.0","decA.1","decA.2"]]]},
+ {id:"yz-heat", tab:/^heat/i, title:"Yizumi Heating", titles:[/heating\s*zones/i, /auto\s*heating/i, /tol\.?\s*high/i],
+  grids:[], kvs:[["set",/^set$/i,7,1],["tolH",/tol\.?\s*high/i,1,1],["tolL",/tol\.?\s*low/i,1,1],["stby",/standby/i,1,0],["oil",/^oil$/i,1,0]],
+  fields:{zone1:["set.0"],zone2:["set.1"],zone3:["set.2"],zone4:["set.3"],zone5:["set.4"],zone6:["set.5"],zone7:["set.6"]},
+  notes:[["Tolerance high/low °F",["tolH.0","tolL.0"]],["Standby temperature °F",["stby.0"]],["Oil °F",["oil.0"]]]},
+ {id:"yz-eject", tab:/^eject/i, title:"Yizumi Ejector", titles:[/ejector\s*forward/i, /ejector\s*backward/i, /shake/i],
+  grids:[{k:"ef", panel:/ejector\s*forward/i, cols:YZ_COLSF, rows:["E"]}, {k:"eb", panel:/ejector\s*backward/i, cols:YZ_COLSF, rows:["E"]}],
+  kvs:[["shake",/shake\s*counter/i,1,0]], texts:[["mode",/ejector\s*mode/i]],
+  fields:{ej_fwd_press:["efE.0"], ej_fwd_speed:["efE.1"], ej_fwd_int:["efE.2"], ej_strokes:["shake.0"], ej_back_press:["ebE.0"], ej_back_speed:["ebE.1"], ej_back_set:["ebE.2"]},
+  notes:[["Ejector mode",["mode"]]]},
+ {id:"yz-nozzle", tab:/^nozzle$/i, title:"Yizumi Nozzle", titles:[/nozzle\s*forward/i, /nozzle\s*backward/i, /limit\s*switch/i],
+  grids:[], kvs:[["bf",/before\s*limit/i,2,0],["af",/after\s*limit/i,4,[0,0,2,2]],["cf",/contact\s*force/i,2,0],["bu",/build\s*up/i,2,2],["bk",/^backward$/i,4,[0,0,2,2]]],
+  fields:{}, notes:[["Nozzle fwd before limit psi/%",["bf.0","bf.1"]],["Nozzle fwd after limit psi/%/s/s",["af.0","af.1","af.2","af.3"]],["Contact force psi/%",["cf.0","cf.1"]],["Force build up time s",["bu.0","bu.1"]],["Nozzle backward psi/%/s/s",["bk.0","bk.1","bk.2","bk.3"]]]}
+];
+var YZ_BRAND = [/yizumi/i, /\bhpm\b/i, /administrator/i, /^overvi/i, /^ejector$/i, /^injection$/i, /^plastic/i, /^nozzle$/i, /^heating$/i, /^produ/i, /^alarm$/i, /^return$/i, /^cooling$/i];
+// cheap look: big light-grey low-colour area + a small bright green block (the highlighted tab)
+function yzLooksLikeScreen(im){
+  var W=360, w0=im.naturalWidth||im.width, h0=im.naturalHeight||im.height, H=Math.round(h0*W/w0), c=document.createElement("canvas"); c.width=W; c.height=H;
+  var g=c.getContext("2d"); g.drawImage(im,0,0,W,H); var d=g.getImageData(0,0,W,H).data, gr=0, grey=0, N=W*H;
+  for(var i=0;i<N;i++){ var r=d[i*4], G=d[i*4+1], b=d[i*4+2]; if(G>120 && G-r>35 && G-b>55) gr++; if(r>165 && G>165 && b>165 && Math.max(r,G,b)-Math.min(r,G,b)<28) grey++; }
+  return gr/N>0.0008 && gr/N<0.04 && grey/N>0.18;
+}
+function yzPrep(im){
+  var w0=im.naturalWidth||im.width, h0=im.naturalHeight||im.height, s=YZ_W/w0, H=Math.round(h0*s), c=document.createElement("canvas"); c.width=YZ_W; c.height=H;
+  var g=c.getContext("2d"); g.imageSmoothingQuality="high"; g.drawImage(im,0,0,YZ_W,H);
+  var id=g.getImageData(0,0,YZ_W,H), d=id.data, N=YZ_W*H, o=document.createElement("canvas"); o.width=YZ_W; o.height=H; var og=o.getContext("2d"), od=og.createImageData(YZ_W,H), q=od.data, hist=new Array(256).fill(0), L=new Uint8Array(N);
+  var gm=new Uint8Array(N);
+  for(var i=0;i<N;i++){ var r=d[i*4], G=d[i*4+1], b=d[i*4+2], l=Math.round(0.3*r+0.59*G+0.11*b); L[i]=l; hist[l]++; if(G>120 && G-r>35 && G-b>55) gm[i]=1; }
+  var lo=0, hi=255, acc=0; for(var t=0;t<256;t++){ acc+=hist[t]; if(acc>N*0.02){ lo=t; break; } } acc=0; for(t=255;t>=0;t--){ acc+=hist[t]; if(acc>N*0.02){ hi=t; break; } }
+  // green tab block = largest green component; its white label is turned dark so Tesseract reads the tab name
+  var C=mscrComponents(gm, YZ_W, H), best=null; C.comps.forEach(function(k){ if(k.n>YZ_W*4 && k.w<YZ_W*0.25 && k.h<k.w*1.5 && (!best || k.n>best.n)) best=k; });
+  for(i=0;i<N;i++){ var v=Math.max(0,Math.min(255,(L[i]-lo)*255/Math.max(1,hi-lo))); q[i*4]=q[i*4+1]=q[i*4+2]=v; q[i*4+3]=255; }
+  if(best) for(var y=best.y0;y<=best.y1;y++) for(var x=best.x0;x<=best.x1;x++){ var j=y*YZ_W+x, r=d[j*4], G=d[j*4+1], b=d[j*4+2], wv=(Math.min(r,G,b)>170 && G-b<45)? 0 : 255; q[j*4]=q[j*4+1]=q[j*4+2]=wv; }
+  og.putImageData(od,0,0);
+  return {c:c, g:o, s:s, W:YZ_W, H:H, tab:best};
+}
+// white value boxes: brighter than the grey panel around them (local mean, so uneven light does not matter)
+function yzBoxes(P0, lh){
+  var W=P0.W, H=P0.H, g=P0.g.getContext("2d").getImageData(0,0,W,H).data, N=W*H, I=new Float64Array((W+1)*(H+1)), L=new Uint8Array(N);
+  for(var y=0;y<H;y++){ var row=0; for(var x=0;x<W;x++){ var v=g[(y*W+x)*4]; L[y*W+x]=v; row+=v; I[(y+1)*(W+1)+x+1]=I[y*(W+1)+x+1]+row; } }
+  var R=Math.round(lh*2.2), M=new Uint8Array(N);
+  for(y=0;y<H;y++) for(x=0;x<W;x++){ var a=Math.max(0,x-R), b=Math.max(0,y-R), c=Math.min(W,x+R+1), d=Math.min(H,y+R+1), m=(I[d*(W+1)+c]-I[b*(W+1)+c]-I[d*(W+1)+a]+I[b*(W+1)+a])/((c-a)*(d-b));
+    var v=L[y*W+x]; if(v>150 && v>m+5) M[y*W+x]=1; }
+  var C=mscrComponents(M, W, H), out=[];
+  C.comps.forEach(function(k){ if(k.h<lh*0.9 || k.h>lh*3.2 || k.w<k.h*1.1 || k.w>k.h*9) return; if(k.n/(k.w*k.h)<0.45) return;
+    out.push({x0:k.x0, y0:k.y0, x1:k.x1, y1:k.y1, cx:(k.x0+k.x1)/2, cy:(k.y0+k.y1)/2, w:k.w, h:k.h}); });
+  return out;
+}
+// box picture → black digits on white (Otsu), specks and box-edge slivers dropped
+function yzBin(c){
+  var g=c.getContext("2d"), id=g.getImageData(0,0,c.width,c.height), d=id.data, N=c.width*c.height, hist=new Array(256).fill(0), Y=new Uint8Array(N);
+  for(var i=0;i<N;i++){ Y[i]=d[i*4]; hist[Y[i]]++; }
+  var sum=0,sB=0,wB=0,best=0,T=128; for(var t=0;t<256;t++) sum+=t*hist[t];
+  for(t=0;t<256;t++){ wB+=hist[t]; if(!wB) continue; var wF=N-wB; if(!wF) break; sB+=t*hist[t]; var mB=sB/wB, mF=(sum-sB)/wF, bt=wB*wF*(mB-mF)*(mB-mF); if(bt>best){ best=bt; T=t; } }
+  var mn=255; for(t=0;t<256;t++) if(hist[t]){ mn=t; break; } T=mn+(T-mn)*0.75;  // a bit darker than Otsu: thinner strokes, 5/3/8 stay apart
+  var B=new Uint8Array(N); for(i=0;i<N;i++) B[i]=Y[i]<T? 1 : 0;
+  var C=mscrComponents(B, c.width, c.height), mh=0; C.comps.forEach(function(k){ if(k.h<c.height*0.8 && k.w<c.width*0.5 && k.h>mh) mh=k.h; });
+  var keep={}; C.comps.forEach(function(k){ if(k.h>=c.height*0.8 || k.w>=c.width*0.5) return; if(k.h<mh*0.5 && !(k.h<mh*0.3 && k.w<mh*0.3 && k.n>4 && k.y1>c.height*0.5)) return; keep[k.id]=1; }); // keep digits and the decimal point
+  c._nd=C.comps.filter(function(k){ return keep[k.id] && k.h>=mh*0.5; }).length; c._nd2=Object.keys(keep).length-c._nd;
+  for(i=0;i<N;i++){ var v=keep[C.L[i]]? 0 : 255; d[i*4]=d[i*4+1]=d[i*4+2]=v; d[i*4+3]=255; } g.putImageData(id,0,0); return c;
+}
+function yzNum(t){ var s=String(t||"").replace(/[oOQD]/g,"0").replace(/[Il|\]\[!]/g,"1").replace(/[Ss]/g,"5").replace(/,/g,".").replace(/[^0-9.\-]/g,""); s=s.replace(/^\.+|\.+$/g,""); return /^-?\d+(\.\d+)?$/.test(s)? s : ""; }
+function yzIsNum(t){ var s=String(t||"").trim(); return /^[|\[]?-?[\dOoSIl]*\d[\dOoSIl]*([.,][\dOo]+)?[|\]]?$/.test(s) && !/^[A-Za-z]+$/.test(s); }
+function yzFixDec(v, d){ if(v==="" || d==null) return {v:v, ok:true}; var p=v.split("."), n=p[1]? p[1].length : 0;
+  if(n===d) return {v:v, ok:true};
+  if(!p[1] && d>0 && v.length>d){ return {v:v.slice(0,v.length-d)+"."+v.slice(v.length-d), ok:false}; }  // dot lost in OCR
+  if(d===0 && n) return {v:v, ok:false}; return {v:v, ok:false}; }
+function yzWords(raw){
+  var ws=(raw||[]).map(function(w){ var t=String(w.text||"").trim(); return {t:t, x0:w.bbox.x0, y0:w.bbox.y0, x1:w.bbox.x1, y1:w.bbox.y1, cx:(w.bbox.x0+w.bbox.x1)/2, cy:(w.bbox.y0+w.bbox.y1)/2, h:Math.max(1,w.bbox.y1-w.bbox.y0), c:(w.confidence||0)/100}; })
+    .filter(function(w){ return w.t && w.h>4; });
+  var hs=ws.filter(function(w){ return /[a-z]{3,}/i.test(w.t); }).map(function(w){ return w.h; }).sort(function(a,b){ return a-b; }), lh=hs.length? hs[hs.length>>1] : 20;
+  var nums=[], txt=[]; ws.forEach(function(w){ if(yzIsNum(w.t) && yzNum(w.t)) { w.v=yzNum(w.t); nums.push(w); } else if(w.h<lh*2.5) txt.push(w); });
+  // label segments: neighbouring text words on one line
+  txt.sort(function(a,b){ return a.cy-b.cy || a.x0-b.x0; }); var segs=[];
+  txt.slice().sort(function(a,b){ return a.x0-b.x0; }).forEach(function(w){
+    var s=segs.find(function(g){ return Math.abs(g.cy-w.cy)<lh*0.45 && w.x0-g.x1>-lh*0.3 && w.x0-g.x1<lh*1.1; });
+    if(s){ s.t+=" "+w.t; s.x1=w.x1; s.y0=Math.min(s.y0,w.y0); s.y1=Math.max(s.y1,w.y1); s.ws.push(w); }
+    else segs.push({t:w.t, x0:w.x0, x1:w.x1, y0:w.y0, y1:w.y1, cy:w.cy, ws:[w]}); });
+  segs.forEach(function(s){ s.t=s.t.replace(/[^A-Za-z0-9.\-\/ ]/g,"").replace(/\s+/g," ").trim(); s.cx=(s.x0+s.x1)/2; });
+  return {words:ws, nums:nums, segs:segs, lh:lh};
+}
+function yzFind(P, re, opt){ opt=opt||{}; var r=opt.words? [] : P.segs.filter(function(s){ return re.test(s.t) && (!opt.y0 || s.cy>opt.y0) && (!opt.y1 || s.cy<opt.y1); });
+  // single words inside a segment too ("To", "Set" may join their neighbours)
+  if(!r.length) P.segs.forEach(function(s){ s.ws.forEach(function(w){ var t=w.t.replace(/[^A-Za-z.\-]/g,""); if(re.test(t) && (!opt.y0 || w.cy>opt.y0) && (!opt.y1 || w.cy<opt.y1)) r.push({t:t, x0:w.x0, x1:w.x1, y0:w.y0, y1:w.y1, cx:w.cx, cy:w.cy, ws:[w]}); }); });
+  return r; }
+// the highlighted tab's label (white on green), read on its own
+function yzTabName(wk, P0){ var T=P0.tab; if(!T) return Promise.resolve("");
+  var c=document.createElement("canvas"), y0=T.y0+T.h*0.45, h=T.h*0.55; c.width=Math.round(T.w*2)+40; c.height=Math.round(h*2)+40; var g=c.getContext("2d"); g.fillStyle="#fff"; g.fillRect(0,0,c.width,c.height);
+  g.drawImage(P0.g, T.x0, y0, T.w, h, 20, 20, T.w*2, h*2);
+  return wk.setParameters({tessedit_pageseg_mode:"7", tessedit_char_whitelist:""}).then(function(){ return wk.recognize(c); }).then(function(r){ return String(r.data.text||"").replace(/[^A-Za-z ]/g," ").trim().split(/\s+/).sort(function(a,b){ return b.length-a.length; })[0]||""; }, function(){ return ""; })
+    .then(function(t){ return wk.setParameters({tessedit_pageseg_mode:"11"}).then(function(){ return t; }); });
+}
+// read one Yizumi photo → same result shape as mscrRead
+function yzRead(im, onProg, pre){
+  var P0=yzPrep(im), wkP=tessWorker(), out={kind:"screen", rows:[], header:{}, notesList:[]}, P=null, vals={};
+  return wkP.then(function(wk){
+    if(onProg) onProg("Reading the machine screen…", 5);
+    var restore=function(){ return wk.setParameters({tessedit_char_whitelist:"", tessedit_pageseg_mode:"6"}); };
+    return (pre? Promise.resolve(pre) : wk.setParameters({tessedit_pageseg_mode:"11", tessedit_char_whitelist:""}).then(function(){ return wk.recognize(P0.g); }).then(function(r){ return r.data.words||[]; })).then(function(raw){ return yzTabName(wk, P0).then(function(tn){ return {raw:raw, tn:tn}; }); }).then(function(o){ var raw=o.raw;
+      P=yzWords(raw); var lh=P.lh; P.nums=yzBoxes(P0, lh).filter(function(b){ var inW=P.words.filter(function(w){ return w.cx>b.x0 && w.cx<b.x1 && w.cy>b.y0 && w.cy<b.y1; });
+        b.words=inW; b.v=yzNum(inW.map(function(w){ return w.t; }).join("")); b.c=0; return !inW.some(function(w){ return /[a-z]{2,}/i.test(w.t) && !yzIsNum(w.t); }); });
+      if(window.__yzDbg) window.__yzDbg=P.nums.map(function(w){return [w.v,Math.round(w.cx),Math.round(w.cy),w.w,w.h];}).concat([P.segs.map(function(s){return s.t;}).join("|")]); var  all=P.segs.map(function(s){ return s.t; });
+      var brand=YZ_BRAND.filter(function(re){ return all.some(function(t){ return re.test(t) || t.split(" ").some(function(x){ return re.test(x); }); }); }).length;
+      // highlighted tab: the label inside the green block
+      var tabName=o.tn||""; if(!tabName && P0.tab){ var T=P0.tab; P.words.forEach(function(w){ if(w.cx>T.x0 && w.cx<T.x1 && w.cy>T.y0-lh && w.cy<T.y1+lh && /[a-z]{3,}/i.test(w.t)) tabName=w.t.replace(/[^A-Za-z]/g,""); }); }
+      var best=null; YZ_DEFS.forEach(function(def){ var n=def.titles.filter(function(re){ return yzFind(P, re).length; }).length, sc=n/def.titles.length+(tabName && def.tab.test(tabName)? 1 : 0);
+        if(!best || sc>best.sc) best={def:def, sc:sc}; });
+      out.brandScore=brand; out.tab=tabName; out.tabBox=P0.tab? [P0.tab.x0,P0.tab.y0,P0.tab.w,P0.tab.h] : null;
+      if(!best || best.sc<0.6 || brand<3){ out.unknown=true; return restore(); }
+      var def=best.def; out.screen={id:def.id, title:def.title, tab:tabName, kw:+best.sc.toFixed(2)};
+      // panel bounds: from its title down to the next panel title below it
+      var titleY=[]; YZ_DEFS.forEach(function(d){ d.titles.slice(0,2).forEach(function(re){ yzFind(P, re).forEach(function(s){ titleY.push(s.cy); }); }); });
+      var tabY=P.words.filter(function(w){ return /^(overvi|alarm|return|produ)/i.test(w.t); }).map(function(w){ return w.y0; }); var bottom=Math.min(tabY.length? Math.min.apply(null,tabY) : P0.H, P0.tab? P0.tab.y0 : P0.H);
+      var cells=[];  // {key, v, c, x0,y0,x1,y1, d, found}
+      def.grids.forEach(function(gd){
+        var tt=yzFind(P, gd.panel)[0]; if(!tt) return;
+        var y1=Math.min.apply(null, [bottom].concat(titleY.filter(function(y){ return y>tt.cy+lh; })));
+        var hd=gd.cols.map(function(cdef){ var c=yzFind(P, cdef[0], {y0:tt.cy, y1:tt.cy+lh*6, words:true}).sort(function(a,b){ return Math.hypot(a.cx-tt.x1,a.cy-tt.cy)-Math.hypot(b.cx-tt.x1,b.cy-tt.cy); })[0]; return c||null; });
+        if(window.__yzDbg) window.__yzDbgG=(window.__yzDbgG||[]).concat([[gd.k, hd.map(function(h){ return h? [h.t,Math.round(h.cx),Math.round(h.cy)] : null; })]]);
+        var got=hd.map(function(h,i){ return h? i : -1; }).filter(function(i){ return i>=0; }); if(got.length<2) return;
+        var sp=(hd[got[got.length-1]].cx-hd[got[0]].cx)/(got[got.length-1]-got[0]), hy=hd[got[0]].cy;
+        var xs=gd.cols.map(function(c,i){ return hd[i]? hd[i].cx : hd[got[0]].cx+(i-got[0])*sp; });
+        var ns=P.nums.filter(function(w){ return w.cy>hy+lh*0.8 && w.cy<y1-lh*0.5 && w.cx>xs[0]-sp*0.6 && w.cx<xs[xs.length-1]+sp*0.6; }).sort(function(a,b){ return a.cy-b.cy; });
+        var mhs=ns.map(function(w){ return w.h; }).sort(function(a,b){ return a-b; }), mh=mhs[mhs.length>>1]||0; ns=ns.filter(function(w){ return w.h>mh*0.8 && w.h<mh*1.22 && w.w<sp*1.3; });
+        var rows=[]; ns.forEach(function(w){ var r=rows.find(function(r){ return Math.abs(r.cy-w.cy)<lh*0.6; }); if(r){ r.ws.push(w); r.cy=(r.cy*(r.ws.length-1)+w.cy)/r.ws.length; } else rows.push({cy:w.cy, ws:[w]}); });
+        rows=rows.filter(function(r){ return r.ws.filter(function(w){ return xs.some(function(x){ return Math.abs(w.cx-x)<sp*0.5; }); }).length>=2; }); // a grid row has 2+ boxes under the headers
+        var pitch=rows.length>1? (rows[rows.length-1].cy-rows[0].cy)/(rows.length-1) : lh*1.9;
+        gd.rows.forEach(function(rk, ri){ var r=rows[ri], cy=r? r.cy : (rows.length? rows[0].cy+ri*pitch : hy+lh*2.5+ri*lh*1.9);
+          gd.cols.forEach(function(cdef, ci){ var w=r && r.ws.filter(function(w){ return Math.abs(w.cx-xs[ci])<sp*0.5; })[0];
+            var bw=sp*0.42; cells.push({key:gd.k+rk+"."+ci, w:w||null, v:w? w.v : "", c:w? w.c : 0, x0:xs[ci]-bw, x1:xs[ci]+bw, y0:cy-lh*0.85, y1:cy+lh*0.85, d:cdef[1], rows:rows.length, want:gd.rows.length}); }); });
+      });
+      def.kvs.forEach(function(kd){
+        var ls=yzFind(P, kd[1]); if(kd[4]==="last") ls.sort(function(a,b){ return b.cy-a.cy; }); var l=ls[0]; if(!l) return;
+        var ns=P.nums.filter(function(w){ return Math.abs(w.cy-l.cy)<lh*0.6 && w.x0>l.x1-lh*0.2; }).sort(function(a,b){ return a.x0-b.x0; });
+        var step=ns.length>1? ns[1].cx-ns[0].cx : lh*4;
+        for(var i=0;i<kd[2];i++){ var w=ns[i], d=Array.isArray(kd[3])? kd[3][i] : kd[3];
+          var cx=w? w.cx : (ns.length? ns[ns.length-1].cx+(i-ns.length+1)*step : l.x1+lh*3+i*step), bw=w? (w.x1-w.x0)/2+lh*0.5 : lh*1.8;
+          cells.push({key:kd[0]+"."+i, w:w||null, v:w? w.v : "", c:w? w.c : 0, x0:cx-bw, x1:cx+bw, y0:l.cy-lh*0.85, y1:l.cy+lh*0.85, d:d}); }
+      });
+      (def.texts||[]).forEach(function(td){ var l=yzFind(P, td[1])[0]; if(!l) return; var r=P.segs.filter(function(s){ return Math.abs(s.cy-l.cy)<lh*0.6 && s.x0>l.x1+lh; }).sort(function(a,b){ return a.x0-b.x0; })[0];
+        if(r) vals[td[0]]={v:r.t, c:0.8, x0:r.x0, x1:r.x1, y0:r.y0, y1:r.y1}; });
+      // second look at every box that is missing, unsure or has the wrong number of decimals: OCR that box alone
+      var redo=cells.filter(function(q){ return q.w; });  // no box at that spot (e.g. High pressure has no To) → left blank
+      return wk.setParameters({tessedit_pageseg_mode:"7", tessedit_char_whitelist:"0123456789.-"}).then(function(){
+        return redo.reduce(function(p, q, i){ return p.then(function(){
+          if(onProg) onProg("Checking screen values — "+(i+1)+" of "+redo.length, Math.round(40+i/Math.max(1,redo.length)*55));
+          var bi=q.w? Math.max(3,q.w.h*0.12) : 0, qx0=q.w? q.w.x0+bi : q.x0, qx1=q.w? q.w.x1-bi : q.x1, x0=Math.max(0,qx0), y0=Math.max(0,q.w? q.w.y0+bi : q.y0), w=Math.max(8,qx1-x0), h=Math.max(8,(q.w? q.w.y1-bi : q.y1)-y0), S=Math.max(1,Math.min(4,60/h)), c=document.createElement("canvas");
+          c.width=Math.round(w*S)+40; c.height=Math.round(h*S)+40; var g=c.getContext("2d"); g.fillStyle="#fff"; g.fillRect(0,0,c.width,c.height); g.imageSmoothingQuality="high"; g.drawImage(P0.g, x0, y0, w, h, 20, 20, w*S, h*S); yzBin(c);
+          if(window.__yzCrops) window.__yzCrops.push([q.key, c.toDataURL()]);
+          var nd=c._nd, small=document.createElement("canvas"); small.width=Math.round(c.width*0.55); small.height=Math.round(c.height*0.55); small.getContext("2d").drawImage(c,0,0,small.width,small.height);
+          var tries=[[c,"7"],[c,"8"],[small,"7"],[small,"13"]], ti=0, best=null;
+          function attempt(){ var T=tries[ti++]; return wk.setParameters({tessedit_pageseg_mode:T[1]}).then(function(){ return wk.recognize(T[0]); }).then(function(r){
+              var t=yzNum((r.data.text||"").replace(/\s+/g,"")), cf=(r.data.confidence||0)/100, okN=t && t.replace(/[.\-]/g,"").length===nd;
+              if(!best || (okN && !best.okN) || (okN===best.okN && cf>best.cf)) best={t:t, cf:cf, okN:okN, data:{text:t, confidence:cf*100}};
+              if(okN && cf>0.5 || ti>=tries.length) return {data:best.data, okN:best.okN}; return attempt(); }); }
+          return attempt().then(function(r){ if(!r.okN && nd) r.data.confidence=Math.min(r.data.confidence,40); var t=yzNum((r.data.text||"").replace(/\s+/g,"")), cf=(r.data.confidence||0)/100;
+            var first=q.v; if(!t){ q.v=""; q.c=0; return; } q.v=t; q.c=Math.min(0.97, cf);
+            if(!q.w){ q.c=Math.min(q.c,0.5); return; }
+            if(first && first.replace(".","")!==t.replace(".","")) q.c=Math.min(q.c,0.5); });  // the two reads disagree: Allen checks it
+        }); }, Promise.resolve());
+      }).then(function(){
+        cells.forEach(function(q){ var f=yzFixDec(q.v, q.d); if(q.v){ q.v=f.v; if(!f.ok) q.c=Math.min(q.c,0.45); } if(!q.w && q.v) q.c=Math.min(q.c,0.6); if(q.want && q.rows!==q.want) q.c=Math.min(q.c,0.55);
+          var bb=q.w||q; vals[q.key]={nr:q.rows, v:q.v, c:+Math.max(0,Math.min(1,q.c)).toFixed(2), x0:bb.x0, x1:bb.x1, y0:bb.y0, y1:bb.y1, state:q.v? "read" : "unread"}; });
+        out.found=cells.filter(function(q){ return q.w; }).length; out.total=cells.length; out.slots={}; Object.keys(vals).forEach(function(k){ out.slots[k]={v:vals[k].v, c:vals[k].c, nr:vals[k].nr}; });
+        function cropOf(ks){ var qs=ks.map(function(k){ return vals[k]; }).filter(Boolean); if(!qs.length) return ""; var pad=10, gap=16, H=Math.max.apply(null, qs.map(function(q){ return q.y1-q.y0; }))+pad*2;
+          var Wt=qs.reduce(function(a,q){ return a+(q.x1-q.x0)+pad*2; },0)+gap*(qs.length-1), c=document.createElement("canvas"); c.width=Math.round(Wt); c.height=Math.round(H);
+          var g=c.getContext("2d"); g.fillStyle="#fff"; g.fillRect(0,0,c.width,c.height); var x=0;
+          qs.forEach(function(q){ var w=q.x1-q.x0+pad*2, h=q.y1-q.y0+pad*2; g.drawImage(P0.c, Math.max(0,q.x0-pad), Math.max(0,q.y0-pad), w, h, x, (H-h)/2, w, h); x+=w+gap; });
+          if(c.width>380){ var sc=380/c.width, d=document.createElement("canvas"); d.width=380; d.height=Math.round(c.height*sc); d.getContext("2d").drawImage(c,0,0,d.width,d.height); c=d; }
+          return c.toDataURL("image/jpeg", 0.85); }
+        Object.keys(def.fields).forEach(function(id){ var ks=def.fields[id], Pm=MS_P[id]; if(!Pm) return;
+          var ss=ks.map(function(k){ return vals[k]; }), vs=ss.map(function(s){ return s && s.v? s.v : ""; }), any=vs.some(Boolean);
+          var row={id:id, vals:Pm.staged? vs.concat(["","",""]).slice(0,3) : [vs[0]], extra:"", same:false, crop:cropOf(ks), typed:true, screen:true,
+            ocr:vs.join(" | "), state:any? "read" : "unread", conf:+Math.min.apply(null, ss.map(function(s){ return s && s.v? s.c : 0.2; })).toFixed(2)};
+          if(Pm.staged && vs.length>1 && vs.every(function(v){ return v===vs[0]; }) && vs.length===3) row.same=false;
+          out.rows.push(row); });
+        (def.notes||[]).forEach(function(n){ var vs=n[1].map(function(k){ var s=vals[k]; return s && s.v? s.v+(s.c<0.6? " (check)" : "") : "?"; }); if(vs.every(function(v){ return v==="?"; })) return;
+          out.notesList.push({label:n[0], text:vs.join(" / "), conf:Math.min.apply(null, n[1].map(function(k){ return vals[k]? vals[k].c : 0.3; }))}); });
+        // date on the top status bar (setup date) — always let Allen check it
+        var dw=P.words.filter(function(w){ return /^\d{1,2}\/\d{1,2}\/\d{2}$/.test(w.t) && w.cy<P0.H*0.5; })[0];
+        if(dw) out.header.date={value:dw.t, conf:0.55, crop:mscrCropUrl(P0.c, dw.x0, dw.y0, dw.x1+lh*5, dw.y1, 10)};
+        return restore();
+      }, function(e){ return restore().then(function(){ throw e; }); });
+    });
+  }).then(function(){
+    out.lines=P? [{text:P.segs.map(function(s){ return s.t; }).join(" "), conf:0.6}] : [];
+    out.notes = out.notesList.length? "Machine 3 "+(out.screen? out.screen.title : "screen")+": "+out.notesList.map(function(n){ return n.label+" "+n.text; }).join("; ") : "";
+    out.noteConf = out.notesList.length? Math.min.apply(null, out.notesList.map(function(n){ return n.conf; })) : 0;
+    return out;
+  });
+}
 /*MSCR-END*/
 // one image (file or canvas) → oriented, prepped, OCR'd page; a machine settings sheet is also read cell by cell
 function msScanImage(src, label, prog){
@@ -2190,8 +2404,12 @@ function msScanImage(src, label, prog){
   return (isBlob? loadImage(src) : Promise.resolve(src)).then(function(im){
     base=im;
     // v2.5.0: a photo of the press controller's screen (dark LCD, yellow boxes) is read box by box, not as a paper sheet
-    var looks=false; try{ looks=mscrLooksLikeScreen(im); }catch(e){}
-    if(!looks) return im;
+    var looks=false, yl=false; try{ looks=mscrLooksLikeScreen(im); }catch(e){}
+    if(!looks){ try{ yl=yzLooksLikeScreen(im); }catch(e){}
+      if(!yl) return im;
+      // v2.6.0: Yizumi-HPM controller (light-grey screen, green highlighted tab)
+      if(prog) prog("Machine screen photo (Yizumi) — reading it…");
+      return yzRead(im, function(t, pc){ if(prog) prog(t, pc); }).then(function(res){ if(!res.unknown) screenRes=res; return im; }, function(e){ console.warn("yizumi read failed", e); return im; }); }
     if(prog) prog("Machine screen photo — finding the value boxes…");
     return mscrRead(im, function(t, pc){ if(prog) prog(t, pc); }).then(function(res){ if(!res.unknown){ screenRes=res; } return im; }, function(e){ console.warn("screen read failed", e); return im; });
   }).then(function(im){
@@ -2212,7 +2430,11 @@ function msScanImage(src, label, prog){
   }).then(function(r){
     if(screenRes) return {lines:screenRes.lines||[], conf:0.6, label:label, kind:"screen", ms:screenRes, rot:0};
     var c=r._c; delete r._c;
-    if(!msIsForm(textOf(r))){ c._raw=null; delete r.words; return r; }
+    if(!msIsForm(textOf(r))){
+      var tt=textOf(r); if(r.rot===0 && YZ_BRAND.filter(function(re){ return tt.split(/\s+/).some(function(x){ return re.test(x); }); }).length>=5){
+        c._raw=null; delete r.words; if(prog) prog("Machine screen photo (Yizumi) — reading it…");
+        return yzRead(base, function(t, pc){ if(prog) prog(t, pc); }).then(function(res){ return res.unknown? r : {lines:res.lines||[], conf:0.6, label:label, kind:"screen", ms:res, rot:0}; }, function(){ return r; }); }
+      c._raw=null; delete r.words; return r; }
     if(prog) prog("Reading machine settings sheet…");
     return msExtract(c, c._raw, r.words, function(d, n){ if(prog) prog("Reading machine settings — cell "+d+" of "+n, Math.round(d/n*100)); }).then(function(res){
       res.rot=r.rot; r.ms=res; c._raw=null; delete r.words; return r;
@@ -7120,7 +7342,7 @@ function init(){
     if(!state.meta.ocrWarmAt && !c.saveData && c.type!=="cellular") warmOcr(false);
   }, 8000);
 }
-window.__tjl = {state:state, googleClientId:GOOGLE_CLIENT_ID, ms:{screenRead:function(i,p){return mscrRead(i,p);}, screenLooks:function(i){return mscrLooksLikeScreen(i);}, scan:msScanImage, extract:msExtract, orient:orientForOcr, normalize:msNormalize, defs:MS_DEFS, rowText:msRowText, isForm:msIsForm}, phone:{storeAlbumHandle:storeAlbumHandle, albumName:albumName, readPhoneSaved:readPhoneSaved},
+window.__tjl = {state:state, googleClientId:GOOGLE_CLIENT_ID, ms:{screenRead:function(i,p){return mscrRead(i,p);}, screenLooks:function(i){return mscrLooksLikeScreen(i);}, yzRead:function(i,p){return yzRead(i,p);}, yzLooks:function(i){return yzLooksLikeScreen(i);}, yzDefs:YZ_DEFS, scan:msScanImage, extract:msExtract, orient:orientForOcr, normalize:msNormalize, defs:MS_DEFS, rowText:msRowText, isForm:msIsForm}, phone:{storeAlbumHandle:storeAlbumHandle, albumName:albumName, readPhoneSaved:readPhoneSaved},
   doc:{url:DOC_SCRIPT_URL, readQueue:readDocQueue, readUploaded:readDocUploaded, readSent:readDocSent, baseName:docBaseName, renameable:function(){ return renameableDocs().map(function(d){ return {sent:d.sentName, name:d.docName}; }); }, flush:flushDocQueue, docsForCtx:docsForCtx, buildDocPdf:buildDocPdf, buildDocParts:buildDocParts, exists:docExists, uploadAll:uploadAllDocs, limits:function(){ return {page:DOC_PAGE_MAX, part:DOC_PART_BYTES, asis:DOC_PDF_ASIS, side:DOC_MAX_SIDE}; }}, parseLines:parseLines, buildReview:buildReview, render:render, scan:{buildSynIndex:buildSynIndex, labelUnitHint:labelUnitHint, parseNumber:parseNumber, defForLabel:defForLabel, reconcileFields:reconcileFields},
   photo:{readQueue:readPhotoQueue, readUploaded:readPhotoUploaded, readOk:readPhotoOk, flush:flushPhotoQueue, name:photoDriveName, prep:photoUploadBlob, info:docServerInfo, items:function(){ return photoItemsFor(state.jobs, false).map(function(it){ return {job:it.job.id, id:it.photo.id, name:it.photo.driveName||""}; }); }, terms:jobSearchTerms, find:findDocs, missing:jobMissing},
   restore:{need:restoreNeed, run:runRestore, pick:restorePickFiles, stem:restoreStem, partOf:restorePartOf, fileId:driveFileId, getFile:getDriveFile, pages:restorePagesOf, last:function(){ return state.restoreLast||null; }},
