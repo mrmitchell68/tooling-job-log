@@ -616,7 +616,7 @@ pre.raw{white-space:pre-wrap;font-size:12px;background:var(--surface-2);padding:
 <script>
 (function(){
 "use strict";
-var APP_VERSION = "2.7.0";
+var APP_VERSION = "2.7.1";
 // Public OAuth client id (not a secret). Web client, authorized JavaScript origins:
 //   https://mrmitchell68.github.io   and   http://localhost:8766
 // Leave empty until that client exists — Save-to-Drive is hidden and the button uses the Android share sheet.
@@ -1933,6 +1933,35 @@ var MSCR_DEFS = [
      close_press:["clP1","clP2","clP3"], close_int:["clX1","clX2","clX3"], close_speed:["clS1","clS2","clS3"]},
    notes:[["Ejector PT (K.O.)",["ejKO"]],["Clamp open PT2 / PT1",["opT2","opT1"]],["Clamp close PT",["clT1","clT2"]],["Status position",["stPos"]],["Timer",["timer"]]],
    status:true}
+  ,
+  {id:"tmc-charge", brand:"TMC", title:"TMC 250E · Carriage / Screw charge / Suck back screen", keys:[/carriage/i, /rotate/i, /charge/i, /suck/i, /delay/i, /monit/i, /timer/i, /min\.?\s*pres/i],
+   slots:[
+    ["carP1",265,234,95,89,3],["carP2",405,236,92,88,3],["chP1",622,238,92,90,3],["chP2",776,238,88,88,3],["chP3",931,239,90,88,3],["sbP",1102,239,86,87,3],
+    ["carT21",125,393,119,87,4],["carT20",265,395,118,87,4],["carT22",404,396,118,90,4],["chT1",616,396,110,86,4],["chT2",770,396,108,85,4],["chT3",923,396,106,85,4],["sbX",1100,396,105,86,4],["stPos",1280,396,105,86,4],
+    ["carS1",152,591,73,85,2],["carS2",292,593,76,89,2],["carS3",430,592,72,86,2],["chS1",640,592,69,84,2],["chS2",793,592,70,85,2],["chS3",944,592,69,86,2],["sbS",1110,589,69,83,2],["stSpd",1297,588,70,85,0],
+    ["chPT1",625,741,112,85,4],["chPT2",779,744,112,84,4],["chTmr",927,743,111,86,4],["sbTmr",1092,742,110,86,4],["stTmr",1278,740,105,85,0],
+    ["date",121,934,115,36,0,"text"]],
+   fields:{back_press:["chP1","chP2","chP3"], screw_speed:["chS1","chS2","chS3"], screw_int:["chT1","chT2","chT3"], suck_back:["sbX"]},
+   notes:[["Carriage press fwd / back",["carP1","carP2"]],["Carriage PT21 / PT20 / PT22",["carT21","carT20","carT22"]],["Carriage speed",["carS1","carS2","carS3"]],["Charge PT1 / PT2",["chPT1","chPT2"]],["Charge timer",["chTmr"]],["Suck back press / speed / timer",["sbP","sbS","sbTmr"]],["Status position",["stPos"]]],
+   status:true},
+  {id:"tmc-inject", brand:"TMC", title:"TMC 250E · Injection & cushion monitor screen", keys:[/monitor/i, /hold/i, /transfer/i, /stage/i, /limit/i, /actual/i, /inj\.?/i, /mode/i],
+   slots:[
+    ["spd7",283,212,68,84,2],["spd6",414,206,68,84,2],["spd5",547,200,68,85,2],["spd4",678,194,67,85,2],["spd3",811,189,67,84,2],["spd2",943,183,68,84,2],["spd1",1076,177,68,84,2],
+    ["pos7",400,312,105,80,4],["pos6",531,307,105,80,4],["pos5",664,303,105,80,4],["pos4",795,297,105,80,4],["pos3",926,291,105,80,4],["pos2",1057,287,105,80,4],
+    ["hP5",143,633,86,83,3],["hP4",255,629,87,84,3],["hP3",368,624,88,86,3],["hP2",480,620,89,85,3],["hP1",592,616,87,86,3],
+    ["hT5",139,746,106,84,4],["hT4",252,741,108,85,4],["hT3",362,736,110,85,4],["hT2",475,733,109,86,4],["hT1",590,729,108,85,4],
+    ["date",146,953,105,34,0,"text"]],
+   fields:{inj_speed:["spd1","spd2","spd3"], inj_int:["pos2","pos3","pos4"], hold_press:["hP1","hP2","hP3"], hold_time:["hT1","hT2","hT3"]},
+   notes:[["Injection speed stages 4 / 5 / 6 / 7",["spd4","spd5","spd6","spd7"]],["Injection position stages 5 / 6 / 7",["pos5","pos6","pos7"]],["Hold pressure stages 4 / 5",["hP4","hP5"]],["Hold timer stages 4 / 5",["hT4","hT5"]]],
+   status:true},
+  {id:"tmc-core", brand:"TMC", title:"TMC 250E · Corepull 1/2/3 screen", keys:[/corepull/i, /core/i, /pulse/i, /out/i, /\bin\b/i, /timer/i],
+   slots:[
+    ["c1oP",141,273,95,88,3],["c1oX",141,430,110,85,4],["c1oS",141,619,68,83,2],["c1oT",141,783,108,84,4],["c1iP",306,273,95,88,3],["c1iX",306,430,110,85,4],["c1iS",306,619,68,83,2],["c1iT",306,780,108,84,4],["c2oP",526,273,95,88,3],["c2oX",526,430,110,85,4],["c2oS",526,619,68,83,2],["c2oT",526,777,108,84,4],["c2iP",680,273,95,88,3],["c2iX",680,430,110,85,4],["c2iS",680,619,68,83,2],["c2iT",680,774,108,84,4],["c3oP",913,273,95,88,3],["c3oX",913,430,110,85,4],["c3oS",913,619,68,83,2],["c3oT",913,771,108,84,4],["c3iP",1066,273,95,88,3],["c3iX",1066,430,110,85,4],["c3iS",1066,619,68,83,2],["c3iT",1066,768,108,84,4],
+    ["stPos",1282,425,107,85,4],["stSpd",1299,615,69,83,0],["stTmr",1279,765,104,84,0],
+    ["date",94,969,95,32,0,"text"]],
+   fields:{},
+   notes:[["Corepull 1 OUT press/PT/speed/timer",["c1oP","c1oX","c1oS","c1oT"]],["Corepull 1 IN press/PT/speed/timer",["c1iP","c1iX","c1iS","c1iT"]],["Corepull 2 OUT press/PT/speed/timer",["c2oP","c2oX","c2oS","c2oT"]],["Corepull 2 IN press/PT/speed/timer",["c2iP","c2iX","c2iS","c2iT"]],["Corepull 3 OUT press/PT/speed/timer",["c3oP","c3oX","c3oS","c3oT"]],["Corepull 3 IN press/PT/speed/timer",["c3iP","c3iX","c3iS","c3iT"]],["Status position",["stPos"]]],
+   status:true}
 ];
 function mscrMask(src, W){
   var w0=src.naturalWidth||src.width, h0=src.naturalHeight||src.height, s=W/w0, H=Math.round(h0*s);
@@ -1992,7 +2021,16 @@ function mscrFit(def, boxes){
       sy0=Math.min.apply(null,SB.map(function(s){return s[2];})), sy1=Math.max.apply(null,SB.map(function(s){return s[2];}));
   var bx0=Math.min.apply(null,boxes.map(function(b){return b.cx;})), bx1=Math.max.apply(null,boxes.map(function(b){return b.cx;})),
       by0=Math.min.apply(null,boxes.map(function(b){return b.cy;})), by1=Math.max.apply(null,boxes.map(function(b){return b.cy;}));
-  var T=function(x,y){ return [bx0+(x-sx0)/(sx1-sx0)*(bx1-bx0), by0+(y-sy0)/(sy1-sy0)*(by1-by0)]; }, best=null;
+  var T0=function(x,y){ return [bx0+(x-sx0)/(sx1-sx0)*(bx1-bx0), by0+(y-sy0)/(sy1-sy0)*(by1-by0)]; };
+  // v2.7.1: the photo is cropped to the screen first, so the template's own coordinates are a good start too (needed when
+  // the outermost boxes are hidden by glare and the box extent no longer matches the template extent)
+  var runs=[T0, function(x,y){ return [x,y]; }].map(function(Ti){ return mscrFitFrom(S, boxes, Ti); });
+  runs.sort(function(a,b){ return b.best.matched-a.best.matched; });
+  var best=runs[0].best, T=runs[0].T;
+  return mscrPlace(best, T);
+}
+function mscrFitFrom(S, boxes, T){
+  var best=null;
   for(var it=0; it<4; it++){
     var used={}, pairs=[], placed=S.map(function(s){
       var p=T(s[1],s[2]), tol=Math.min(s[3],s[4])*(it? 0.45 : 0.7), bi=-1, bd=1e9;
@@ -2004,6 +2042,9 @@ function mscrFit(def, boxes){
     best={placed:placed, matched:pairs.length, total:S.filter(function(s){ return s[6]!=='text'; }).length, extra:boxes.length-pairs.length};
     if(pairs.length<6) break; var F=mscrAffine(pairs); if(!F) break; T=F;
   }
+  return {best:best, T:T};
+}
+function mscrPlace(best, T){
   // final placement with the fitted transform; scale for boxes not found
   best.placed.forEach(function(q){
     var cc=T(q.tx,q.ty), aa=T(q.tx-q.tw/2,q.ty-q.th/2), bb2=T(q.tx+q.tw/2,q.ty+q.th/2), pw=bb2[0]-aa[0], ph=bb2[1]-aa[1];
@@ -2016,7 +2057,7 @@ function mscrFit(def, boxes){
 }
 // cheap test on a small copy: mostly dark picture with yellow drawing → a controller screen, not a paper sheet
 function mscrLooksLikeScreen(im){
-  var m=mscrMask(im, 400); return m.yellow>0.03 && m.yellow<0.35 && m.dark>0.25;
+  var m=mscrMask(im, 400); return m.yellow>0.012 && m.yellow<0.35 && m.dark>0.25;
 }
 function mscrFixDigits(t){ return String(t||"").replace(/[oOQD]/g,"0").replace(/[Il|]/g,"1").replace(/[Ss]/g,"5").replace(/[B]/g,"8").replace(/[^0-9\-—]/g,""); }
 function mscrCropUrl(src, x0, y0, x1, y1, pad){
@@ -2096,7 +2137,21 @@ function mscrTextCanvas(m){ // headings: yellow mask → black text on white (Te
   var c=document.createElement("canvas"); c.width=m.W; c.height=m.H; var g=c.getContext("2d"), id=g.createImageData(m.W,m.H), d=id.data;
   for(var i=0;i<m.W*m.H;i++){ var v=m.M[i]? 0 : 255; d[i*4]=d[i*4+1]=d[i*4+2]=v; d[i*4+3]=255; } g.putImageData(id,0,0); return c; }
 // read one screen photo → same result shape as msExtract (rows / header / found / total) + screen info and notes
+// v2.7.1: the screen may fill only part of the photo (shot from a distance / inside a shroud) → crop to the yellow drawing
+function mscrLocate(src){
+  var w0=src.naturalWidth||src.width, h0=src.naturalHeight||src.height, m=mscrMask(src, 400), xs=[], ys=[];
+  for(var y=0;y<m.H;y++) for(var x=0;x<m.W;x++) if(m.M[y*m.W+x]){ xs.push(x); ys.push(y); }
+  if(xs.length<200) return src;
+  xs.sort(function(a,b){ return a-b; }); ys.sort(function(a,b){ return a-b; });
+  var q=function(a,f){ return a[Math.min(a.length-1, Math.floor(a.length*f))]; };
+  var x0=q(xs,0.01), x1=q(xs,0.99), y0=q(ys,0.01), y1=q(ys,0.99), bw=x1-x0, bh=y1-y0;
+  if(bw>m.W*0.65) return src;                             // screen already fills the frame (the Ejector/Clamp template was measured that way)
+  var mx=bw*0.05, my=bh*0.06; x0=Math.max(0,x0-mx); x1=Math.min(m.W,x1+mx); y0=Math.max(0,y0-my); y1=Math.min(m.H,y1+my);
+  var k=w0/m.W, c=document.createElement("canvas"); c.width=Math.round((x1-x0)*k); c.height=Math.round((y1-y0)*k);
+  c.getContext("2d").drawImage(src, x0*k, y0*k, c.width, c.height, 0, 0, c.width, c.height); c._crop=[x0*k,y0*k]; return c;
+}
 function mscrRead(src, onProg){
+  src=mscrLocate(src);
   var m=mscrMask(src, MSCR_W), boxes=mscrBoxes(m), wkP=tessWorker(), out={kind:"screen", rows:[], header:{}, notesList:[], boxes:boxes.length};
   var words=[], text="";
   return wkP.then(function(wk){
@@ -2107,8 +2162,9 @@ function mscrRead(src, onProg){
       // pick the screen: header keywords + how well its box layout fits
       var best=null;
       MSCR_DEFS.forEach(function(def){ var kw=def.keys.filter(function(re){ return re.test(text); }).length/def.keys.length, fit=mscrFit(def, boxes); if(!fit) return;
-        var sc=kw*0.5+fit.score*0.5; if(!best || sc>best.sc) best={def:def, fit:fit, sc:sc, kw:kw}; });
-      if(!best || best.fit.score<0.5){ out.unknown=true; return; }
+        var ex=boxes.length? Math.max(0,fit.extra)/boxes.length : 1, sc=kw*0.5+fit.score*0.5-ex*0.5; out.fits=(out.fits||[]).concat([[def.id, +kw.toFixed(2), fit.matched, fit.total, fit.extra, boxes.length]]);
+        if(!best || sc>best.sc) best={def:def, fit:fit, sc:sc, kw:kw, ex:ex}; });
+      if(!best || best.fit.score<0.5 || best.ex>0.2){ out.unknown=true; return; } // v2.7.1: many boxes the layout doesn't explain → a screen we don't know yet
       var def=best.def, fit=best.fit, by={}; fit.placed.forEach(function(q){ by[q.key]=q; });
       out.screen={id:def.id, title:def.title, kw:+best.kw.toFixed(2), found:fit.matched, total:fit.total};
       out.found=fit.matched; out.total=fit.total;
@@ -2400,13 +2456,13 @@ function msScanImage(src, label, prog){
     });
   }
   function textOf(r){ return (r.lines||[]).map(function(l){ return l.text; }).join("\n"); }
-  var screenRes=null;
+  var screenRes=null, screenSeen=false;
   return (isBlob? loadImage(src) : Promise.resolve(src)).then(function(im){
     base=im;
     // v2.5.0: a photo of the press controller's screen (dark LCD, yellow boxes) is read box by box, not as a paper sheet
-    var looks=false, yl=false; try{ looks=mscrLooksLikeScreen(im); }catch(e){}
+    var looks=false, yl=false; try{ looks=mscrLooksLikeScreen(im); }catch(e){} if(looks) screenSeen=true;
     if(!looks){ try{ yl=yzLooksLikeScreen(im); }catch(e){}
-      if(!yl) return im;
+      if(!yl) return im; screenSeen=true;
       // v2.6.0: Yizumi-HPM controller (light-grey screen, green highlighted tab)
       if(prog) prog("Machine screen photo (Yizumi) — reading it…");
       return yzRead(im, function(t, pc){ if(prog) prog(t, pc); }).then(function(res){ if(!res.unknown) screenRes=res; return im; }, function(e){ console.warn("yizumi read failed", e); return im; }); }
@@ -2434,7 +2490,7 @@ function msScanImage(src, label, prog){
       var tt=textOf(r); if(r.rot===0 && YZ_BRAND.filter(function(re){ return tt.split(/\s+/).some(function(x){ return re.test(x); }); }).length>=5){
         c._raw=null; delete r.words; if(prog) prog("Machine screen photo (Yizumi) — reading it…");
         return yzRead(base, function(t, pc){ if(prog) prog(t, pc); }).then(function(res){ return res.unknown? r : {lines:res.lines||[], conf:0.6, label:label, kind:"screen", ms:res, rot:0}; }, function(){ return r; }); }
-      c._raw=null; delete r.words; return r; }
+      c._raw=null; delete r.words; if(screenSeen) r.unknownScreen=true; return r; }
     if(prog) prog("Reading machine settings sheet…");
     return msExtract(c, c._raw, r.words, function(d, n){ if(prog) prog("Reading machine settings — cell "+d+" of "+n, Math.round(d/n*100)); }).then(function(res){
       res.rot=r.rot; r.ms=res; c._raw=null; delete r.words; return r;
@@ -4051,12 +4107,14 @@ function renderModal(){
     var items=m.items||[], main=[], loose=[];
     items.forEach(function(r, i){ (r.loose? loose : main).push(i); });
     h = '<h3>Review scanned values</h3><p class="sub">'+esc(m.summary||"")+'</p>';
+    if((m.unknownScreens||[]).length) h += '<div class="rv-warn" id="rvUnknownScreen" style="font-size:15px">⚠ <b>Machine screen not recognized yet</b> ('+m.unknownScreens.map(esc).join(", ")+'). The app can read these screens so far: TMC 250E Clamp &amp; Ejector, Carriage / Screw charge, Injection &amp; cushion, Corepull, and the Yizumi screens. Nothing from '+(m.unknownScreens.length>1? 'these photos' : 'this photo')+' was filled in. Send the photo to Spec. Bot so it can learn this screen.</div>';
+    if(rvNothing(m)) h += '<div class="rv-warn" id="rvNothing" style="font-size:15px">⚠ <b>No values were found</b> on '+(((m.docs||[]).length>1)? 'these photos' : 'this photo')+', so nothing will be saved. Try a straight-on photo with the whole screen or sheet in the frame, no glare, or use Paste text.</div>';
     if(m.ms) h += msReviewHtml(m.ms);
     if(!items.length && m.ms){
       h += '';
-    } else if(!items.length){
+    } else if(!items.length && !rvNothing(m)){
       h += '<p class="muted">No recognizable labels found. Try a straighter, closer photo in good light, or use Paste text from Google Lens.</p>';
-    } else {
+    } else if(items.length){
       var unchecked = main.filter(function(i){ return !items[i].selected; }).length;
       h += '<div class="btnrow" style="margin-bottom:6px"><button class="btn ghost" data-act="rvAll" data-v="1">Select all</button><button class="btn ghost" data-act="rvAll" data-v="0">Select none</button></div>';
       h += '<p class="faint" style="margin:4px 0">Fix any misread values here. <span class="conf hi">High</span> <span class="conf md">Check</span> <span class="conf lo">Low</span> = match confidence. Low ones start unchecked.</p>';
@@ -4795,7 +4853,8 @@ function finishScan(pages, summary, scanFiles){
   setBusy(null); ocrProgressCb=null;
   var job = scanJob(); if(!job){ if(scanFiles) dropScanMetas(scanFiles); showToast("Job not found", {err:true}); return; }
   // each page/file is read as its own document (work instructions, BOM, item record…), then merged into one job
-  var msPages = pages.filter(function(p){ return p.ms; }); pages = pages.filter(function(p){ return !p.ms; });
+  var unknownScreens = pages.filter(function(p){ return p.unknownScreen; }).map(function(p){ return p.label||"photo"; });
+  var msPages = pages.filter(function(p){ return p.ms; }); pages = pages.filter(function(p){ return !p.ms && !p.unknownScreen; });
   var msM = msPages.length? msReviewModel(msPages.map(function(p){ return p.ms; }), job) : null;
   var docs = pages.map(function(p, pi){ var ls=p.lines.map(function(l){ return Object.assign({kind:p.kind}, l); }); var d=parseDoc(ls, job, 0.9, p.label || ("Page "+(pi+1))); d.raw=ls.map(function(l){ return l.text; }).join("\n"); return d; });
   var cnt={}; docs.forEach(function(d){ cnt[d.label]=(cnt[d.label]||0)+1; }); var seen={};
@@ -4809,7 +4868,7 @@ function finishScan(pages, summary, scanFiles){
   if(msPages.length) raw = (raw? raw+"\n\n" : "") + msPages.map(function(p){ return "— "+(p.kind==="screen"? "Machine screen" : "Machine settings sheet")+" ("+(p.label||"photo")+") —\n"+p.lines.map(function(l){ return l.text; }).join("\n"); }).join("\n\n");
   if(scanFiles) scanFiles._handed = true;
   keepScanWithJob(job, scanFiles||[]);
-  openModal({type:"review", ms:msM, items:items, raw:raw, docs:parsed.docs.concat(msPages.some(function(p){ return p.kind!=="screen"; })? ["Machine settings sheet"] : []).concat(msPages.some(function(p){ return p.kind==="screen"; })? ["Machine screen"] : []), conflicts:nConf, scanFiles:scanFiles||[], summary:(msM && msM.screen? "Machine screen ("+msM.screen+") · " : msPages.length? "Machine settings sheet · " : "")+(docs.length>1? docs.length+" documents ("+parsed.docs.join(", ")+") · " : (docs[0] && docs[0].kind? docs[0].kind+" · " : ""))+summary+" · "+items.filter(function(i){ return !i.loose; }).length+" value"+(items.length===1?"":"s")+" found"+(nConf? " · "+nConf+" conflict"+(nConf>1?"s":"") : "")});
+  openModal({type:"review", unknownScreens:unknownScreens, ms:msM, items:items, raw:raw, docs:parsed.docs.concat(msPages.some(function(p){ return p.kind!=="screen"; })? ["Machine settings sheet"] : []).concat(msPages.some(function(p){ return p.kind==="screen"; })? ["Machine screen"] : []), conflicts:nConf, scanFiles:scanFiles||[], summary:(msM && msM.screen? "Machine screen ("+msM.screen+") · " : msPages.length? "Machine settings sheet · " : "")+(docs.length>1? docs.length+" documents ("+parsed.docs.join(", ")+") · " : (docs[0] && docs[0].kind? docs[0].kind+" · " : ""))+summary+" · "+items.filter(function(i){ return !i.loose; }).length+" value"+(items.length===1?"":"s")+" found"+(nConf? " · "+nConf+" conflict"+(nConf>1?"s":"") : "")});
   scheduleAutoDriveCopy(scanFiles||[]);
 }
 ACT.rvPick = function(t){ var r=state.modal.items[+t.getAttribute("data-i")], o=r && r.options[+t.getAttribute("data-o")]; if(!o) return; r.value=o.value; r.unit=o.unit||""; r.selected=true; r.picked=true; rvRerender(); };
@@ -4819,6 +4878,15 @@ ACT.rvRole = function(t){ var r=state.modal.items[+t.getAttribute("data-i")]; if
   rvRerender(); };
 ACT.rvAll = function(t){ var v=t.getAttribute("data-v")==="1"; state.modal.items.forEach(function(i){ i.selected = v && (!i.loose || !!i.target); }); rvRerender(); };
 function rvRerender(){ var sh=document.querySelector("#modalRoot .sheet"), y=sh? sh.scrollTop : 0; renderModal(); sh=document.querySelector("#modalRoot .sheet"); if(sh) sh.scrollTop=y; }
+// nothing at all to save: no document values, no machine-settings rows/notes with a value
+function rvNothing(m){
+  if((m.items||[]).length) return false;
+  var M=m.ms; if(!M) return true;
+  if((M.rows||[]).some(function(r){ return (r.vals||[]).some(function(v){ return String(v||"").trim(); }); })) return false;
+  if(M.screenNotes && String(M.screenNotes.value||"").trim()) return false;
+  if(M.corePull && String(M.corePull.value||"").trim()) return false;
+  return true;
+}
 ACT.rvApply = function(){
   var job=scanJob(), m=state.modal, isNew=!!(state.scanTarget && state.scanTarget.newJob);
   if(!job || !m) return;
@@ -4836,7 +4904,8 @@ ACT.rvApply = function(){
   if(isNew){ state.jobs.unshift(job); }
   state.scanTarget=null; saveJobs(); askPersist(); closeModal();
   if(isNew) go("#/job/"+job.id); else render();
-  showToast(isNew? "Job created from scan ("+n+" values)" : "Applied "+n+" value"+(n===1?"":"s"));
+  if(!n && !isNew) showToast("Nothing was saved — no values were checked. Check the rows you want, or retake the photo.", {err:true, ms:7000});
+  else showToast(isNew? "Job created from scan ("+n+" values)" : "Applied "+n+" value"+(n===1?"":"s"));
   autoDocUpload(job, scanIds);
 };
 
@@ -7358,7 +7427,7 @@ function init(){
     if(!state.meta.ocrWarmAt && !c.saveData && c.type!=="cellular") warmOcr(false);
   }, 8000);
 }
-window.__tjl = {state:state, googleClientId:GOOGLE_CLIENT_ID, ms:{screenRead:function(i,p){return mscrRead(i,p);}, screenLooks:function(i){return mscrLooksLikeScreen(i);}, yzRead:function(i,p){return yzRead(i,p);}, yzLooks:function(i){return yzLooksLikeScreen(i);}, yzDefs:YZ_DEFS, scan:msScanImage, extract:msExtract, orient:orientForOcr, normalize:msNormalize, defs:MS_DEFS, rowText:msRowText, isForm:msIsForm}, phone:{storeAlbumHandle:storeAlbumHandle, albumName:albumName, readPhoneSaved:readPhoneSaved},
+window.__tjl = {state:state, googleClientId:GOOGLE_CLIENT_ID, ms:{screenRead:function(i,p){return mscrRead(i,p);}, screenLooks:function(i){return mscrLooksLikeScreen(i);}, boxes:function(i){ var m=mscrMask(mscrLocate(i),MSCR_W); return {img:m.c.toDataURL('image/jpeg',0.85),W:m.W,H:m.H,yellow:m.yellow,dark:m.dark,boxes:mscrBoxes(m).map(function(b){return [Math.round(b.cx),Math.round(b.cy),Math.round(b.w),Math.round(b.h)];})}; }, yzRead:function(i,p){return yzRead(i,p);}, yzLooks:function(i){return yzLooksLikeScreen(i);}, yzDefs:YZ_DEFS, scan:msScanImage, extract:msExtract, orient:orientForOcr, normalize:msNormalize, defs:MS_DEFS, rowText:msRowText, isForm:msIsForm}, phone:{storeAlbumHandle:storeAlbumHandle, albumName:albumName, readPhoneSaved:readPhoneSaved},
   doc:{url:DOC_SCRIPT_URL, readQueue:readDocQueue, readUploaded:readDocUploaded, readSent:readDocSent, baseName:docBaseName, renameable:function(){ return renameableDocs().map(function(d){ return {sent:d.sentName, name:d.docName}; }); }, flush:flushDocQueue, docsForCtx:docsForCtx, buildDocPdf:buildDocPdf, buildDocParts:buildDocParts, exists:docExists, uploadAll:uploadAllDocs, limits:function(){ return {page:DOC_PAGE_MAX, part:DOC_PART_BYTES, asis:DOC_PDF_ASIS, side:DOC_MAX_SIDE}; }}, parseLines:parseLines, buildReview:buildReview, render:render, scan:{buildSynIndex:buildSynIndex, labelUnitHint:labelUnitHint, parseNumber:parseNumber, defForLabel:defForLabel, reconcileFields:reconcileFields},
   photo:{readQueue:readPhotoQueue, readUploaded:readPhotoUploaded, readOk:readPhotoOk, flush:flushPhotoQueue, name:photoDriveName, prep:photoUploadBlob, info:docServerInfo, items:function(){ return photoItemsFor(state.jobs, false).map(function(it){ return {job:it.job.id, id:it.photo.id, name:it.photo.driveName||""}; }); }, terms:jobSearchTerms, find:findDocs, missing:jobMissing},
   restore:{need:restoreNeed, run:runRestore, pick:restorePickFiles, stem:restoreStem, partOf:restorePartOf, fileId:driveFileId, getFile:getDriveFile, pages:restorePagesOf, last:function(){ return state.restoreLast||null; }},
