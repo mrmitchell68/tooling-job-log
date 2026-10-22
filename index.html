@@ -645,7 +645,7 @@ pre.raw{white-space:pre-wrap;font-size:12px;background:var(--surface-2);padding:
 <script>
 (function(){
 "use strict";
-var APP_VERSION = "2.8.0";
+var APP_VERSION = "2.8.1";
 // Public OAuth client id (not a secret). Web client, authorized JavaScript origins:
 //   https://mrmitchell68.github.io   and   http://localhost:8766
 // Leave empty until that client exists — Save-to-Drive is hidden and the button uses the Android share sheet.
@@ -1969,7 +1969,9 @@ var MSCR_DEFS = [
     ["carT21",125,393,119,87,4],["carT20",265,395,118,87,4],["carT22",404,396,118,90,4],["chT1",616,396,110,86,4],["chT2",770,396,108,85,4],["chT3",923,396,106,85,4],["sbX",1100,396,105,86,4],["stPos",1280,396,105,86,4],
     ["carS1",152,591,73,85,2],["carS2",292,593,76,89,2],["carS3",430,592,72,86,2],["chS1",640,592,69,84,2],["chS2",793,592,70,85,2],["chS3",944,592,69,86,2],["sbS",1110,589,69,83,2],["stSpd",1297,588,70,85,0],
     ["chPT1",625,741,112,85,4],["chPT2",779,744,112,84,4],["chTmr",927,743,111,86,4],["sbTmr",1092,742,110,86,4],["stTmr",1278,740,105,85,0],
-    ["date",121,934,115,36,0,"text"]],
+    ["date",150,934,178,36,0,"text"],
+    ["dly",806,816,115,40,4,"text"],["minp",1110,816,115,40,4,"text"],["stat",297,744,90,40,4,"text"]],
+   texts:[["dly","charge_delay","Delay time"],["minp",null,"Min. pres"],["stat",null,"Status"]],
    fields:{back_press:["chP1","chP2","chP3"], screw_speed:["chS1","chS2","chS3"], screw_int:["chT1","chT2","chT3"], suck_back:["sbX"]},
    notes:[["Carriage press fwd / back",["carP1","carP2"]],["Carriage PT21 / PT20 / PT22",["carT21","carT20","carT22"]],["Carriage speed",["carS1","carS2","carS3"]],["Charge PT1 / PT2",["chPT1","chPT2"]],["Charge timer",["chTmr"]],["Suck back press / speed / timer",["sbP","sbS","sbTmr"]],["Status position",["stPos"]]],
    status:true},
@@ -1979,9 +1981,16 @@ var MSCR_DEFS = [
     ["pos7",400,312,105,80,4],["pos6",531,307,105,80,4],["pos5",664,303,105,80,4],["pos4",795,297,105,80,4],["pos3",926,291,105,80,4],["pos2",1057,287,105,80,4],
     ["hP5",143,633,86,83,3],["hP4",255,629,87,84,3],["hP3",368,624,88,86,3],["hP2",480,620,89,85,3],["hP1",592,616,87,86,3],
     ["hT5",139,746,106,84,4],["hT4",252,741,108,85,4],["hT3",362,736,110,85,4],["hT2",475,733,109,86,4],["hT1",590,729,108,85,4],
-    ["date",146,953,105,34,0,"text"]],
+    ["stSpd",1285,166,70,84,0],["stPT",1287,279,105,80,4],["stPsi",1303,580,75,80,0],["stTmr",1293,738,100,80,0],
+    ["date",172,953,165,34,0,"text"],
+    ["mont",1080,404,100,40,4,"text"],["hspd",598,531,62,40,2,"text"],["tprs",963,588,90,40,4,"text"],["tprsA",1080,588,90,40,3,"text"],
+    ["tpos",961,670,90,40,4,"text"],["tposA",1075,670,90,40,4,"text"],["ttmr",965,750,90,40,4,"text"],["ttmrA",1080,750,90,40,4,"text"],
+    ["cushL",596,824,90,40,4,"text"],["cushH",820,824,90,40,4,"text"],["cushA",1083,824,95,40,4,"text"]],
+   texts:[["hspd","hold_speed","Hold speed"],["tpos","switchover","Transfer position set"],["cushA","cushion","Cushion actual"],["mont",null,"Injection monitor time"],
+    ["tprs",null,"Transfer press set"],["tprsA",null,"Transfer press actual"],["tposA",null,"Transfer position actual"],["ttmr",null,"Transfer timer set"],["ttmrA",null,"Transfer timer actual"],
+    ["cushL",null,"Cushion limit low"],["cushH",null,"Cushion limit high"]],
    fields:{inj_speed:["spd1","spd2","spd3"], inj_int:["pos2","pos3","pos4"], hold_press:["hP1","hP2","hP3"], hold_time:["hT1","hT2","hT3"]},
-   notes:[["Injection speed stages 4 / 5 / 6 / 7",["spd4","spd5","spd6","spd7"]],["Injection position stages 5 / 6 / 7",["pos5","pos6","pos7"]],["Hold pressure stages 4 / 5",["hP4","hP5"]],["Hold timer stages 4 / 5",["hT4","hT5"]]],
+   notes:[["Injection speed stages 4 / 5 / 6 / 7",["spd4","spd5","spd6","spd7"]],["Status screw position",["stPT"]],["Injection position stages 5 / 6 / 7",["pos5","pos6","pos7"]],["Hold pressure stages 4 / 5",["hP4","hP5"]],["Hold timer stages 4 / 5",["hT4","hT5"]]],
    status:true},
   {id:"tmc-core", brand:"TMC", title:"TMC 250E · Corepull 1/2/3 screen", keys:[/corepull/i, /core/i, /pulse/i, /out/i, /\bin\b/i, /timer/i],
    slots:[
@@ -2122,9 +2131,11 @@ function mscrInk(src, s, x0, y0, x1, y1, TH, K){
   // expected boundary
   var G2=[]; G.forEach(function(q){ var gw=q.x1-q.x0+1, gh=q.y1-q.y0+1, n=Math.round(gw/gh/0.8);
     if(gw/gh<0.35) return;
+    var rr=gw/gh/0.8, dia=(rr>1.3 && rr<1.75);   // v2.8.1: one digit glued to the ◆ marker: cut one digit-width from the left, not in half
+    if(dia) n=2;
     if(n<=1){ G2.push(q); return; }
     var col=function(x){ var v=0; for(var yy=q.y0; yy<=q.y1; yy++) if(q.ids.indexOf(C.L[yy*c.width+x])>=0) v++; return v; }, cuts=[q.x0];
-    for(var j=1;j<n;j++){ var e=q.x0+gw*j/n, bx=Math.round(e), bv=1e9; for(var x=Math.round(e-gw/n*0.2); x<=Math.round(e+gw/n*0.2); x++){ var v=col(x); if(v<bv){ bv=v; bx=x; } } cuts.push(bx); }
+    for(var j=1;j<n;j++){ var e=dia? q.x0+gh*0.8 : q.x0+gw*j/n, bx=Math.round(e), bv=1e9; for(var x=Math.round(e-gw/n*0.2); x<=Math.round(e+gw/n*0.2); x++){ var v=col(x); if(v<bv){ bv=v; bx=x; } } cuts.push(bx); }
     cuts.push(q.x1+1);
     for(j=0;j<n;j++){ var a=cuts[j], b2=cuts[j+1]-1, yt=q.y1, yb=q.y0;
       for(var xx=a; xx<=b2; xx++) for(var yy=q.y0; yy<=q.y1; yy++) if(q.ids.indexOf(C.L[yy*c.width+xx])>=0){ if(yy<yt) yt=yy; if(yy>yb) yb=yy; }
@@ -2144,7 +2155,7 @@ function mscrInk(src, s, x0, y0, x1, y1, TH, K){
   return o;
 }
 // TMC LCD digit font (24×24 bitmaps averaged from Allen's TMC 250E photo; 6 = 9 turned over, 8 from only two samples)
-var MSCR_FONT = {"0":["01ffc003ffe007fff00ffffc1fc1fc3f83fc3f83fc3f87fc3fdffc3ffffc3ffffc3ffffc3ffffc3ffdfc3ff8fc3ff0fc3fe0fc1fc0fc1fc0fc1fc0fc1fc1fc1ffff807fff003ffe0",0.84],"1":["001c00003e00007e0000fe0001fe0007fe000ffe000ffe0007fe00007e00007e00007e00007e00007e00007e00007e00007e00007e00007e00007e0001fff007fff807fff007ffe0",0.66],"2":["01ffe001fff003fff007fffc1fe1fc1f80fc0f00fc0001fc0007f80007f0000fe0001fc0003f80007f0000fe0001fc0003f80007f80007e0780fe0fc1ffffc3ffffc1ffffc1ffff8",0.81],"3":["01ffe003ffe007ffe00ffff81f81fc1f80fc3e00fc0000fc0000fc0001fc0003f8007ff000fff000fff80001fc0001fc0001fc0000fc0700fc0f80fc1f81f81ffff807fff003ffc0",0.81],"4":["0001c00003e00007e0000fe0001fe0007ff0007ff000fff001fff003fff007fff00ffff01feff01ffff81ffffc1ffffc0ffff00007f00007f00007f00007f4000ffc000ffc000ff8",0.81],"5":["07fff80ffff83ffff83ffff03fc0003f80003f80003f80003f80003f80003fc3c03ffff03ffff01ffffc0001fc0001fc0000fc0000fc0300fc0f80fc1fc7fc1ffff803fff003ffc0",0.82],"6":["007f8000ffc003ff8403ff040fe0040fc0003f80003f80003f80003f80003fffc03fffc03ffff07ffff87f83f83f83f87f83fc7f83fc7f83fc7fbffc7fffe04fffc00fff80030000",0.86],"7":["0ffff81ffffc1ffffc3ffffc3ffffc3f83fc3f03fc0003fc0007f0000ff0001fe0003fe0007f80007f8000fe0001fe0001fe0001fe0001fe0001fe0001fe0001fe0001fe0001fe00",0.78],"8":["03fff003fff80ffffc1ffffc1fc1fe3f81fe3f81fe3f81fe3f81fe7f81fe3fc3fc1ffffc0ffffc0ffffc1fe0fe3fc0ff3fc0ff7f80ff3f80fe3f80ff3fe7ff3ffffc0ffffc0ffff8",0.87],"9":["0000c001fff003fff207fffe3ffdfe3fc1fe3fc1fe3fc1fe1fc1fc1fc1fe1ffffe0ffffc03fffc03fffc0001fc0001fc0001fc0001fc0003f02007f020ffc021ffc003ff0001fe00",0.86]}, mscrFontB=null;
+var MSCR_FONT = {"<":["0001c00007e0000ff0003fe0003fc0007fc0007f0000ff0003fe0007f80007f8000ff0000fe0000ff00007f80003fc0001fe0000ff00007f80003fc0001fe0000fe00007e00003e0",0.65],">":["01c00007e0000ff00003f80003fc0001fe0000ff00007f80003fe0001ff0000ff00007f80007f80007f8000ff8001fe0003fe0007fc000ff0001ff0003fe0007f80007f80003f000",0.70],"0":["01ffc003ffe007fff00ffffc1fc1fc3f83fc3f83fc3f87fc3fdffc3ffffc3ffffc3ffffc3ffffc3ffdfc3ff8fc3ff0fc3fe0fc1fc0fc1fc0fc1fc0fc1fc1fc1ffff807fff003ffe0",0.84],"1":["001c00003e00007e0000fe0001fe0007fe000ffe000ffe0007fe00007e00007e00007e00007e00007e00007e00007e00007e00007e00007e00007e0001fff007fff807fff007ffe0",0.66],"2":["01ffe001fff003fff007fffc1fe1fc1f80fc0f00fc0001fc0007f80007f0000fe0001fc0003f80007f0000fe0001fc0003f80007f80007e0780fe0fc1ffffc3ffffc1ffffc1ffff8",0.81],"3":["01ffe003ffe007ffe00ffff81f81fc1f80fc3e00fc0000fc0000fc0001fc0003f8007ff000fff000fff80001fc0001fc0001fc0000fc0700fc0f80fc1f81f81ffff807fff003ffc0",0.81],"4":["0001c00003e00007e0000fe0001fe0007ff0007ff000fff001fff003fff007fff00ffff01feff01ffff81ffffc1ffffc0ffff00007f00007f00007f00007f4000ffc000ffc000ff8",0.81],"5":["07fff80ffff83ffff83ffff03fc0003f80003f80003f80003f80003f80003fc3c03ffff03ffff01ffffc0001fc0001fc0000fc0000fc0300fc0f80fc1fc7fc1ffff803fff003ffc0",0.82],"6":["007f8000ffc003ff8403ff040fe0040fc0003f80003f80003f80003f80003fffc03fffc03ffff07ffff87f83f83f83f87f83fc7f83fc7f83fc7fbffc7fffe04fffc00fff80030000",0.86],"7":["0ffff81ffffc1ffffc3ffffc3ffffc3f83fc3f03fc0003fc0007f0000ff0001fe0003fe0007f80007f8000fe0001fe0001fe0001fe0001fe0001fe0001fe0001fe0001fe0001fe00",0.78],"8":["03fff003fff80ffffc1ffffc1fc1fe3f81fe3f81fe3f81fe3f81fe7f81fe3fc3fc1ffffc0ffffc0ffffc1fe0fe3fc0ff3fc0ff7f80ff3f80fe3f80ff3fe7ff3ffffc0ffffc0ffff8",0.87],"9":["0000c001fff003fff207fffe3ffdfe3fc1fe3fc1fe3fc1fe1fc1fc1fc1fe1ffffe0ffffc03fffc03fffc0001fc0001fc0001fc0001fc0003f02007f020ffc021ffc003ff0001fe00",0.86]}, mscrFontB=null;
 function mscrFont(){ if(mscrFontB) return mscrFontB; mscrFontB=Object.keys(MSCR_FONT).map(function(ch){ var h=MSCR_FONT[ch][0], b=new Uint8Array(576); for(var i=0;i<144;i++){ var v=parseInt(h[i],16); for(var k=0;k<4;k++) b[i*4+k]=(v>>(3-k))&1; } return {ch:ch, b:b, ar:MSCR_FONT[ch][1]}; }); return mscrFontB; }
 function mscrGlyph(q){
   var F=mscrFont(), sc=F.map(function(t){ var best=1;
@@ -2155,8 +2166,21 @@ function mscrGlyph(q){
   if(sc[0].ch==="6"||sc[0].ch==="8") c=Math.min(c, 0.75);
   return {ch:sc[0].ch, d:+d1.toFixed(3), c:+c.toFixed(2), alt:sc[1].ch};
 }
+// v2.8.1: slashed zero vs 8 — both have two holes (the glow closes the slash gap)
+function mscrHoles(bm){ var seen=new Uint8Array(576), st=[], H=[];
+  for(var i=0;i<24;i++){ [i, 552+i, i*24, i*24+23].forEach(function(k){ if(!bm[k] && !seen[k]){ seen[k]=1; st.push(k); } }); }
+  while(st.length){ var k=st.pop(), x=k%24, y=(k/24)|0; [[1,0],[-1,0],[0,1],[0,-1]].forEach(function(d){ var xx=x+d[0], yy=y+d[1], kk=yy*24+xx; if(xx<0||yy<0||xx>23||yy>23||seen[kk]||bm[kk]) return; seen[kk]=1; st.push(kk); }); }
+  for(var j=0;j<576;j++){ if(bm[j]||seen[j]) continue; var q=[j], n=0, sx=0, sy=0; seen[j]=1;
+    while(q.length){ var k2=q.pop(), x2=k2%24, y2=(k2/24)|0; n++; sx+=x2; sy+=y2; [[1,0],[-1,0],[0,1],[0,-1]].forEach(function(d){ var xx=x2+d[0], yy=y2+d[1], kk=yy*24+xx; if(xx<0||yy<0||xx>23||yy>23||seen[kk]||bm[kk]) return; seen[kk]=1; q.push(kk); }); }
+    if(n>=3) H.push({x:sx/n, y:sy/n, n:n}); }
+  return H; }
+function mscrZero8(q, r){ if(!(r.ch==="0"||r.ch==="8") || !(r.alt==="0"||r.alt==="8"||true)) return r;
+  var H=mscrHoles(q.bm); if(H.length!==2) return r; H.sort(function(a,b){ return a.y-b.y; });
+  // measured on Allen's photos: Ø = small upper hole (~0.5-0.7 of the lower one) offset ~2 px by the slash; 8 = two equal holes stacked
+  var dx=Math.abs(H[0].x-H[1].x), rt=H[0].n/H[1].n, ch=(rt>0.8 && dx<1.4)? "8" : "0";
+  if(ch!==r.ch) return {ch:ch, d:r.d, c:Math.min(r.c,0.6), alt:r.ch}; return r; }
 function mscrReadGlyphs(G, sep){
-  var R=G.map(mscrGlyph);
+  var R=G.map(function(q){ return mscrZero8(q, mscrGlyph(q)); });
   if(sep) R.forEach(function(r){ if(r.d>0.3){ r.ch=sep; r.c=1; } });
   while(R.length && R[R.length-1].d>0.3 && R[R.length-1].ch!==sep) R.pop();   // ◆ marker / box edge after the number
   while(R.length && R[0].d>0.3) R.shift();
@@ -2179,6 +2203,99 @@ function mscrLocate(src){
   var k=w0/m.W, c=document.createElement("canvas"); c.width=Math.round((x1-x0)*k); c.height=Math.round((y1-y0)*k);
   c.getContext("2d").drawImage(src, x0*k, y0*k, c.width, c.height, 0, 0, c.width, c.height); c._crop=[x0*k,y0*k]; return c;
 }
+/* ---- v2.8.1: TMC 250E MACHINE MONITOR screen — text lines "LABEL : status setup", no value boxes ---- */
+var MSCR_MON = [ // [label regex on the joined label words, field id or null, note label, staged?]
+  [/^cycle\s*time$/i,"cycle","Cycle time"], [/mold\s*prot/i,null,"Mold protect time"], [/ejector\s*count/i,null,"Ejector counter"],
+  [/cycle\s*int/i,"cycle_int","Cycle interval time"], [/shot\s*count/i,null,"Shot counter"], [/back\s*press/i,null,"Clamp back press. time"],
+  [/close\s*mon/i,null,"Clamp close monit. time"], [/open\s*mon/i,null,"Clamp open monit. time"], [/blast\s*int/i,null,"Air blast interval time"],
+  [/blast\s*delay.*m\.?$/i,null,"Air blast delay T.-M."], [/blast\s*time.*m\.?$/i,null,"Air blast time-M."], [/inj\w*\s*mon/i,null,"Injection monit. time"],
+  [/cooling/i,"cooling","Cooling time"], [/lubri\w*\s*count/i,null,"Lubrication counter"], [/lubri\w*\s*time/i,null,"Lubrication time"],
+  [/part\s*count/i,null,"Part counter"], [/cavit/i,"cavities","Cavities on mold"], [/charge\s*mon/i,null,"Charge monitor time"],
+  [/intrusion/i,null,"Intrusion time"], [/charge\s*delay/i,"charge_delay","Charge delay time"], [/blast\s*delay.*f\.?$/i,null,"Air blast delay T.-F."],
+  [/blast\s*time.*f\.?$/i,null,"Air blast time-F."]];
+function mscrIsMonitor(text){ var t=String(text||""), n=0;
+  if(/machine/i.test(t) && /monitor/i.test(t) && !/injection\s*&|cushion\s*monitor/i.test(t)) n+=2;
+  [/lubricat/i,/part\s*counter/i,/cavities/i,/intrusion/i,/cooling/i,/status-?\s*setup|setup/i,/clamp\s*unit/i].forEach(function(re){ if(re.test(t)) n++; });
+  return n>=4; }
+function mscrMonitor(src, m, words, out){
+  var num=/^[:;<\[(]?[0-9OoDQSsBZz]{2,5}[:;.,>\])]?$/, W=words.filter(function(w){ return w.y1-w.y0>3; }), W0=W;
+  W=W.filter(function(w){ return !/status|setup/i.test(w.t); });
+  // lines: group by vertical centre
+  W.sort(function(a,b){ return (a.y0+a.y1)-(b.y0+b.y1); });
+  var lines=[]; W.forEach(function(w){ var cy=(w.y0+w.y1)/2, h=w.y1-w.y0, L=lines.length? lines[lines.length-1] : null;
+    if(L && Math.abs(cy-L.cy)<Math.max(h,L.h)*0.55){ L.w.push(w); L.cy=(L.cy*(L.w.length-1)+cy)/L.w.length; } else lines.push({cy:cy, h:h, w:[w]}); });
+  function readNum(w, n){ // re-read a value in the screen font (Tesseract reads the slashed zero as 8)
+    var pad=(w.y1-w.y0)*0.25, cv=mscrInk(src, m.s, w.x0-pad, w.y0-pad, w.x1+pad, w.y1+pad, 48, 0.4), rg=mscrReadGlyphs(cv._glyphs||[]);
+    var t=rg.t.replace(/[^0-9]/g,""), tt=String(w.t).replace(/[^0-9OoDQ]/g,"").replace(/[OoDQ]/g,"0");
+    if(t.length===tt.length || (n && t.length===n)) return {v:t, c:rg.c};
+    return {v:tt, c:Math.min(0.45, w.c)}; }
+  var items=[], temps=[], seen={};
+  // value columns: under the two "STATUS-SETUP" headings; each line is read there in the screen font (no Tesseract digits)
+  var hw=W0.filter(function(w){ return /status|setup/i.test(w.t); }), cyc=W.filter(function(w){ return /^cycle$/i.test(w.t); })[0];
+  if(cyc) hw=hw.filter(function(w){ return w.y1<=cyc.y0+2; });
+  hw.sort(function(a,b){ return a.x0-b.x0; }); var cols=[];
+  hw.forEach(function(w){ var c=cols[cols.length-1]; if(c && w.x0-c.x1<(w.y1-w.y0)*4){ c.x1=Math.max(c.x1,w.x1); c.y1=Math.max(c.y1,w.y1); } else cols.push({x0:w.x0, x1:w.x1, y1:w.y1}); });
+  cols=cols.filter(function(c){ return c.x1-c.x0>m.W*0.06; }).slice(-2);
+  function band(x0, y0, x1, y1){ var cv=mscrInk(src, m.s, x0, y0, x1, y1, window.__monTH||64, window.__monK!=null? window.__monK : 0.3), G=cv._glyphs||[]; if(window.__mscrDbg) window.__mscrDbg.push(['band', cv.toDataURL(), mscrCropUrl(m.c,x0,y0,x1,y1,0)]); if(window.__mscrDbg) window.__mscrGl=(window.__mscrGl||[]).concat([['band', G.map(function(x){ return Array.from(x.bm).join(''); }), G.map(function(x){return +x.ar.toFixed(2);})]]); if(!G.length) return [];
+    var R=G.map(function(q){ return mscrZero8(q, mscrGlyph(q)); }), aw=G.reduce(function(a,q){ return a+(q.x1-q.x0); },0)/G.length, grp=[[0]];
+    for(var i=1;i<G.length;i++){ if(G[i].x0-G[i-1].x1>aw*0.8) grp.push([]); grp[grp.length-1].push(i); }
+    return grp.map(function(g){ var t=g.map(function(i){ return R[i].ch; }).join("").replace(/[^0-9]/g,""); return {v:t, c:Math.min.apply(null, g.map(function(i){ return R[i].c; })), n:g.length, x0:x0+(G[g[0]].x0-20)/cv.width*(x1-x0)}; }).filter(function(r){ return r.v; }); }
+  lines.forEach(function(L){ L.w.sort(function(a,b){ return a.x0-b.x0; });
+    var hs=L.w.map(function(w){ return w.y1-w.y0; }).sort(function(a,b){ return a-b; }), h=hs[hs.length>>1];
+    if(cols.length===2 && L.cy>cols[0].y1){
+      [0,1].forEach(function(ci){ var c=cols[ci], bx0=c.x0-(c.x1-c.x0)*0.1, bx1=c.x1+(c.x1-c.x0)*0.15, lx0= ci? cols[0].x1+(cols[0].x1-cols[0].x0)*0.15 : -1;
+        var lab=L.w.filter(function(w){ return w.x0>lx0 && w.x1<bx0+h && !num.test(w.t) && !/^[:;.]+$/.test(w.t); });
+        if(!lab.length) return;
+        var vals=band(bx0, L.cy-h*0.8, bx1, L.cy+h*0.8), tk=L.w.filter(function(w){ return num.test(w.t) && w.x0>bx0-h && w.x1<bx1+h; }).map(function(w){ return w.t.replace(/[^0-9OoDQSsBZz]/g,"").replace(/[OoDQ]/g,"0").replace(/[Ss]/g,"5").replace(/[B]/g,"8").replace(/[Zz]/g,"2"); });
+        // fuse with Tesseract: it reads the slashed zero as 8 but gets 1/2/5/6/7 right where the small glyphs blur
+        if(vals.length>2) vals=vals.slice(-2);
+        if(tk.length && tk.length===vals.length) vals=vals.map(function(r,i){ var t=tk[i]; if(t.length!==r.v.length){ if(r.c<0.3 && t.length>=2 && t.length<=4){ return {v:t.replace(/8/g,"0"), c:0.3, n:t.length}; } return r; }
+          var v="", agree=true; for(var k=0;k<t.length;k++){ var a=t[k], g=r.v[k]; if(a===g || a==="8") v+=g; else { v+=a; if(!(g==="0"&&a==="0")) agree=false; } }
+          return {v:v, c:agree? Math.max(r.c, 0.75) : Math.max(0.5, Math.min(0.7, r.c+0.3)), n:r.n}; });
+        items.push({label:lab.map(function(w){ return w.t; }).join(" ").replace(/[:;.]+$/,"").trim(), vals:vals, cy:L.cy, box:[bx0, L.cy-h*0.8, bx1, L.cy+h*0.8]}); });
+      return; }
+    L.w.forEach(function(w){ if(num.test(w.t)) temps.push(w); }); });
+  // older path when the headings were not found: Tesseract tokens re-read one by one
+  if(cols.length<2) lines.forEach(function(L){
+    var lab=[], vals=[];
+    function flush(){ if(lab.length && vals.length){ var w=vals[vals.length-1]; items.push({label:lab.map(function(w){ return w.t; }).join(" ").replace(/[:;]+$/,"").trim(), vals:vals.slice(0,2).map(function(w){ return readNum(w, w.t.replace(/[^0-9OoDQ]/g,"").length); }), cy:L.cy, box:[w.x0,w.y0,w.x1,w.y1]}); } lab=[]; vals=[]; }
+    L.w.forEach(function(w){ var t=w.t.replace(/^[:;]+|[:;]+$/g,"");
+      if(num.test(w.t) && t){ if(lab.length) vals.push(w); else temps.push(w); }
+      else if(/^[:;]$/.test(w.t)) return;
+      else { if(vals.length) flush(); lab.push(w); } });
+    flush(); });
+  out.screen={id:"tmc-monitor", title:"TMC 250E · Machine monitor screen", kw:1, found:0, total:MSCR_MON.length};
+  var found=0;
+  items.forEach(function(it){ var lab=it.label.replace(/\s+/g," ");
+    var def=null, at=-1; MSCR_MON.forEach(function(d){ if(seen[d[2]]) return; var mm=lab.match(d[0]); if(mm && mm.index>at){ def=d; at=mm.index; } }); if(!def) return; // two labels run together → the last one owns the values
+    var R=it.vals.slice(-2); if(!R.length) return; seen[def[2]]=1; found++;
+    var set=R[R.length-1], st=R.length>1? R[0] : null;
+    var c=set.c; if(R.length<2 && def[1]!=="cavities") c=Math.min(c,0.45);
+    if(def[1] && MS_P[def[1]] && set.v){ var P=MS_P[def[1]], bb=it.box;
+      out.rows.push({id:def[1], vals:P.staged? [set.v,"",""] : [set.v], extra:"", same:false, crop:mscrCropUrl(m.c, bb[0], bb[1], bb[2], bb[3], 6), typed:true, ocr:"setup "+set.v+(st? " (status "+st.v+")" : ""), state:"read", conf:+Math.min(0.9,c).toFixed(2), screen:true}); }
+    out.notesList.push({label:def[2], text:(st? st.v+" / " : "")+set.v, conf:c}); });
+  // barrel temperatures: the numbers in the heater strip above "SCREW R.P.M." (nozzle at the left, collar box at the right) — actual readings
+  var rpm=words.filter(function(w){ return /r\.?p\.?m/i.test(w.t); })[0], tit=words.filter(function(w){ return /machine/i.test(w.t); })[0];
+  var tz=temps.filter(function(w){ var cy=(w.y0+w.y1)/2; return (!rpm || cy<rpm.y0) && (!tit || cy>tit.y0-(tit.y1-tit.y0)*2) && w.t.replace(/[^0-9OoDQ]/g,"").length===3; }).sort(function(a,b){ return a.x0-b.x0; });
+  if(rpm){ var rw=words.filter(function(w){ return num.test(w.t) && Math.abs((w.y0+w.y1)/2-(rpm.y0+rpm.y1)/2)<(rpm.y1-rpm.y0) && w.x0>rpm.x0; })[0]; if(rw){ var rv=readNum(rw,3); out.notesList.push({label:"Screw R.P.M.", text:rv.v, conf:rv.c}); } }
+  if(tz.length>=2 && tz.length<7){ // v2.8.1: Tesseract drops boxed temps (box edges read as brackets) — read the whole heater row in the screen font
+    var ty=tz.map(function(w){ return (w.y0+w.y1)/2; }).sort(function(a,b){ return a-b; })[tz.length>>1], th=tz.reduce(function(a,w){ return a+(w.y1-w.y0); },0)/tz.length, xr=Math.max.apply(null, words.map(function(w){ return w.x1; }));
+    var bnd=band(tz[0].x0-th*6, ty-th*0.32, Math.min(xr, tz[tz.length-1].x1+th*8), ty+th*0.32);
+    if(window.__mscrDbg) window.__monBnd=JSON.stringify(bnd); bnd=bnd.filter(function(r){ return r.v.length===3; });
+    if(bnd.length>tz.length){ var tw2=th*1.6; tz=bnd.map(function(r){ return {t:r.v, x0:r.x0, x1:r.x0+tw2, y0:ty-th/2, y1:ty+th/2, c:r.c, _r:r}; }); } }
+  if(tz.length>=4){ var T=tz.map(function(w){ return w._r? {v:w._r.v, c:w._r.c} : readNum(w,3); }), ids=["nozzle","zone1","zone2","zone3","zone4","zone5","zone6","zone7"], col=tz.length>=7? T.pop() : null, tw=tz.slice(0,T.length);
+    T.forEach(function(r,i){ if(!r.v || !ids[i] || !MS_P[ids[i]]) return; var w=tw[i];
+      out.rows.push({id:ids[i], vals:[r.v], extra:"", same:false, crop:mscrCropUrl(m.c, w.x0, w.y0, w.x1, w.y1, 10), typed:true, ocr:"actual temperature on the monitor screen — the set point is on TEMP. SETTING", state:"read", conf:Math.min(0.55,r.c), screen:true}); });
+    out.notesList.push({label:"Barrel temps actual (nozzle → rear)", text:T.map(function(r){ return r.v; }).join(" / "), conf:Math.min.apply(null,T.map(function(r){ return r.c; }))});
+    if(col) out.notesList.push({label:"Collar actual", text:col.v, conf:col.c}); }
+  // position status
+  words.forEach(function(w,i){ var nx=words[i+1]; if(!nx) return;
+    if(/^unit:?$/i.test(w.t) && num.test(nx.t)){ var r=readNum(nx,4); out.notesList.push({label:"Clamp unit position", text:r.v, conf:r.c}); }
+    if(/^screw:?$/i.test(w.t) && num.test(nx.t)){ var r2=readNum(nx,4); out.notesList.push({label:"Screw position", text:r2.v, conf:r2.c}); } });
+  out.screen.found=found; out.found=found; out.total=MSCR_MON.length;
+  if(window.__mscrDbg) out.monTemps=temps.map(function(w){ return w.t+'@'+Math.round(w.x0)+','+Math.round(w.y0); })+' rpm '+(rpm&&rpm.y0)+' tit '+(tit&&tit.y0)+' bnd '+window.__monBnd;
+  if(window.__mscrDbg) out.monItems=items.map(function(it){ return [it.label, it.vals.map(function(w){ return w.v+"("+w.c+")"; })]; });
+}
 function mscrRead(src, onProg){
   src=mscrLocate(src);
   var m=mscrMask(src, MSCR_W), boxes=mscrBoxes(m), wkP=tessWorker(), out={kind:"screen", rows:[], header:{}, notesList:[], boxes:boxes.length};
@@ -2188,6 +2305,7 @@ function mscrRead(src, onProg){
     return wk.setParameters({tessedit_pageseg_mode:"11", tessedit_char_whitelist:""}).then(function(){ return wk.recognize(m.ink); }).then(function(r){
       words=(r.data.words||[]).map(function(w){ return {t:String(w.text||"").trim(), x0:w.bbox.x0, y0:w.bbox.y0, x1:w.bbox.x1, y1:w.bbox.y1, c:(w.confidence||0)/100}; }).filter(function(w){ return w.t; });
       text=words.map(function(w){ return w.t; }).join(" ");
+      if(mscrIsMonitor(text)) return mscrMonitor(src, m, words, out);   // v2.8.1: Machine Monitor (no boxes: label : status setup)
       // pick the screen: header keywords + how well its box layout fits
       var best=null;
       MSCR_DEFS.forEach(function(def){ var kw=def.keys.filter(function(re){ return re.test(text); }).length/def.keys.length, fit=mscrFit(def, boxes); if(!fit) return;
@@ -2205,15 +2323,24 @@ function mscrRead(src, onProg){
         var cv=mscrInk(src, m.s, q.x0+ix, q.y0+iy, q.x1-ix, q.y1-iy, 64);
         if(window.__mscrDbg) window.__mscrDbg.push([q.key, cv.toDataURL()]);
         // digits are matched against the screen font (Tesseract reads the slashed zero as 8)
-        return Promise.resolve(mscrReadGlyphs(cv._glyphs||[])).then(function(rg){
-          var r={text:rg.t, conf:rg.c}, t=rg.t, c=rg.c, G=cv._glyphs||[];
+        var rg0=mscrReadGlyphs(cv._glyphs||[]);
+        if(cv._inkF>0.45){ // v2.8.1: cursor box = dark digits on a yellow block → invert the block and read it the same way
+          var X0=(q.x0+bw*0.12)/m.s, Y0=(q.y0+bh*0.16)/m.s, iw=Math.max(4,(bw*0.76)/m.s), ih=Math.max(4,(bh*0.68)/m.s), ic=document.createElement("canvas"); ic.width=Math.round(iw); ic.height=Math.round(ih);
+          var ig=ic.getContext("2d"); ig.drawImage(src, X0, Y0, iw, ih, 0, 0, ic.width, ic.height); var idt=ig.getImageData(0,0,ic.width,ic.height), dd=idt.data;
+          for(var k2=0;k2<dd.length;k2+=4){ var L=0.3*dd[k2]+0.59*dd[k2+1]+0.11*dd[k2+2], v2=255-L; dd[k2]=dd[k2+1]=v2; dd[k2+2]=0; }
+          ig.putImageData(idt,0,0); var cv2=mscrInk(ic, 1, ic.width*0.02, 0, ic.width*0.98, ic.height, 64), rg2=mscrReadGlyphs(cv2._glyphs||[]);
+          if(window.__mscrDbg) window.__mscrDbg.push([q.key+"-inv", cv2.toDataURL()]);
+          if(rg2.t && (!q.digits || rg2.t.length===q.digits)){ rg0=rg2; rg0.cursor=true; cv=cv2; } }
+        return Promise.resolve(rg0).then(function(rg){
+          var r={text:rg.t, conf:rg.c}, t=rg.t.replace(/[<>]/g,""), c=rg.c, G=cv._glyphs||[];
           if(q.digits && t.length>q.digits){ t=t.slice(0,q.digits); c=Math.min(c,0.7); } // marker (◆) after the number
           var ink=0, g=cv.getContext("2d").getImageData(0,0,cv.width,cv.height).data; for(var k=0;k<g.length;k+=4) if(g[k]<128) ink++;
           var inkF=cv._inkF, state="read";
           if(!t){ state= inkF<0.04? "blank" : "unread"; c= state==="blank"? 0.7 : 0.2; }
           else if(q.digits && t.length!==q.digits){ c=Math.min(c, 0.45); }
           if(!q.found) c=Math.min(c, 0.55);   // box hidden by glare / cursor: placed from the layout, check it
-          if(inkF>0.45){ c=Math.min(c,0.3); }  // highlighted (cursor) box: dark digits on a yellow block
+          if(rg.cursor){ inkF=0.2; c=Math.min(c,0.55); state=t? "read" : state; }   // cursor block read inverted: show it, let Allen check it
+          else if(inkF>0.45){ c=Math.min(c,0.3); }  // highlighted (cursor) box: dark digits on a yellow block
           if(window.__mscrDbg) window.__mscrGl=(window.__mscrGl||[]).concat([[q.key, G.map(function(x){ return Array.from(x.bm).join(''); }), G.map(function(x){return +x.ar.toFixed(2);})]]);
           slotVal[q.key]={v:t, c:+c.toFixed(2), state:state, q:q, raw:r.text, mr:G.map(function(x){return x.midRuns;}).join('')};
         });
@@ -2243,11 +2370,20 @@ function mscrRead(src, onProg){
         // status strip at the bottom: date, cycle time, shot count (same font, no boxes)
         var txt={}; fit.placed.filter(function(q){ return q.text; }).forEach(function(q){
           var cv=mscrInk(src, m.s, q.x0, q.y0, q.x1, q.y1, 48, window.__mscrK2!=null? window.__mscrK2 : 0.4); if(window.__mscrDbg) window.__mscrDbg.push([q.key, cv.toDataURL(), mscrCropUrl(m.c,q.x0,q.y0,q.x1,q.y1,0)]); var rg=mscrReadGlyphs(cv._glyphs||[], q.key==="date"? "/" : "");
+          if(q.key!=="date" && q.digits && rg.g.length>q.digits){ // v2.8.1: <0010> / [2478]: keep the best-matching run of digits (brackets can pass for a 1)
+            var bi=0, bs=1e9; for(var w0=0; w0+q.digits<=rg.g.length; w0++){ var sd=0; for(var w1=w0; w1<w0+q.digits; w1++) sd+=rg.g[w1].d+(/[0-9]/.test(rg.g[w1].ch)? 0 : 1); if(sd<bs){ bs=sd; bi=w0; } }
+            var gg=rg.g.slice(bi, bi+q.digits); rg={t:gg.map(function(r){ return r.ch; }).join(""), c:Math.min.apply(null, gg.map(function(r){ return r.c; })), g:gg}; }
           txt[q.key]={v:rg.t, c:rg.c, q:q}; if(window.__mscrDbg) window.__mscrGl=(window.__mscrGl||[]).concat([[q.key, (cv._glyphs||[]).map(function(x){ return Array.from(x.bm).join(''); }), (cv._glyphs||[]).map(function(x){return +x.ar.toFixed(2);})]]); });
         var dt=txt.date, dm=dt && dt.v.match(/^(\d{1,2})\/(\d{1,2})\/(\d{2})$/);
         if(dm) out.header.date={value:dm[1]+"/"+dm[2]+"/"+dm[3], conf:Math.min(0.5, dt.c),  // small blurry status font: always let Allen check it
  crop:mscrCropUrl(m.c, dt.q.x0, dt.q.y0, dt.q.x1, dt.q.y1, 8)};
-        else if(dt && dt.v) out.header.date={value:dt.v, conf:0.3, crop:mscrCropUrl(m.c, dt.q.x0, dt.q.y0, dt.q.x1, dt.q.y1, 8)};
+        else if(dt && dt.v && /^[0-9/]{4,8}$/.test(dt.v)) out.header.date={value:dt.v, conf:0.3, crop:mscrCropUrl(m.c, dt.q.x0, dt.q.y0, dt.q.x1, dt.q.y1, 8)};
+        // v2.8.1: plain-text values on the screen (<0010>, [2478]) — no box, read in the same screen font
+        (def.texts||[]).forEach(function(t){ var x=txt[t[0]]; if(!x) return; var v=String(x.v||"").replace(/[^0-9]/g,""), q=x.q;
+          if(!v) return; var c=x.c; if(q.digits && v.length!==q.digits) c=Math.min(c,0.4);
+          if(t[1] && MS_P[t[1]]){ var P=MS_P[t[1]];
+            out.rows.push({id:t[1], vals:P.staged? [v,"",""] : [v], extra:"", same:false, crop:mscrCropUrl(m.c,q.x0,q.y0,q.x1,q.y1,8), typed:true, ocr:x.v, state:"read", conf:+Math.min(c,0.85).toFixed(2), screen:true}); }
+          out.notesList.push({label:t[2], text:v, conf:c}); });
         out.status={}; Object.keys(txt).forEach(function(k){ out.status[k]={v:txt[k].v, c:txt[k].c}; });
         if(txt.cycle && txt.cycle.v.length===4 && txt.cycle.c>=0.5) out.notesList.push({label:"Cycle time (screen)", text:txt.cycle.v, conf:txt.cycle.v.length===4? txt.cycle.c : Math.min(0.4,txt.cycle.c)});
         if(txt.shots && txt.shots.v.length===6 && txt.shots.c>=0.5) out.notesList.push({label:"Shot count", text:txt.shots.v, conf:txt.shots.v.length===6? txt.shots.c : Math.min(0.4,txt.shots.c)});
