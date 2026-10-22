@@ -508,6 +508,35 @@ pre.raw{white-space:pre-wrap;font-size:12px;background:var(--surface-2);padding:
 .rs-ft .meta{position:absolute;right:8px;bottom:2px;font-family:'Barlow',Arial,sans-serif;font-style:normal;font-size:6.4px;opacity:.72}
 .rs-ft .meta.l{right:auto;left:8px}
 .rs-cont{font-size:9px;font-weight:700;color:#0b3a75;letter-spacing:.08em;text-transform:uppercase;padding:0 2px}
+/* ---- v2.8.0 Manufacturing Traveler (Sample C) ---- */
+@font-face{font-family:"DCT Cond";src:url("fonts/BarlowSemiCondensed-Regular.ttf") format("truetype");font-weight:400;font-display:block}
+@font-face{font-family:"DCT Cond";src:url("fonts/BarlowSemiCondensed-Bold.ttf") format("truetype");font-weight:700;font-display:block}
+.tv-page{width:7.9in;min-height:10.3in;background:#fff;color:#000;font-family:"DCT Cond",Arial,sans-serif;font-size:7.6pt;line-height:1.2;display:flex;flex-direction:column;padding:0;box-shadow:0 2px 12px rgba(0,0,0,.22);-webkit-print-color-adjust:exact;print-color-adjust:exact}
+.tv-page *{-webkit-print-color-adjust:exact;print-color-adjust:exact;box-sizing:border-box}
+.tv-page+.tv-page{margin-top:.25in}
+.tv-page table{border-collapse:collapse;width:100%;table-layout:auto}
+.tv-page td,.tv-page th{border:1px solid #000;padding:1.4px 3px;vertical-align:top;text-align:left;overflow-wrap:anywhere}
+.tv-page th,.tv-page .lb{background:#e8e8e8;font-weight:700;font-size:6.8pt;text-transform:uppercase}
+.tv-page .lb.w{width:.72in}.tv-page .lb.w2{width:1.35in}
+.tv-page .n{width:.26in;text-align:center}.tv-page .q{width:.55in;text-align:center}.tv-page .pf{width:.62in;white-space:nowrap}
+.tv-page .pre{white-space:pre-wrap}
+.tv-hdr td{padding:3px 5px}.tv-hdr .tv-co{width:2in}.tv-hdr .co{font-size:12pt;font-weight:700;line-height:1.05}
+.tv-hdr .t{font-size:14pt;font-weight:700;text-align:center;line-height:1.1}.tv-hdr .pn{text-align:center;font-size:10.5pt;font-weight:700}
+.tv-ex{font-size:7pt;border:1px dashed #000;padding:0 3px;vertical-align:2px}
+.tv-bar{background:#000;color:#fff;font-weight:700;letter-spacing:.1em;padding:1.5px 4px;margin-top:4px;font-size:7pt;break-after:avoid;page-break-after:avoid}
+.tv-two{display:grid;grid-template-columns:1fr 1fr;gap:4px;align-items:start}
+.tv-page .sg td{height:.28in}
+.tv-page .chk{display:inline-block;width:8px;height:8px;border:1px solid #000;margin-right:2px;vertical-align:-1px}
+.tv-ms td.fn{font-weight:700;width:.78in}.tv-ms td.c,.tv-ms th:nth-child(n+3){text-align:center;width:.5in}
+.tv-ft{margin-top:auto;padding-top:6px;display:flex;justify-content:space-between;gap:10px;font-size:6.6pt;border-top:1px solid #000}
+.tv-gal{display:grid;grid-template-columns:repeat(3,2in);gap:.08in .3in;justify-content:center;margin-top:.08in}
+.tv-gc{margin:0;width:2in;break-inside:avoid;page-break-inside:avoid}
+.tv-gi{width:2in;height:2in;background:#ececec;border:1px solid #000;display:flex;align-items:center;justify-content:center;overflow:hidden}
+.tv-gi img{max-width:100%;max-height:100%;width:auto;height:auto;object-fit:contain;filter:none;opacity:1;display:block}
+.tv-gi img.noblob{width:100%;height:100%}
+.tv-gc figcaption{font-size:7.5pt;line-height:1.15;margin-top:2px;text-align:center;min-height:2.3em}
+.tv-gc figcaption b{display:inline-block;min-width:1.4em;padding:0 3px;margin-right:3px;border-radius:2px;color:#fff;background:#000}
+@media print{.tv-page{box-shadow:none!important;margin:0!important;min-height:10.3in}.tv-page+.tv-page{break-before:page;page-break-before:always}}
 @media print{
   @page{size:letter portrait;margin:.3in}
   html,body{background:#fff!important}
@@ -616,7 +645,7 @@ pre.raw{white-space:pre-wrap;font-size:12px;background:var(--surface-2);padding:
 <script>
 (function(){
 "use strict";
-var APP_VERSION = "2.7.1";
+var APP_VERSION = "2.8.0";
 // Public OAuth client id (not a secret). Web client, authorized JavaScript origins:
 //   https://mrmitchell68.github.io   and   http://localhost:8766
 // Leave empty until that client exists — Save-to-Drive is hidden and the button uses the Android share sheet.
@@ -3675,8 +3704,70 @@ function viewLog(){
 }
 
 /* ---------- print sheet ---------- */
-function printLayout(){ return state.meta.printLayout==="process" ? "process" : "reference"; }
-function printSheetHtml(j, layout){ return (layout||printLayout())==="process" ? processSheetHtml(j) : refSheetHtml(j); }
+function printLayout(){ var v=state.meta.printLayout; return (v==="process"||v==="reference")? v : "traveler"; }
+function printSheetHtml(j, layout){ var l=layout||printLayout(); return l==="process" ? processSheetHtml(j) : l==="reference" ? refSheetHtml(j) : travelerSheetHtml(j); }
+/* ---------- v2.8.0: Manufacturing Traveler sheet (Allen's approved Sample C) — default print layout ---------- */
+function tvVal(j, key){ var h=pfield(j,key); return h? rsVal(h.f) : ""; }
+function tvHead(j, B, sub, n, pages){
+  return '<table class="tv-hdr"><tr><td rowspan="2" class="tv-co"><div class="co">'+esc(B.company||"")+'</div>'+esc(B.tagline||"")+'</td><td rowspan="2"><div class="t">MANUFACTURING TRAVELER'+(sub?' — '+esc(sub):'')+'</div><div class="pn">'+esc(j.partName||j.toolNumber||"Untitled part")+(j.example?' <span class="tv-ex">EXAMPLE</span>':'')+'</div></td><td class="lb">Doc No.</td><td>DCT-SPEC-'+esc(j.toolNumber||shortId(j))+'</td></tr><tr><td class="lb">Page</td><td>'+n+' of '+pages+'</td></tr></table>';
+}
+function tvFoot(j, B){ return '<div class="tv-ft"><span>'+esc(B.footer||"")+'</span><span>Printed '+esc(fmtDate(nowIso()))+' · Uncontrolled when printed · '+esc([j.toolNumber, shortId(j)].filter(Boolean).join(" · "))+'</span></div>'; }
+function tvMsTable(ms, side){
+  var h='<table class="tv-ms"><tr><th>Function</th><th>Parameter</th><th>1</th><th>2</th><th>3</th></tr>';
+  MS_DEFS.filter(function(s){ return s.side===side; }).forEach(function(sec){
+    sec.params.forEach(function(p, i){ var P=MS_P[p[0]], r=ms.rows[p[0]]||{vals:[]}, v=(r.vals||[]).map(function(x){ return String(x||""); });
+      var cells = P.staged? (r.same && v[0]? '<td colspan="3" class="c">'+esc(v[0])+' (all stages)</td>' : [0,1,2].map(function(k){ return '<td class="c">'+esc(v[k]||"")+'</td>'; }).join("")) : '<td colspan="3" class="c">'+esc(P.check? (msIsCheckOn(v[0])? "Yes" : (v[0]||"")) : (v[0]||""))+'</td>';
+      if(r.extra) cells=cells.replace(/<\/td>$/, ' · '+esc(r.extra)+'</td>');
+      h+='<tr>'+(i===0?'<td class="fn" rowspan="'+sec.params.length+'">'+esc(sec.title)+'</td>':'')+'<td>'+esc(P.label)+'</td>'+cells+'</tr>'; });
+  });
+  return h+'</table>';
+}
+function travelerSheetHtml(j){
+  var B=getBrand(), photos=j.photos||[], gp=[]; for(var i=0;i<photos.length;i+=12) gp.push(photos.slice(i,i+12));
+  var msOn=msHas(j.machineSettings), pages=1+(msOn?1:0)+gp.length, pg=1, printed={};
+  function F(key){ var h=pfield(j,key); if(h && String(h.f.value||"").trim()) printed[h.f.id]=1; return h? rsVal(h.f) : ""; }
+  var id=[["Customer",esc(j.customer||""),"Part Name",esc(j.partName||""),"Part No.",esc(F("part_no")),"Tool No.",esc(j.toolNumber||"")],
+    ["Description",esc(F("description")),"Material",esc(F("material")),"Color",esc(F("color")),"Cavities",esc(F("cavities"))],
+    ["Part Wt.",esc(F("part_wt")),"Shot Wt.",esc(F("shot_wt")),"Avg. Cycle",esc(F("cycle")),"Mach. Cycle",esc(F("mach_cycle"))],
+    ["Parts/Hr",esc(F("pph")),"Machine",esc(F("machine")||j.press||""),"Work Order",esc(F("work_order")),"Date",esc(rsDate(F("date")))]];
+  var rev=F("revision"), dt=rsDate(tvVal(j,"date"));
+  var h='<div class="tv-page">'+tvHead(j,B,"",pg,pages)+'<div class="tv-bar">1. PART / MOLD IDENTIFICATION</div><table>'+id.map(function(r){ return '<tr>'+r.map(function(c,i){ return i%2? '<td>'+c+'</td>' : '<td class="lb w">'+c+'</td>'; }).join("")+'</tr>'; }).join("")+'</table>';
+  // material & process (every filled process field), then other specs
+  var mp=[]; MP_KEYS.forEach(function(k){ var hh=pfield(j,k); if(hh && String(hh.f.value||"").trim() && !printed[hh.f.id]){ printed[hh.f.id]=1; mp.push([hh.f.label||(DEF_BY_KEY[k]||{}).label||k, rsVal(hh.f)]); } });
+  var car=secByRole(j,"carton"); if(car) (car.fields||[]).forEach(function(f){ printed[f.id]=1; });
+  var other=[]; (j.sections||[]).forEach(function(s){ if(s.type!=="fields") return; (s.fields||[]).forEach(function(f){ if(printed[f.id] || !String(f.value||"").trim()) return; printed[f.id]=1; other.push([f.label||"Spec", rsVal(f)]); }); });
+  var kvT=function(list){ return '<table>'+list.map(function(r){ return '<tr><td class="lb w2">'+esc(r[0])+'</td><td>'+esc(r[1])+'</td></tr>'; }).join("")+'</table>'; };
+  h+='<div class="tv-bar">2. MATERIAL &amp; PROCESS</div>'+(mp.length? kvT(mp) : '<table><tr><td style="height:.22in"></td></tr></table>');
+  if(other.length) h+='<div class="tv-bar">2b. OTHER SPECS</div>'+kvT(other);
+  var sup=secByRole(j,"supplies"), srows=sup? (sup.rows||[]).filter(function(r){ return String(r.desc||"").trim()||String(r.qty||"").trim(); }) : [];
+  h+='<div class="tv-bar">3. '+esc(((sup&&sup.title)||ROLE_TITLES.supplies).toUpperCase())+'</div><table><tr><th class="n">No.</th><th>Description</th><th class="q">Qty.</th><th class="q">Issued</th></tr>'+(srows.length? srows : [{},{},{}]).map(function(r,i){ return '<tr><td class="n">'+(i+1)+'</td><td>'+esc(r.desc||"")+'</td><td class="q">'+esc(r.qty||"")+'</td><td></td></tr>'; }).join("")+'</table>';
+  function items(sec){ return sec? (sec.items||[]).filter(function(it){ return String(it.text||"").trim(); }) : []; }
+  var ins=secByRole(j,"instructions"), qc=secByRole(j,"quality"), pk=secByRole(j,"packaging"), nt=secByRole(j,"notes");
+  var insI=items(ins), qcI=items(qc);
+  h+='<div class="tv-two"><div><div class="tv-bar">4. '+esc(((ins&&ins.title)||ROLE_TITLES.instructions).toUpperCase())+'</div><table><tr><th class="n">#</th><th>Step</th><th class="q">Init.</th></tr>'+(insI.length? insI:[{text:""}]).map(function(it,i){ return '<tr><td class="n">'+(i+1)+'</td><td>'+esc(it.text)+'</td><td></td></tr>'; }).join("")+'</table></div>'+
+     '<div><div class="tv-bar">5. '+esc(((qc&&qc.title)||ROLE_TITLES.quality).toUpperCase())+'</div><table><tr><th>Check</th><th class="pf">Pass / Fail</th></tr>'+(qcI.length? qcI:[{text:""}]).map(function(it){ return '<tr><td>'+esc(it.text)+'</td><td class="pf"><span class="chk"></span>P <span class="chk"></span>F</td></tr>'; }).join("")+'</table>'+
+     '<div class="tv-bar">6. '+esc(((car&&car.title)||ROLE_TITLES.carton).toUpperCase())+'</div><table>'+(car? (car.fields||[]) : []).map(function(f){ return '<tr><td class="lb w2">'+esc(f.label)+'</td><td>'+esc(rsVal(f))+'</td></tr>'; }).join("")+'<tr><td class="lb w2">Packaging desc.</td><td>'+esc(pk? pk.text||"" : "")+'</td></tr></table></div></div>';
+  // custom sections (notes / tables / checklists the job added)
+  var bn=7; (j.sections||[]).forEach(function(s){ if(s.role) return;
+    if(s.type==="notes" && String(s.text||"").trim()){ h+='<div class="tv-bar">'+(bn++)+'. '+esc(String(s.title||"Notes").toUpperCase())+'</div><table><tr><td class="pre">'+esc(s.text)+'</td></tr></table>'; }
+    else if(s.type==="table"){ var tr=(s.rows||[]).filter(function(r){ return String(r.desc||"").trim()||String(r.qty||"").trim(); }); if(tr.length) h+='<div class="tv-bar">'+(bn++)+'. '+esc(String(s.title).toUpperCase())+'</div><table><tr><th class="n">No.</th><th>Description</th><th class="q">Qty.</th></tr>'+tr.map(function(r,i){ return '<tr><td class="n">'+(i+1)+'</td><td>'+esc(r.desc)+'</td><td class="q">'+esc(r.qty)+'</td></tr>'; }).join("")+'</table>'; }
+    else if(s.type==="steps"){ var it=items(s); if(it.length && !isStockSteps(s)) h+='<div class="tv-bar">'+(bn++)+'. '+esc(String(s.title).toUpperCase())+'</div><table>'+it.map(function(x,i){ return '<tr><td class="n">'+(i+1)+'</td><td>'+esc(x.text)+'</td></tr>'; }).join("")+'</table>'; }
+  });
+  h+='<div class="tv-bar">'+(bn++)+'. NOTES / COMMENTS</div><table><tr><td class="pre" style="height:.3in">'+esc(nt? nt.text||"" : "")+'</td></tr></table>';
+  h+='<div class="tv-two"><div><div class="tv-bar">'+(bn++)+'. SIGN-OFF</div><table class="sg"><tr><th>Role</th><th>Name</th><th>Signature</th><th>Date</th></tr><tr><td>Setup</td><td></td><td></td><td></td></tr><tr><td>First-piece QC</td><td></td><td></td><td></td></tr><tr><td>Supervisor</td><td></td><td></td><td></td></tr></table></div>'+
+     '<div><div class="tv-bar">'+(bn++)+'. REVISION HISTORY</div><table class="sg"><tr><th>Rev</th><th>Description</th><th>By</th><th>Date</th></tr><tr><td>'+esc(rev)+'</td><td>'+(rev?'Current release':'')+'</td><td></td><td>'+esc(rev? dt : "")+'</td></tr><tr><td></td><td></td><td></td><td></td></tr><tr><td></td><td></td><td></td><td></td></tr></table></div></div>'+tvFoot(j,B)+'</div>';
+  if(msOn){ var ms=msNormalize(j.machineSettings), H=ms.header; pg++;
+    h+='<div class="tv-page">'+tvHead(j,B,"MACHINE SETTINGS",pg,pages)+'<table><tr><td class="lb">Part No.</td><td>'+esc(H.partNumber||tvVal(j,"part_no"))+'</td><td class="lb">Machine</td><td>'+esc(H.machine||tvVal(j,"machine")||j.press||"")+'</td><td class="lb">Date</td><td>'+esc(H.date||"")+'</td></tr></table>'+
+      '<div class="tv-two"><div><div class="tv-bar">'+(bn++)+'. CLAMP · EJECTION · INJECTION</div>'+tvMsTable(ms,"L")+'</div><div><div class="tv-bar">'+(bn++)+'. CHARGING · TEMPERATURE · PRODUCTION</div>'+tvMsTable(ms,"R")+'</div></div>'+
+      (String(ms.corePull||"").trim()? '<div class="tv-bar">CORE PULL</div><table><tr><td class="pre">'+esc(ms.corePull)+'</td></tr></table>' : '')+
+      '<div class="tv-bar">'+(bn++)+'. MACHINE NOTES</div><table>'+(String(ms.notes||"").trim()? String(ms.notes).split(/\n+/).map(function(n){ return '<tr><td>'+esc(n)+'</td></tr>'; }).join("") : '<tr><td style="height:.3in"></td></tr>')+'</table>'+
+      '<div class="tv-bar">SETTINGS VERIFIED</div><table class="sg"><tr><th>Name</th><th>Signature</th><th>Date</th></tr><tr><td></td><td></td><td></td></tr></table>'+tvFoot(j,B)+'</div>'; }
+  var pb=bn++;
+  gp.forEach(function(list, gi){ pg++;
+    h+='<div class="tv-page">'+tvHead(j,B,"PHOTO RECORD",pg,pages)+'<div class="tv-bar">'+pb+'. PHOTO RECORD ('+photos.length+')'+(gp.length>1? ' — photos '+(gi*12+1)+'–'+(gi*12+list.length) : '')+'</div><div class="tv-gal">'+list.map(function(p,k){ return '<figure class="tv-gc"><div class="tv-gi"><img data-pid="'+esc(p.id)+'" alt="'+esc(p.label||"")+'"></div><figcaption><b>'+(gi*12+k+1)+'</b> '+esc(p.label||("Photo "+(gi*12+k+1)))+'</figcaption></figure>'; }).join("")+'</div>'+tvFoot(j,B)+'</div>'; });
+  return '<div class="rs-pages tv-pages">'+h+'</div>';
+}
+
 
 /* Reference sheet: matches the Mold / Job Reference Sheet template (Letter portrait, 7.9in content width) */
 var RS = {contH:8.75, W:7.9, gap:0.06, lab:0.2, photoH:5.3, minPhotoH:2.9, contImgH:1.55, perCont:20, pageH:10.25};
@@ -3892,15 +3983,16 @@ function processSheetHtml(j){
 function viewPrint(){
   var j = curJob(); if(!j) return viewList();
   var lay = printLayout(), n=(j.photos||[]).length, pages = lay==="reference" ? 1+Math.ceil(Math.max(0,n-rsP1Count())/rsPerCont())+(msHas(j.machineSettings)?1:0) : 0;
-  var h = topbar(backBtn("#/job/"+j.id, j.toolNumber||"Job"), "Print / share", lay==="reference"?"Mold / job reference sheet":"Process sheet", "");
-  h += '<div class="seg no-print" style="grid-template-columns:1fr 1fr;margin-top:12px" role="tablist" aria-label="Sheet layout"><button class="active'+(lay==="reference"?' sel':'')+'" data-act="setLayout" data-v="reference" role="tab" aria-selected="'+(lay==="reference")+'">📋 Reference sheet</button><button class="active'+(lay==="process"?' sel':'')+'" data-act="setLayout" data-v="process" role="tab" aria-selected="'+(lay==="process")+'">⚙️ Process sheet</button></div>';
+  var h = topbar(backBtn("#/job/"+j.id, j.toolNumber||"Job"), "Print / share", lay==="traveler"?"Manufacturing traveler":lay==="reference"?"Mold / job reference sheet":"Process sheet", "");
+  h += '<div class="seg no-print" style="grid-template-columns:1fr 1fr 1fr;margin-top:12px" role="tablist" aria-label="Sheet layout"><button class="active'+(lay==="traveler"?' sel':'')+'" data-act="setLayout" data-v="traveler" role="tab" aria-selected="'+(lay==="traveler")+'">🧾 Traveler</button><button class="active'+(lay==="reference"?' sel':'')+'" data-act="setLayout" data-v="reference" role="tab" aria-selected="'+(lay==="reference")+'">📋 Reference sheet</button><button class="active'+(lay==="process"?' sel':'')+'" data-act="setLayout" data-v="process" role="tab" aria-selected="'+(lay==="process")+'">⚙️ Process sheet</button></div>';
   if(lay==="reference") h += '<div class="no-print" style="margin-top:10px"><div class="faint" style="font-weight:700;margin:0 2px 4px">Photo layout</div><div class="seg" style="grid-template-columns:repeat(4,1fr)" role="tablist" aria-label="Photo layout">'+PHOTO_LAYOUTS.map(function(o){ var on=photoLayout()===o[0]; return '<button class="active'+(on?' sel':'')+'" data-act="setPhotoLayout" data-v="'+o[0]+'" role="tab" aria-selected="'+on+'">'+o[1]+'</button>'; }).join("")+'</div></div>';
+  if(lay==="traveler") h += '<p class="faint no-print" style="margin:6px 2px 0">Part info, material &amp; process, supplies, instructions, QC, packaging, sign-off, machine settings, and photos as 2″ squares (12 per page) · Letter · '+(1+(msHas(j.machineSettings)?1:0)+Math.ceil(n/12))+' pages. Branding: ⚙️ Settings.</p>'; else
   h += '<p class="faint no-print" style="margin:6px 2px 0">'+(lay==="reference"? 'Photos ('+n+'), part info, material &amp; process, supplies, packaging, instructions, QC &amp; any other specs · Letter · <span id="rsPageCount">'+pages+' page'+(pages>1?'s':'')+'</span>. Branding: ⚙️ Settings.' : 'Specs, temperatures, pressures, setup steps and recent runs.')+'</p>';
   h += '<div class="btnrow no-print" style="margin-top:12px"><button class="btn primary tall" data-act="print">🖨️ Print / Save PDF</button><button class="btn ghost tall" data-act="shareText">📤 Share text</button></div>';
   if(n) h += '<button class="btn ghost block no-print" style="margin-top:8px" data-act="arrangeOpen">↕ Arrange photos ('+n+') — order, labels, pictures</button>';
   h += '<div class="btnrow no-print" style="margin-top:8px"><button class="btn ghost" data-act="copyText">📋 Copy summary</button><button class="btn ghost" data-act="exportJob">💾 Export job file</button></div>';
   h += '<p class="faint no-print" style="margin:8px 2px 0">To share a PDF: Print → choose “Save as PDF” → share the file from Downloads.</p>';
-  h += '<div class="sheetwrap'+(lay==="reference"?' ref':'')+'" id="printArea">'+printSheetHtml(j, lay)+'</div>';
+  h += '<div class="sheetwrap'+(lay!=="process"?' ref':'')+'" id="printArea">'+printSheetHtml(j, lay)+'</div>';
   return h;
 }
 function summaryText(j){
@@ -7427,7 +7519,7 @@ function init(){
     if(!state.meta.ocrWarmAt && !c.saveData && c.type!=="cellular") warmOcr(false);
   }, 8000);
 }
-window.__tjl = {state:state, googleClientId:GOOGLE_CLIENT_ID, ms:{screenRead:function(i,p){return mscrRead(i,p);}, screenLooks:function(i){return mscrLooksLikeScreen(i);}, boxes:function(i){ var m=mscrMask(mscrLocate(i),MSCR_W); return {img:m.c.toDataURL('image/jpeg',0.85),W:m.W,H:m.H,yellow:m.yellow,dark:m.dark,boxes:mscrBoxes(m).map(function(b){return [Math.round(b.cx),Math.round(b.cy),Math.round(b.w),Math.round(b.h)];})}; }, yzRead:function(i,p){return yzRead(i,p);}, yzLooks:function(i){return yzLooksLikeScreen(i);}, yzDefs:YZ_DEFS, scan:msScanImage, extract:msExtract, orient:orientForOcr, normalize:msNormalize, defs:MS_DEFS, rowText:msRowText, isForm:msIsForm}, phone:{storeAlbumHandle:storeAlbumHandle, albumName:albumName, readPhoneSaved:readPhoneSaved},
+window.__tjl = {state:state, pfield:function(j,k){ return pfield(j,k); }, secByRole:function(j,r){ return secByRole(j,r); }, saveJobs:function(){ saveJobs(); }, render:function(){ render(); }, googleClientId:GOOGLE_CLIENT_ID, ms:{screenRead:function(i,p){return mscrRead(i,p);}, screenLooks:function(i){return mscrLooksLikeScreen(i);}, boxes:function(i){ var m=mscrMask(mscrLocate(i),MSCR_W); return {img:m.c.toDataURL('image/jpeg',0.85),W:m.W,H:m.H,yellow:m.yellow,dark:m.dark,boxes:mscrBoxes(m).map(function(b){return [Math.round(b.cx),Math.round(b.cy),Math.round(b.w),Math.round(b.h)];})}; }, yzRead:function(i,p){return yzRead(i,p);}, yzLooks:function(i){return yzLooksLikeScreen(i);}, yzDefs:YZ_DEFS, scan:msScanImage, extract:msExtract, orient:orientForOcr, normalize:msNormalize, defs:MS_DEFS, rowText:msRowText, isForm:msIsForm}, phone:{storeAlbumHandle:storeAlbumHandle, albumName:albumName, readPhoneSaved:readPhoneSaved},
   doc:{url:DOC_SCRIPT_URL, readQueue:readDocQueue, readUploaded:readDocUploaded, readSent:readDocSent, baseName:docBaseName, renameable:function(){ return renameableDocs().map(function(d){ return {sent:d.sentName, name:d.docName}; }); }, flush:flushDocQueue, docsForCtx:docsForCtx, buildDocPdf:buildDocPdf, buildDocParts:buildDocParts, exists:docExists, uploadAll:uploadAllDocs, limits:function(){ return {page:DOC_PAGE_MAX, part:DOC_PART_BYTES, asis:DOC_PDF_ASIS, side:DOC_MAX_SIDE}; }}, parseLines:parseLines, buildReview:buildReview, render:render, scan:{buildSynIndex:buildSynIndex, labelUnitHint:labelUnitHint, parseNumber:parseNumber, defForLabel:defForLabel, reconcileFields:reconcileFields},
   photo:{readQueue:readPhotoQueue, readUploaded:readPhotoUploaded, readOk:readPhotoOk, flush:flushPhotoQueue, name:photoDriveName, prep:photoUploadBlob, info:docServerInfo, items:function(){ return photoItemsFor(state.jobs, false).map(function(it){ return {job:it.job.id, id:it.photo.id, name:it.photo.driveName||""}; }); }, terms:jobSearchTerms, find:findDocs, missing:jobMissing},
   restore:{need:restoreNeed, run:runRestore, pick:restorePickFiles, stem:restoreStem, partOf:restorePartOf, fileId:driveFileId, getFile:getDriveFile, pages:restorePagesOf, last:function(){ return state.restoreLast||null; }},
