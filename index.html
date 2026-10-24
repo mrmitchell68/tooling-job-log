@@ -653,7 +653,7 @@ pre.raw{white-space:pre-wrap;font-size:12px;background:var(--surface-2);padding:
 <script>
 (function(){
 "use strict";
-var APP_VERSION = "2.8.3";
+var APP_VERSION = "2.8.4";
 // Public OAuth client id (not a secret). Web client, authorized JavaScript origins:
 //   https://mrmitchell68.github.io   and   http://localhost:8766
 // Leave empty until that client exists — Save-to-Drive is hidden and the button uses the Android share sheet.
@@ -2538,35 +2538,39 @@ function yzG(h,d){ return [h,d]; }
 var YZ_COLS3 = [yzG(/^pressure/i,0), yzG(/^veloc/i,0), yzG(/^to$/i,2)], YZ_COLSF = [yzG(/^force/i,0), yzG(/^veloc/i,0), yzG(/^to$/i,2)];
 var YZ_DEFS = [
  {id:"yz-mold", tab:/^mold$/i, title:"Yizumi Mold (clamp)", titles:[/^mold\s*close$/i, /^mold\s*open$/i],
-  grids:[{k:"cl", panel:/^mold\s*close$/i, cols:YZ_COLS3, rows:["1","2","3","pr","hp"]}, {k:"op", panel:/^mold\s*open$/i, cols:YZ_COLS3, rows:["1","2","E"]}],
+  grids:[{k:"cl", panel:/^mold\s*close$/i, cols:YZ_COLS3, rows:["1","2","3","pr","hp"]}, {k:"op", panel:/^mold\s*open$/i, cols:YZ_COLS3, rows:["1","2","3","E"]}],
   kvs:[["prot",/mold\s*protect\s*time/i,2,2],["protFT",/protect\s*from/i,2,2],["force",/clamp\s*force/i,2,1]],
   fields:{close_press:["cl1.0","cl2.0","cl3.0"], close_speed:["cl1.1","cl2.1","cl3.1"], close_int:["cl1.2","cl2.2","cl3.2"],
-    open_press:["op1.0","op2.0","opE.0"], open_speed:["op1.1","op2.1","opE.1"], open_int:["op1.2","op2.2","opE.2"], clamp_tonnage:["force.1"]},
+    open_press:["op1.0","op2.0","op3.0","opE.0"], open_speed:["op1.1","op2.1","op3.1","opE.1"], open_int:["op1.2","op2.2","op3.2","opE.2"], clamp_tonnage:["force.1"]},
   notes:[["Mold protect psi/%/in",["clpr.0","clpr.1","clpr.2"]],["High pressure psi/%",["clhp.0","clhp.1"]],["Mold protect time s",["prot.0","prot.1"]],["Protect from-to in",["protFT.0","protFT.1"]],["Clamp force US ton (actual/set)",["force.0","force.1"]]]},
  {id:"yz-inject", tab:/^inject/i, title:"Yizumi Injection", titles:[/^inject$/i, /^cut\s*off$/i, /allowable/i],
-  grids:[{k:"in", panel:/^inject$/i, cols:YZ_COLS3, rows:["1","2","E"]}],
-  kvs:[["stroke",/plasticize\s*stroke/i,1,2],["allow",/allowable/i,1,0],["coPos",/screw\s*position/i,1,2],["coTime",/^inject\s*time/i,1,2],["coPress",/^inject\s*pressure/i,1,0,"last"],["coAct",/activation/i,1,2]],
-  fields:{inj_press:["in1.0","in2.0","inE.0"], inj_speed:["in1.1","in2.1","inE.1"], inj_int:["in1.2","in2.2"], switchover:["coPos.0"]},
-  notes:[["Plasticize stroke in",["stroke.0"]],["Allowable inject pressure psi",["allow.0"]],["Cut off: inject time s",["coTime.0"]],["Cut off: inject pressure psi",["coPress.0"]],["Cut off activation position in",["coAct.0"]]]},
+  grids:[{k:"in", panel:/^inject$/i, cols:YZ_COLS3, rows:["1","2","3","E"]}],
+  kvs:[["stroke",/plasticize\s*stroke/i,1,2],["allow",/allowable/i,1,0],["coPos",/screw\s*position/i,2,2],["coTime",/^inject\s*time/i,2,[2,1]],["coPress",/^inject\s*pressure/i,1,0,"last"],["coAct",/activation/i,1,2]],
+  fields:{inj_press:["in1.0","in2.0","in3.0","inE.0"], inj_speed:["in1.1","in2.1","in3.1","inE.1"], inj_int:["in1.2","in2.2","in3.2"], switchover:["coPos.1"]},
+  notes:[["Plasticize stroke in",["stroke.0"]],["Allowable inject pressure psi",["allow.0"]],["Cut off: screw position in (actual / set)",["coPos.0","coPos.1"]],["Cut off: inject time s (actual / set)",["coTime.0","coTime.1"]],["Cut off: inject pressure psi",["coPress.0"]],["Cut off activation position in",["coAct.0"]]]},
  {id:"yz-plast", tab:/^plast/i, title:"Yizumi Plasticize", titles:[/plasticize\s*and/i, /^decompression$/i, /delay\s*plast/i],
   grids:[{k:"pl", panel:/plasticize\s*and/i, cols:[yzG(/^back/i,0), yzG(/^charge/i,0), yzG(/^to$/i,2)], rows:["E"]}],
   kvs:[["dly",/delay\s*plast/i,2,2],["decA",/decompression\s*after/i,3,[0,0,2]]],
   fields:{back_press:["plE.0"], screw_speed:["plE.1"], screw_int:["plE.2"], charge_delay:["dly.1"], suck_back:["decA.2"]},
   notes:[["Delay plast s",["dly.0","dly.1"]],["Decompression after plasticize psi/%/in",["decA.0","decA.1","decA.2"]]]},
  {id:"yz-heat", tab:/^heat/i, title:"Yizumi Heating", titles:[/heating\s*zones/i, /auto\s*heating/i, /tol\.?\s*high/i],
-  grids:[], kvs:[["set",/^set$/i,7,1],["tolH",/tol\.?\s*high/i,1,1],["tolL",/tol\.?\s*low/i,1,1],["stby",/standby/i,1,0],["oil",/^oil$/i,1,0]],
-  fields:{zone1:["set.0"],zone2:["set.1"],zone3:["set.2"],zone4:["set.3"],zone5:["set.4"],zone6:["set.5"],zone7:["set.6"]},
-  notes:[["Tolerance high/low °F",["tolH.0","tolL.0"]],["Standby temperature °F",["stby.0"]],["Oil °F",["oil.0"]]]},
+  grids:[], kvs:[["set",/^set$/i,8,1],["tolH",/tol\.?\s*high/i,8,1],["tolL",/tol\.?\s*low/i,8,1],["stby",/standby/i,1,0],["oil",/^oil$/i,1,0]],
+  fields:{zone1:["set.0"],zone2:["set.1"],zone3:["set.2"],zone4:["set.3"],zone5:["set.4"],zone6:["set.5"],zone7:["set.6"],zone8:["set.7"],oil_temp:["oil.0"]},
+  notes:[["Tolerance high °F (zones 1-8)",["tolH.0","tolH.1","tolH.2","tolH.3","tolH.4","tolH.5","tolH.6","tolH.7"]],["Tolerance low °F (zones 1-8)",["tolL.0","tolL.1","tolL.2","tolL.3","tolL.4","tolL.5","tolL.6","tolL.7"]],["Standby temperature °F",["stby.0"]],["Oil °F",["oil.0"]]]},
  {id:"yz-eject", tab:/^eject/i, title:"Yizumi Ejector", titles:[/ejector\s*forward/i, /ejector\s*backward/i, /shake/i],
-  grids:[{k:"ef", panel:/ejector\s*forward/i, cols:YZ_COLSF, rows:["E"]}, {k:"eb", panel:/ejector\s*backward/i, cols:YZ_COLSF, rows:["E"]}],
+  grids:[{k:"ef", panel:/ejector\s*forward/i, cols:YZ_COLSF, rows:["1","2","3","E"]}, {k:"eb", panel:/ejector\s*backward/i, cols:YZ_COLSF, rows:["1","2","3","E"]}],
   kvs:[["shake",/shake\s*counter/i,1,0]], texts:[["mode",/ejector\s*mode/i]],
-  fields:{ej_fwd_press:["efE.0"], ej_fwd_speed:["efE.1"], ej_fwd_int:["efE.2"], ej_strokes:["shake.0"], ej_back_press:["ebE.0"], ej_back_speed:["ebE.1"], ej_back_set:["ebE.2"]},
+  fields:{ej_fwd_press:["ef1.0","ef2.0","ef3.0","efE.0"], ej_fwd_speed:["ef1.1","ef2.1","ef3.1","efE.1"], ej_fwd_int:["ef1.2","ef2.2","ef3.2","efE.2"], ej_strokes:["shake.0"], ej_back_press:["eb1.0","eb2.0","eb3.0","ebE.0"], ej_back_speed:["eb1.1","eb2.1","eb3.1","ebE.1"], ej_back_set:["eb1.2","eb2.2","eb3.2","ebE.2"]},
   notes:[["Ejector mode",["mode"]]]},
+ {id:"yz-overview", tab:/^overvi/i, title:"Yizumi Overview", titles:[/prod\.?\s*counter/i, /cycle\s*delay/i, /plasticize\s*time/i, /decomp/i, /plast\s*end/i],
+  grids:[], kvs:[["prod",/prod\.?\s*counter/i,2,0],["cdly",/cycle\s*delay/i,2,1],["cyc",/^cycle\s*time/i,2,1],["cool",/cooling\s*time/i,2,1],["mct",/mold\s*close\s*time/i,2,1],["mot",/mold\s*open\s*time/i,2,1],["ijt",/^injection\s*time/i,2,1],["plt",/plasticize\s*time/i,2,1],["dct",/decomp/i,2,1],["cush",/^cushion/i,1,2],["pend",/plast\s*end/i,1,2]],
+  fields:{cycle:["cyc.1"], cooling:["cool.1"], cycle_int:["cdly.1"], cushion:["cush.0"]},
+  notes:[["Production counter actual / set",["prod.0","prod.1"]],["Cycle delay time s actual / set",["cdly.0","cdly.1"]],["Cycle time s actual / set",["cyc.0","cyc.1"]],["Cooling time s actual / set",["cool.0","cool.1"]],["Mold close time s actual / max",["mct.0","mct.1"]],["Mold open time s actual / max",["mot.0","mot.1"]],["Injection time s actual / max",["ijt.0","ijt.1"]],["Plasticize time s actual / max",["plt.0","plt.1"]],["Decomp. time s actual / max",["dct.0","dct.1"]],["Plast end position in (actual)",["pend.0"]]], barrel:true},
  {id:"yz-nozzle", tab:/^nozzle$/i, title:"Yizumi Nozzle", titles:[/nozzle\s*forward/i, /nozzle\s*backward/i, /limit\s*switch/i],
   grids:[], kvs:[["bf",/before\s*limit/i,2,0],["af",/after\s*limit/i,4,[0,0,2,2]],["cf",/contact\s*force/i,2,0],["bu",/build\s*up/i,2,2],["bk",/^backward$/i,4,[0,0,2,2]]],
   fields:{}, notes:[["Nozzle fwd before limit psi/%",["bf.0","bf.1"]],["Nozzle fwd after limit psi/%/s/s",["af.0","af.1","af.2","af.3"]],["Contact force psi/%",["cf.0","cf.1"]],["Force build up time s",["bu.0","bu.1"]],["Nozzle backward psi/%/s/s",["bk.0","bk.1","bk.2","bk.3"]]]}
 ];
-var YZ_BRAND = [/yizumi/i, /\bhpm\b/i, /administrator/i, /^overvi/i, /^ejector$/i, /^injection$/i, /^plastic/i, /^nozzle$/i, /^heating$/i, /^produ/i, /^alarm$/i, /^return$/i, /^cooling$/i];
+var YZ_BRAND = [/yizumi/i, /^mold$/i, /^heating$/i, /^core/i, /\bhpm\b/i, /administrator/i, /^overvi/i, /^ejector$/i, /^injection$/i, /^plastic/i, /^nozzle$/i, /^heating$/i, /^produ/i, /^alarm$/i, /^return$/i, /^cooling$/i];
 // cheap look: big light-grey low-colour area + a small bright green block (the highlighted tab)
 function yzLooksLikeScreen(im){
   var W=360, w0=im.naturalWidth||im.width, h0=im.naturalHeight||im.height, H=Math.round(h0*W/w0), c=document.createElement("canvas"); c.width=W; c.height=H;
@@ -2592,10 +2596,11 @@ function yzPrep(im){
 function yzBoxes(P0, lh){
   var W=P0.W, H=P0.H, g=P0.g.getContext("2d").getImageData(0,0,W,H).data, N=W*H, I=new Float64Array((W+1)*(H+1)), L=new Uint8Array(N);
   for(var y=0;y<H;y++){ var row=0; for(var x=0;x<W;x++){ var v=g[(y*W+x)*4]; L[y*W+x]=v; row+=v; I[(y+1)*(W+1)+x+1]=I[y*(W+1)+x+1]+row; } }
-  var R=Math.round(lh*2.2), M=new Uint8Array(N);
+  var R=Math.round(lh*(window.__yzR||2.2)), M=new Uint8Array(N), TH=window.__yzT||5;
   for(y=0;y<H;y++) for(x=0;x<W;x++){ var a=Math.max(0,x-R), b=Math.max(0,y-R), c=Math.min(W,x+R+1), d=Math.min(H,y+R+1), m=(I[d*(W+1)+c]-I[b*(W+1)+c]-I[d*(W+1)+a]+I[b*(W+1)+a])/((c-a)*(d-b));
-    var v=L[y*W+x]; if(v>150 && v>m+5) M[y*W+x]=1; }
+    var v=L[y*W+x]; if(v>150 && v>m+TH) M[y*W+x]=1; }
   var C=mscrComponents(M, W, H), out=[];
+  if(window.__yzDbg) window.__yzComps=C.comps.filter(function(k){ return k.n>lh*lh; }).map(function(k){ return [k.x0,k.y0,k.w,k.h,+(k.n/(k.w*k.h)).toFixed(2)]; }).concat([[lh]]);
   C.comps.forEach(function(k){ if(k.h<lh*0.9 || k.h>lh*3.2 || k.w<k.h*1.1 || k.w>k.h*9) return; if(k.n/(k.w*k.h)<0.45) return;
     out.push({x0:k.x0, y0:k.y0, x1:k.x1, y1:k.y1, cx:(k.x0+k.x1)/2, cy:(k.y0+k.y1)/2, w:k.w, h:k.h}); });
   return out;
@@ -2646,13 +2651,14 @@ function yzTabName(wk, P0){ var T=P0.tab; if(!T) return Promise.resolve("");
 }
 // read one Yizumi photo → same result shape as mscrRead
 function yzRead(im, onProg, pre){
-  var P0=yzPrep(im), wkP=tessWorker(), out={kind:"screen", rows:[], header:{}, notesList:[]}, P=null, vals={};
+  var P0=yzPrep(im); if(window.__yzImg) window.__yzImg=P0.g.toDataURL('image/jpeg',0.8); var wkP=tessWorker(), out={kind:"screen", rows:[], header:{}, notesList:[]}, P=null, vals={};
   return wkP.then(function(wk){
     if(onProg) onProg("Reading the machine screen…", 5);
     var restore=function(){ return wk.setParameters({tessedit_char_whitelist:"", tessedit_pageseg_mode:"6"}); };
     return (pre? Promise.resolve(pre) : wk.setParameters({tessedit_pageseg_mode:"11", tessedit_char_whitelist:""}).then(function(){ return wk.recognize(P0.g); }).then(function(r){ return r.data.words||[]; })).then(function(raw){ return yzTabName(wk, P0).then(function(tn){ return {raw:raw, tn:tn}; }); }).then(function(o){ var raw=o.raw;
       P=yzWords(raw); var lh=P.lh; P.nums=yzBoxes(P0, lh).filter(function(b){ var inW=P.words.filter(function(w){ return w.cx>b.x0 && w.cx<b.x1 && w.cy>b.y0 && w.cy<b.y1; });
-        b.words=inW; b.v=yzNum(inW.map(function(w){ return w.t; }).join("")); b.c=0; return !inW.some(function(w){ return /[a-z]{2,}/i.test(w.t) && !yzIsNum(w.t); }); });
+        if(window.__yzDbg) (window.__yzRej=window.__yzRej||[]).push([Math.round(b.cx),Math.round(b.cy),inW.map(function(w){ return w.t; }).join('~')]);
+        b.words=inW; b.v=yzNum(inW.map(function(w){ return w.t; }).join("")); b.c=0; return !inW.some(function(w){ return /^[a-z]{4,}$/i.test(w.t.replace(/[^A-Za-z]/g,'')) && !/\d/.test(w.t) && w.t.replace(/[^A-Za-z]/g,'').length>=4 && /[aeiou]/i.test(w.t) && w.t.length>=4; }); });   // v2.8.4: photo glare turns digits into letter junk ("aso", "HED") — drop only real words
       if(window.__yzDbg) window.__yzDbg=P.nums.map(function(w){return [w.v,Math.round(w.cx),Math.round(w.cy),w.w,w.h];}).concat([P.segs.map(function(s){return s.t;}).join("|")]); var  all=P.segs.map(function(s){ return s.t; });
       var brand=YZ_BRAND.filter(function(re){ return all.some(function(t){ return re.test(t) || t.split(" ").some(function(x){ return re.test(x); }); }); }).length;
       // highlighted tab: the label inside the green block
@@ -2660,16 +2666,24 @@ function yzRead(im, onProg, pre){
       var best=null; YZ_DEFS.forEach(function(def){ var n=def.titles.filter(function(re){ return yzFind(P, re).length; }).length, sc=n/def.titles.length+(tabName && def.tab.test(tabName)? 1 : 0);
         if(!best || sc>best.sc) best={def:def, sc:sc}; });
       out.brandScore=brand; out.tab=tabName; out.tabBox=P0.tab? [P0.tab.x0,P0.tab.y0,P0.tab.w,P0.tab.h] : null;
-      if(!best || best.sc<0.6 || brand<3){ out.unknown=true; return restore(); }
+      var tN=best? best.def.titles.filter(function(re){ return yzFind(P, re).length; }).length : 0;   // v2.8.4: real photos — the tab strip is small/glary, the panel titles are not
+      if(!best || best.sc<0.6 || (brand<3 && tN<2)){ out.unknown=true; return restore(); }
       var def=best.def; out.screen={id:def.id, title:def.title, tab:tabName, kw:+best.sc.toFixed(2)};
       // panel bounds: from its title down to the next panel title below it
       var titleY=[]; YZ_DEFS.forEach(function(d){ d.titles.slice(0,2).forEach(function(re){ yzFind(P, re).forEach(function(s){ titleY.push(s.cy); }); }); });
       var tabY=P.words.filter(function(w){ return /^(overvi|alarm|return|produ)/i.test(w.t); }).map(function(w){ return w.y0; }); var bottom=Math.min(tabY.length? Math.min.apply(null,tabY) : P0.H, P0.tab? P0.tab.y0 : P0.H);
       var cells=[];  // {key, v, c, x0,y0,x1,y1, d, found}
       def.grids.forEach(function(gd){
-        var tt=yzFind(P, gd.panel)[0]; if(!tt) return;
+        var tt=yzFind(P, gd.panel)[0];
+        var hdOf=function(tt){ return gd.cols.map(function(cdef){ var c=yzFind(P, cdef[0], {y0:tt.cy, y1:tt.cy+lh*6, words:true}).sort(function(a,b){ return Math.hypot(a.cx-tt.x1,a.cy-tt.cy)-Math.hypot(b.cx-tt.x1,b.cy-tt.cy); })[0]; return c||null; }); }; var okH=function(h){ return h.filter(Boolean).length>=2; };
+        if(!tt || !okH(hdOf(tt))){ tt=null; // v2.8.4: title missed (glare) or cropped off the photo → the grid's own header row (Pressure|Force + Velocity side by side)
+          var hc=P.words.filter(function(w){ return gd.cols[0][0].test(w.t) && P.words.some(function(v){ return (gd.cols[1][0].test(v.t) && Math.abs(v.cy-w.cy)<lh*0.8 && v.x0>w.x1 && v.x0-w.x1<lh*4) || (/^psi$/i.test(v.t) && v.cy>w.cy+lh*0.4 && v.cy<w.cy+lh*2.2 && Math.abs(v.cx-w.cx)<lh*1.5); }); }).sort(function(a,b){ return a.cy-b.cy; });
+          var gi=def.grids.indexOf(gd), others=def.grids.filter(function(g){ return yzFind(P, g.panel)[0]; }).map(function(g){ return yzFind(P, g.panel)[0].cy; });
+          var cand=hc.filter(function(h){ return !others.some(function(oy){ return h.cy>oy && h.cy<oy+lh*4; }); });
+          var h0=cand[Math.min(gi, cand.length-1)]; if(gi>0 && cand.length<def.grids.length) h0=null; if(!h0 && cand.length===1) h0=cand[0];
+          if(!h0) return; tt={cy:h0.cy-lh*1.6, x1:h0.x0-lh, x0:h0.x0-lh*6, t:"(header)"}; }
         var y1=Math.min.apply(null, [bottom].concat(titleY.filter(function(y){ return y>tt.cy+lh; })));
-        var hd=gd.cols.map(function(cdef){ var c=yzFind(P, cdef[0], {y0:tt.cy, y1:tt.cy+lh*6, words:true}).sort(function(a,b){ return Math.hypot(a.cx-tt.x1,a.cy-tt.cy)-Math.hypot(b.cx-tt.x1,b.cy-tt.cy); })[0]; return c||null; });
+        var hd=hdOf(tt);
         if(window.__yzDbg) window.__yzDbgG=(window.__yzDbgG||[]).concat([[gd.k, hd.map(function(h){ return h? [h.t,Math.round(h.cx),Math.round(h.cy)] : null; })]]);
         var got=hd.map(function(h,i){ return h? i : -1; }).filter(function(i){ return i>=0; }); if(got.length<2) return;
         var sp=(hd[got[got.length-1]].cx-hd[got[0]].cx)/(got[got.length-1]-got[0]), hy=hd[got[0]].cy;
@@ -2679,17 +2693,28 @@ function yzRead(im, onProg, pre){
         var rows=[]; ns.forEach(function(w){ var r=rows.find(function(r){ return Math.abs(r.cy-w.cy)<lh*0.6; }); if(r){ r.ws.push(w); r.cy=(r.cy*(r.ws.length-1)+w.cy)/r.ws.length; } else rows.push({cy:w.cy, ws:[w]}); });
         rows=rows.filter(function(r){ return r.ws.filter(function(w){ return xs.some(function(x){ return Math.abs(w.cx-x)<sp*0.5; }); }).length>=2; }); // a grid row has 2+ boxes under the headers
         var pitch=rows.length>1? (rows[rows.length-1].cy-rows[0].cy)/(rows.length-1) : lh*1.9;
+        // v2.8.4: name each grid row by its label at the left (1 / 2 / 3 / End / Protect / High pr…) — real screens show as many stages as are set
+        var labOf=function(t){ t=String(t||"").trim(); if(/^[1-9]$/.test(t)) return t; if(/^[Il|]$/.test(t)) return "1"; if(/^end/i.test(t)) return "E"; if(/^prot/i.test(t)) return "pr"; if(/^high/i.test(t)) return "hp"; return null; };
+        var labs=rows.map(function(r){ var ws=P.words.filter(function(w){ return Math.abs(w.cy-r.cy)<lh*0.6 && w.x1<xs[0]-sp*0.35 && w.x0>xs[0]-sp*3.2; }).map(function(w){ return labOf(w.t); }).filter(function(l){ return l && gd.rows.indexOf(l)>=0; }); return ws[0]||null; });
+        var nl=labs.filter(Boolean).length, plan=null;
+        if(nl && rows.length>0){ plan=[]; var prev=-1; labs.forEach(function(l, i){ var k=l? gd.rows.indexOf(l) : -1; if(k<=prev) k=prev+1; if(!l && i===rows.length-1 && gd.rows.indexOf("E")>prev && rows.length<gd.rows.length && gd.rows[gd.rows.length-1]==="E") k=gd.rows.length-1; prev=k; plan.push(k<gd.rows.length? gd.rows[k] : null); }); }
+        if(plan && new Set(plan.filter(Boolean)).size===plan.filter(Boolean).length){ rows.forEach(function(r, ri){ var rk=plan[ri]; if(!rk) return;
+          gd.cols.forEach(function(cdef, ci){ var w=r.ws.filter(function(w){ return Math.abs(w.cx-xs[ci])<sp*0.5; })[0], bw=sp*0.42;
+            cells.push({key:gd.k+rk+"."+ci, w:w||null, v:w? w.v : "", c:w? w.c : 0, x0:xs[ci]-bw, x1:xs[ci]+bw, y0:r.cy-lh*0.85, y1:r.cy+lh*0.85, d:cdef[1], rows:rows.length, want:rows.length}); }); }); return; }
         gd.rows.forEach(function(rk, ri){ var r=rows[ri], cy=r? r.cy : (rows.length? rows[0].cy+ri*pitch : hy+lh*2.5+ri*lh*1.9);
           gd.cols.forEach(function(cdef, ci){ var w=r && r.ws.filter(function(w){ return Math.abs(w.cx-xs[ci])<sp*0.5; })[0];
             var bw=sp*0.42; cells.push({key:gd.k+rk+"."+ci, w:w||null, v:w? w.v : "", c:w? w.c : 0, x0:xs[ci]-bw, x1:xs[ci]+bw, y0:cy-lh*0.85, y1:cy+lh*0.85, d:cdef[1], rows:rows.length, want:gd.rows.length}); }); });
       });
+      var yzSl=(function(){ var sl=[]; P.nums.forEach(function(a){ P.nums.forEach(function(b){ var dx=b.cx-a.cx; if(dx>lh*2 && dx<lh*14 && Math.abs(b.cy-a.cy)<lh*0.9) sl.push((b.cy-a.cy)/dx); }); });
+        sl.sort(function(a,b){ return a-b; }); var m=sl.length>=4? sl[sl.length>>1] : 0; return Math.max(-0.12, Math.min(0.12, m)); })();  // v2.8.4: angled photo → rows slope
+      if(window.__yzDbg) window.__yzSlope=yzSl;
       def.kvs.forEach(function(kd){
         var ls=yzFind(P, kd[1]); if(kd[4]==="last") ls.sort(function(a,b){ return b.cy-a.cy; }); var l=ls[0]; if(!l) return;
-        var ns=P.nums.filter(function(w){ return Math.abs(w.cy-l.cy)<lh*0.6 && w.x0>l.x1-lh*0.2; }).sort(function(a,b){ return a.x0-b.x0; });
+        var ns=P.nums.filter(function(w){ return Math.abs(w.cy-l.cy-yzSl*(w.cx-l.cx))<lh*0.6 && w.x0>l.x1-lh*0.2; }).sort(function(a,b){ return a.x0-b.x0; });
         var step=ns.length>1? ns[1].cx-ns[0].cx : lh*4;
         for(var i=0;i<kd[2];i++){ var w=ns[i], d=Array.isArray(kd[3])? kd[3][i] : kd[3];
           var cx=w? w.cx : (ns.length? ns[ns.length-1].cx+(i-ns.length+1)*step : l.x1+lh*3+i*step), bw=w? (w.x1-w.x0)/2+lh*0.5 : lh*1.8;
-          cells.push({key:kd[0]+"."+i, w:w||null, v:w? w.v : "", c:w? w.c : 0, x0:cx-bw, x1:cx+bw, y0:l.cy-lh*0.85, y1:l.cy+lh*0.85, d:d}); }
+          var ky=l.cy+yzSl*(cx-l.cx); cells.push({key:kd[0]+"."+i, w:w||null, v:w? w.v : "", c:w? w.c : 0, x0:cx-bw, x1:cx+bw, y0:ky-lh*0.85, y1:ky+lh*0.85, d:d}); }
       });
       (def.texts||[]).forEach(function(td){ var l=yzFind(P, td[1])[0]; if(!l) return; var r=P.segs.filter(function(s){ return Math.abs(s.cy-l.cy)<lh*0.6 && s.x0>l.x1+lh; }).sort(function(a,b){ return a.x0-b.x0; })[0];
         if(r) vals[td[0]]={v:r.t, c:0.8, x0:r.x0, x1:r.x1, y0:r.y0, y1:r.y1}; });
@@ -2707,14 +2732,16 @@ function yzRead(im, onProg, pre){
               var t=yzNum((r.data.text||"").replace(/\s+/g,"")), cf=(r.data.confidence||0)/100, okN=t && t.replace(/[.\-]/g,"").length===nd;
               if(!best || (okN && !best.okN) || (okN===best.okN && cf>best.cf)) best={t:t, cf:cf, okN:okN, data:{text:t, confidence:cf*100}};
               if(okN && cf>0.5 || ti>=tries.length) return {data:best.data, okN:best.okN}; return attempt(); }); }
-          return attempt().then(function(r){ if(!r.okN && nd) r.data.confidence=Math.min(r.data.confidence,40); var t=yzNum((r.data.text||"").replace(/\s+/g,"")), cf=(r.data.confidence||0)/100;
-            var first=q.v; if(!t){ q.v=""; q.c=0; return; } q.v=t; q.c=Math.min(0.97, cf);
+          return attempt().then(function(r){ var t0=yzNum((r.data.text||"").replace(/\s+/g,"")); if(!r.okN && nd && !(r.data.confidence>=85 && t0 && yzFixDec(t0, q.d).ok && t0===yzFixDec(t0,q.d).v)) r.data.confidence=Math.min(r.data.confidence,40); var t=yzNum((r.data.text||"").replace(/\s+/g,"")), cf=(r.data.confidence||0)/100;
+            var first=/^-?\d+(\.\d+)?$/.test(q.v||"")? q.v : ""; if(!t){ q.v=""; q.c=0; return; } q.v=t; q.c=Math.min(0.97, cf);
             if(!q.w){ q.c=Math.min(q.c,0.5); return; }
-            if(first && first.replace(".","")!==t.replace(".","")) q.c=Math.min(q.c,0.5); });  // the two reads disagree: Allen checks it
+            if(first && first.replace(".","")!==t.replace(".","")) q.c=Math.min(q.c,0.5); else if(first && r.okN) q.c=Math.max(q.c,0.9); });  // v2.8.4: two independent reads agree → trust it  // the two reads disagree: Allen checks it
         }); }, Promise.resolve());
       }).then(function(){
         cells.forEach(function(q){ var f=yzFixDec(q.v, q.d); if(q.v){ q.v=f.v; if(!f.ok) q.c=Math.min(q.c,0.45); } if(!q.w && q.v) q.c=Math.min(q.c,0.6); if(q.want && q.rows!==q.want) q.c=Math.min(q.c,0.55);
           var bb=q.w||q; vals[q.key]={nr:q.rows, v:q.v, c:+Math.max(0,Math.min(1,q.c)).toFixed(2), x0:bb.x0, x1:bb.x1, y0:bb.y0, y1:bb.y1, state:q.v? "read" : "unread"}; });
+        if(def.id==="yz-overview") ["cyc","mct","mot","ijt","plt","dct","cool"].forEach(function(k){ var A=vals[k+".0"], B=vals[k+".1"];  // v2.8.4: set/max is never below the actual; tilt can swap the pair
+          if(A && B && A.v && B.v && +A.v > +B.v){ vals[k+".0"]=B; vals[k+".1"]=A; } });
         out.found=cells.filter(function(q){ return q.w; }).length; out.total=cells.length; out.slots={}; Object.keys(vals).forEach(function(k){ out.slots[k]={v:vals[k].v, c:vals[k].c, nr:vals[k].nr}; });
         function cropOf(ks){ var qs=ks.map(function(k){ return vals[k]; }).filter(Boolean); if(!qs.length) return ""; var pad=10, gap=16, H=Math.max.apply(null, qs.map(function(q){ return q.y1-q.y0; }))+pad*2;
           var Wt=qs.reduce(function(a,q){ return a+(q.x1-q.x0)+pad*2; },0)+gap*(qs.length-1), c=document.createElement("canvas"); c.width=Math.round(Wt); c.height=Math.round(H);
@@ -2723,11 +2750,15 @@ function yzRead(im, onProg, pre){
           if(c.width>380){ var sc=380/c.width, d=document.createElement("canvas"); d.width=380; d.height=Math.round(c.height*sc); d.getContext("2d").drawImage(c,0,0,d.width,d.height); c=d; }
           return c.toDataURL("image/jpeg", 0.85); }
         Object.keys(def.fields).forEach(function(id){ var ks=def.fields[id], Pm=MS_P[id]; if(!Pm) return;
+          if(ks.length>3) ks=ks.filter(function(k){ return vals[k]; });   // v2.8.4: stage list longer than 3 (1/2/3/End): only the stages on this screen
           var ss=ks.map(function(k){ return vals[k]; }), vs=ss.map(function(s){ return s && s.v? s.v : ""; }), any=vs.some(Boolean);
-          var row={id:id, vals:Pm.staged? vs.concat(["","",""]).slice(0,3) : [vs[0]], extra:"", same:false, crop:cropOf(ks), typed:true, screen:true,
-            ocr:vs.join(" | "), state:any? "read" : "unread", conf:+Math.min.apply(null, ss.map(function(s){ return s && s.v? s.c : 0.2; })).toFixed(2)};
+          var row={id:id, vals:Pm.staged? vs.concat(["","",""]).slice(0,3) : [vs[0]], extra:Pm.staged? vs.slice(3).filter(Boolean).join(" ") : "", same:false, crop:cropOf(ks), typed:true, screen:true,
+            ocr:vs.join(" | "), state:any? "read" : "unread", conf:ss.length? +Math.min.apply(null, ss.map(function(s){ return s && s.v? s.c : 0.2; })).toFixed(2) : 0.2};
           if(Pm.staged && vs.length>1 && vs.every(function(v){ return v===vs[0]; }) && vs.length===3) row.same=false;
           out.rows.push(row); });
+        if(def.barrel){ var bx=P.nums.filter(function(b){ return /^\d{3}\.\d$/.test(b.v) && b.cy<P0.H*0.45; }), grp=[];   // v2.8.4: Overview barrel strip (actual temps, nozzle → hopper)
+          bx.forEach(function(b){ var g=grp.find(function(g){ return Math.abs(g.cy-b.cy)<lh*0.7; }); if(g){ g.b.push(b); } else grp.push({cy:b.cy, b:[b]}); });
+          grp.sort(function(a,b){ return b.b.length-a.b.length; }); if(grp[0] && grp[0].b.length>=4) out.notesList.push({label:"Barrel actual °F (left → right)", text:grp[0].b.sort(function(a,b){ return a.cx-b.cx; }).map(function(b){ return b.v; }).join(" / ")+" (check)", conf:0.5}); }
         (def.notes||[]).forEach(function(n){ var vs=n[1].map(function(k){ var s=vals[k]; return s && s.v? s.v+(s.c<0.6? " (check)" : "") : "?"; }); if(vs.every(function(v){ return v==="?"; })) return;
           out.notesList.push({label:n[0], text:vs.join(" / "), conf:Math.min.apply(null, n[1].map(function(k){ return vals[k]? vals[k].c : 0.3; }))}); });
         // date on the top status bar (setup date) — always let Allen check it
@@ -7852,6 +7883,7 @@ function init(){
     if(!state.meta.ocrWarmAt && !c.saveData && c.type!=="cellular") warmOcr(false);
   }, 8000);
 }
+window.__tessW=function(){ return tessWorker(); }; window.__yzPrep=function(i){ return yzPrep(i); };
 window.__tjl = {state:state, pfield:function(j,k){ return pfield(j,k); }, secByRole:function(j,r){ return secByRole(j,r); }, saveJobs:function(){ saveJobs(); }, render:function(){ render(); }, googleClientId:GOOGLE_CLIENT_ID, ms:{screenRead:function(i,p){return mscrRead(i,p);}, screenLooks:function(i){return mscrLooksLikeScreen(i);}, boxes:function(i){ var m=mscrMask(mscrLocate(i),MSCR_W); return {img:m.c.toDataURL('image/jpeg',0.85),W:m.W,H:m.H,yellow:m.yellow,dark:m.dark,boxes:mscrBoxes(m).map(function(b){return [Math.round(b.cx),Math.round(b.cy),Math.round(b.w),Math.round(b.h)];})}; }, yzRead:function(i,p){return yzRead(i,p);}, yzLooks:function(i){return yzLooksLikeScreen(i);}, yzDefs:YZ_DEFS, scan:msScanImage, extract:msExtract, orient:orientForOcr, normalize:msNormalize, defs:MS_DEFS, rowText:msRowText, isForm:msIsForm}, phone:{storeAlbumHandle:storeAlbumHandle, albumName:albumName, readPhoneSaved:readPhoneSaved},
   doc:{url:DOC_SCRIPT_URL, readQueue:readDocQueue, readUploaded:readDocUploaded, readSent:readDocSent, baseName:docBaseName, renameable:function(){ return renameableDocs().map(function(d){ return {sent:d.sentName, name:d.docName}; }); }, flush:flushDocQueue, docsForCtx:docsForCtx, buildDocPdf:buildDocPdf, buildDocParts:buildDocParts, exists:docExists, uploadAll:uploadAllDocs, limits:function(){ return {page:DOC_PAGE_MAX, part:DOC_PART_BYTES, asis:DOC_PDF_ASIS, side:DOC_MAX_SIDE}; }}, parseLines:parseLines, buildReview:buildReview, render:render, scan:{buildSynIndex:buildSynIndex, labelUnitHint:labelUnitHint, parseNumber:parseNumber, defForLabel:defForLabel, reconcileFields:reconcileFields},
   photo:{readQueue:readPhotoQueue, readUploaded:readPhotoUploaded, readOk:readPhotoOk, flush:flushPhotoQueue, name:photoDriveName, prep:photoUploadBlob, info:docServerInfo, items:function(){ return photoItemsFor(state.jobs, false).map(function(it){ return {job:it.job.id, id:it.photo.id, name:it.photo.driveName||""}; }); }, terms:jobSearchTerms, find:findDocs, missing:jobMissing},
