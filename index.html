@@ -653,7 +653,7 @@ pre.raw{white-space:pre-wrap;font-size:12px;background:var(--surface-2);padding:
 <script>
 (function(){
 "use strict";
-var APP_VERSION = "2.8.2";
+var APP_VERSION = "2.8.3";
 // Public OAuth client id (not a secret). Web client, authorized JavaScript origins:
 //   https://mrmitchell68.github.io   and   http://localhost:8766
 // Leave empty until that client exists — Save-to-Drive is hidden and the button uses the Android share sheet.
@@ -1103,7 +1103,7 @@ var MS_DEFS = [
   {id:"ejection", title:"Ejection", staged:true, side:"L", params:[["ej_strokes","Number of strokes"],["ej_fwd_press","Forward pressures"],["ej_fwd_int","Forward intervals"],["ej_fwd_speed","Forward speeds"],["ej_back_set","Backward setpoint"],["ej_back_press","Backward pressure"],["ej_back_speed","Backward speed"]]},
   {id:"injection", title:"Injection", staged:true, side:"L", params:[["inj_speed","Injection speeds"],["inj_int","Injection intervals"],["inj_press","Injection pressures"],["switchover","Switchover setpoint"],["hold_press","Hold pressure"],["hold_time","Hold times"],["hold_speed","Hold speeds"],["cushion","Actual cushion value"]]},
   {id:"charging", title:"Charging", staged:true, side:"R", params:[["charge_delay","Charge delay time"],["back_press","Backpressure"],["screw_speed","Screw speeds"],["screw_int","Screw intervals"],["suck_back","Suck back interval"]]},
-  {id:"temperature", title:"Temperature", staged:false, side:"R", params:[["zone1","Setpoint: zone 1"],["zone2","Setpoint: zone 2"],["zone3","Setpoint: zone 3"],["zone4","Setpoint: zone 4"],["zone5","Setpoint: zone 5"],["zone6","Setpoint: zone 6"],["zone7","Setpoint: zone 7"],["zone8","Setpoint: zone 8"],["nozzle","Nozzle htr setting"],["hot_runner","Hot runner settings"],["thermolator","Thermolator setting"],["dryer","Dryer setting"]]},
+  {id:"temperature", title:"Temperature", staged:false, side:"R", params:[["zone1","Setpoint: zone 1"],["zone2","Setpoint: zone 2"],["zone3","Setpoint: zone 3"],["zone4","Setpoint: zone 4"],["zone5","Setpoint: zone 5"],["zone6","Setpoint: zone 6"],["zone7","Setpoint: zone 7"],["zone8","Setpoint: zone 8"],["nozzle","Nozzle htr setting"],["collar","Collar (feed throat) setting"],["oil_temp","Oil temp setting"],["hot_runner","Hot runner settings"],["thermolator","Thermolator setting"],["dryer","Dryer setting"]]},
   {id:"production", title:"Production", staged:false, side:"R", params:[["cooling","Cooling time"],["cycle","Overall cycle time"],["cavities","Number of cavities"],["cycle_int","Cycle interval time"],["air_blast","Air blast?","check"],["corepull","Corepull?","check"],["intrusion","Intrusion?","check"]]}
 ];
 var MS_P = {}; MS_DEFS.forEach(function(s){ s.params.forEach(function(p, i){ MS_P[p[0]] = {id:p[0], label:p[1], check:p[2]==="check", sec:s, staged:s.staged, idx:i}; }); });
@@ -1666,6 +1666,8 @@ function msReviewModel(results, job){
       var ex=rows[r.id], val=r.state==="read"||r.state==="text"||r.state==="check";
       if(!ex){ rows[r.id]=r; order.push(r.id); return; }
       var exVal=ex.state==="read"||ex.state==="text"||ex.state==="check";
+      var act=function(x){ return /^actual temperature/.test(x.ocr||""); };   // v2.8.3: a set point (TEMP. SETTING) beats a monitor actual reading
+      if(val && exVal && act(ex)!==act(r)){ if(act(ex)) rows[r.id]=r; return; }
       if(val && (!exVal || r.conf>ex.conf)) rows[r.id]=r;
     });
     Object.keys(res.header||{}).forEach(function(k){ var h=res.header[k]; if(h && h.value && (!hdr[k] || h.conf>hdr[k].conf)) hdr[k]=h; });
@@ -1992,8 +1994,8 @@ var MSCR_DEFS = [
     ["stSpd",1285,166,70,84,0],["stPT",1287,279,105,80,4],["stPsi",1303,580,75,80,0],["stTmr",1293,738,100,80,0],
     ["date",172,953,165,34,0,"text"],
     ["mont",1080,404,100,40,4,"text"],["hspd",598,531,62,40,2,"text"],["tprs",963,588,90,40,4,"text"],["tprsA",1080,588,90,40,3,"text"],
-    ["tpos",961,670,90,40,4,"text"],["tposA",1075,670,90,40,4,"text"],["ttmr",965,750,90,40,4,"text"],["ttmrA",1080,750,90,40,4,"text"],
-    ["cushL",596,824,90,40,4,"text"],["cushH",820,824,90,40,4,"text"],["cushA",1083,824,95,40,4,"text"]],
+    ["tpos",958,666,104,48,4,"text"],["tposA",1075,670,90,40,4,"text"],["ttmr",965,750,90,40,4,"text"],["ttmrA",1080,750,90,40,4,"text"],
+    ["cushL",596,824,104,40,4,"text"],["cushH",820,824,106,40,4,"text"],["cushA",1083,824,108,40,4,"text"]],
    texts:[["hspd","hold_speed","Hold speed"],["tpos","switchover","Transfer position set"],["cushA","cushion","Cushion actual"],["mont",null,"Injection monitor time"],
     ["tprs",null,"Transfer press set"],["tprsA",null,"Transfer press actual"],["tposA",null,"Transfer position actual"],["ttmr",null,"Transfer timer set"],["ttmrA",null,"Transfer timer actual"],
     ["cushL",null,"Cushion limit low"],["cushH",null,"Cushion limit high"]],
@@ -2130,7 +2132,7 @@ function mscrInk(src, s, x0, y0, x1, y1, TH, K){
   var C=mscrComponents(B, c.width, c.height), mh=0;
   C.comps.forEach(function(k){ if(k.h>mh && k.w>=k.h*0.25 && k.h<c.height*0.95) mh=k.h; });
   var keep={}, gl=[]; C.comps.forEach(function(k){
-    var edge=k.x0===0 || k.x1>=c.width-1; if(k.h<mh*0.6 || k.w<mh*0.22 || (edge && k.w<mh*0.3) || (k.y0===0 && k.y1>=c.height-1)) return;
+    var edge=k.x0===0 || k.x1>=c.width-1; if(k.h<mh*0.6 || k.w<mh*(mscrInk.loose? 0.1 : 0.22) || (edge && k.w<mh*0.3) || (k.y0===0 && k.y1>=c.height-1)) return;
     keep[k.id]=1; gl.push(k); });
   gl.sort(function(a,b){ return a.x0-b.x0; });
   // merge pieces of one glyph stacked vertically (broken strokes)
@@ -2163,12 +2165,18 @@ function mscrInk(src, s, x0, y0, x1, y1, TH, K){
   return o;
 }
 // TMC LCD digit font (24×24 bitmaps averaged from Allen's TMC 250E photo; 6 = 9 turned over, 8 from only two samples)
-var MSCR_FONT = {"<":["0001c00007e0000ff0003fe0003fc0007fc0007f0000ff0003fe0007f80007f8000ff0000fe0000ff00007f80003fc0001fe0000ff00007f80003fc0001fe0000fe00007e00003e0",0.65],">":["01c00007e0000ff00003f80003fc0001fe0000ff00007f80003fe0001ff0000ff00007f80007f80007f8000ff8001fe0003fe0007fc000ff0001ff0003fe0007f80007f80003f000",0.70],"0":["01ffc003ffe007fff00ffffc1fc1fc3f83fc3f83fc3f87fc3fdffc3ffffc3ffffc3ffffc3ffffc3ffdfc3ff8fc3ff0fc3fe0fc1fc0fc1fc0fc1fc0fc1fc1fc1ffff807fff003ffe0",0.84],"1":["001c00003e00007e0000fe0001fe0007fe000ffe000ffe0007fe00007e00007e00007e00007e00007e00007e00007e00007e00007e00007e00007e0001fff007fff807fff007ffe0",0.66],"2":["01ffe001fff003fff007fffc1fe1fc1f80fc0f00fc0001fc0007f80007f0000fe0001fc0003f80007f0000fe0001fc0003f80007f80007e0780fe0fc1ffffc3ffffc1ffffc1ffff8",0.81],"3":["01ffe003ffe007ffe00ffff81f81fc1f80fc3e00fc0000fc0000fc0001fc0003f8007ff000fff000fff80001fc0001fc0001fc0000fc0700fc0f80fc1f81f81ffff807fff003ffc0",0.81],"4":["0001c00003e00007e0000fe0001fe0007ff0007ff000fff001fff003fff007fff00ffff01feff01ffff81ffffc1ffffc0ffff00007f00007f00007f00007f4000ffc000ffc000ff8",0.81],"5":["07fff80ffff83ffff83ffff03fc0003f80003f80003f80003f80003f80003fc3c03ffff03ffff01ffffc0001fc0001fc0000fc0000fc0300fc0f80fc1fc7fc1ffff803fff003ffc0",0.82],"6":["007f8000ffc003ff8403ff040fe0040fc0003f80003f80003f80003f80003fffc03fffc03ffff07ffff87f83f83f83f87f83fc7f83fc7f83fc7fbffc7fffe04fffc00fff80030000",0.86],"7":["0ffff81ffffc1ffffc3ffffc3ffffc3f83fc3f03fc0003fc0007f0000ff0001fe0003fe0007f80007f8000fe0001fe0001fe0001fe0001fe0001fe0001fe0001fe0001fe0001fe00",0.78],"8":["03fff003fff80ffffc1ffffc1fc1fe3f81fe3f81fe3f81fe3f81fe7f81fe3fc3fc1ffffc0ffffc0ffffc1fe0fe3fc0ff3fc0ff7f80ff3f80fe3f80ff3fe7ff3ffffc0ffffc0ffff8",0.87],"9":["0000c001fff003fff207fffe3ffdfe3fc1fe3fc1fe3fc1fe1fc1fc1fc1fe1ffffe0ffffc03fffc03fffc0001fc0001fc0001fc0001fc0003f02007f020ffc021ffc003ff0001fe00",0.86]}, mscrFontB=null;
-function mscrFont(){ if(mscrFontB) return mscrFontB; mscrFontB=Object.keys(MSCR_FONT).map(function(ch){ var h=MSCR_FONT[ch][0], b=new Uint8Array(576); for(var i=0;i<144;i++){ var v=parseInt(h[i],16); for(var k=0;k<4;k++) b[i*4+k]=(v>>(3-k))&1; } return {ch:ch, b:b, ar:MSCR_FONT[ch][1]}; }); return mscrFontB; }
+var MSCR_FONT = {"<":["0001c00007e0000ff0003fe0003fc0007fc0007f0000ff0003fe0007f80007f8000ff0000fe0000ff00007f80003fc0001fe0000ff00007f80003fc0001fe0000fe00007e00003e0",0.61],">":["01c00007e0000ff00003f80003fc0001fe0000ff00007f80003fe0001ff0000ff00007f80007f80007f8000ff8001fe0003fe0007fc000ff0001ff0003fe0007f80007f80003f000",0.69],"0":["005fc003ffc007ffe00ffff01f80f81f81f81f87f81f87f81f8ff81f9ff81f9ff81ffff81ffcf81ff8f80ff0fc0fe0fc0fe0fc0f80fc0f80fc0f80fc0fc0fc0ffff803fff001ffe0",0.78],"1":["003c00007e00007e0000fe0001fe0003fe000ffe000ffe000ffe00007e00007e00007e00007e00003e00003e00003e00003e00003e00003e00003e0000ffe007fff007fff007fff0",0.66],"2":["007fc003ffc003ffe007fff01f81f81f80f80f00f80001f80003f80007e0000fe0001fc0001f80007f00007e0000fc0003f80003f00007e0780fc0f81fc1fc1ffffc0ffffc0ffff8",0.79],"3":["01ffc003ffe007ffe00ffff81f81fc1f80fc1e00fc0000fc0000fc0001fc0003f8007ff000fff000fff80001fc0001fc0000fc0000fc0780fc0f80fc1fc1f80ffff803fff003ffc0",0.79],"4":["0003c00007e0000fe0000fe0001fe0007fe0007fe000ffe001ffe003efe007efe00fc7e01f8fe01fdff81ffffc1ffffc0ffff00007f00007f00007f00007f0000ffc000ffc000ffc",0.79],"5":["00fff01ffff83ffff81ffff81f80001f80001f80001f80001f80001f80001fc3c01fffe01ffff00ffff80000fc0000fc0000fc0000fc0780fc0f80fc0fc1fc0ffff803fff003ffe0",0.8],"6":["007e0000ff0003ff0003ff000fe0000fc0001f80003f80003f80003f80003fffc03fffc03ffff01ffff01f81f81f81f81f81fc1f81fc1f80fc1f80fc1feff80ffff003ffe003ffe0",0.81],"7":["0ffff81ffff81ffff81ffff81ffdf81f81f81f01f80001f80003f80007f0001fe0001fe0003f80007f80007e00007e0000fe00007e0000fe0000fe0000fe0000fe0000fe0000fe00",0.75],"8":["03fff003fff80ffffc1ffffc1fc1fe3f81fe3f81fe3f81fe3f81fe7f81fe3fc3fc1ffffc0ffffc0ffffc1fe0fe3fc0ff3fc0ff7f80ff3f80fe3f80ff3fe7ff3ffffc0ffffc0ffff8",0.83],"9":["0000c001fff003fff207fffe3ffdfe3fc1fe3fc1fe3fc1fe1fc1fc1fc1fe1ffffe0ffffc03fffc03fffc0001fc0001fc0001fc0001fc0003f02007f020ffc021ffc003ff0001fe00",0.81]}, mscrFontB=null;
+var MSCR_FONT0 = {"<":["0001c00007e0000ff0003fe0003fc0007fc0007f0000ff0003fe0007f80007f8000ff0000fe0000ff00007f80003fc0001fe0000ff00007f80003fc0001fe0000fe00007e00003e0",0.65],">":["01c00007e0000ff00003f80003fc0001fe0000ff00007f80003fe0001ff0000ff00007f80007f80007f8000ff8001fe0003fe0007fc000ff0001ff0003fe0007f80007f80003f000",0.70],"0":["01ffc003ffe007fff00ffffc1fc1fc3f83fc3f83fc3f87fc3fdffc3ffffc3ffffc3ffffc3ffffc3ffdfc3ff8fc3ff0fc3fe0fc1fc0fc1fc0fc1fc0fc1fc1fc1ffff807fff003ffe0",0.84],"1":["001c00003e00007e0000fe0001fe0007fe000ffe000ffe0007fe00007e00007e00007e00007e00007e00007e00007e00007e00007e00007e00007e0001fff007fff807fff007ffe0",0.66],"2":["01ffe001fff003fff007fffc1fe1fc1f80fc0f00fc0001fc0007f80007f0000fe0001fc0003f80007f0000fe0001fc0003f80007f80007e0780fe0fc1ffffc3ffffc1ffffc1ffff8",0.81],"3":["01ffe003ffe007ffe00ffff81f81fc1f80fc3e00fc0000fc0000fc0001fc0003f8007ff000fff000fff80001fc0001fc0001fc0000fc0700fc0f80fc1f81f81ffff807fff003ffc0",0.81],"4":["0001c00003e00007e0000fe0001fe0007ff0007ff000fff001fff003fff007fff00ffff01feff01ffff81ffffc1ffffc0ffff00007f00007f00007f00007f4000ffc000ffc000ff8",0.81],"5":["07fff80ffff83ffff83ffff03fc0003f80003f80003f80003f80003f80003fc3c03ffff03ffff01ffffc0001fc0001fc0000fc0000fc0300fc0f80fc1fc7fc1ffff803fff003ffc0",0.82],"6":["007f8000ffc003ff8403ff040fe0040fc0003f80003f80003f80003f80003fffc03fffc03ffff07ffff87f83f83f83f87f83fc7f83fc7f83fc7fbffc7fffe04fffc00fff80030000",0.86],"7":["0ffff81ffffc1ffffc3ffffc3ffffc3f83fc3f03fc0003fc0007f0000ff0001fe0003fe0007f80007f8000fe0001fe0001fe0001fe0001fe0001fe0001fe0001fe0001fe0001fe00",0.78],"8":["03fff003fff80ffffc1ffffc1fc1fe3f81fe3f81fe3f81fe3f81fe7f81fe3fc3fc1ffffc0ffffc0ffffc1fe0fe3fc0ff3fc0ff7f80ff3f80fe3f80ff3fe7ff3ffffc0ffffc0ffff8",0.87],"9":["0000c001fff003fff207fffe3ffdfe3fc1fe3fc1fe3fc1fe1fc1fc1fc1fe1ffffe0ffffc03fffc03fffc0001fc0001fc0001fc0001fc0003f02007f020ffc021ffc003ff0001fe00",0.86]}, mscrFontB=null;   // v2.8.3: the original (clean-render) font stays as a second template set
+function mscrFont(){ if(mscrFontB) return mscrFontB; mscrFontB=[]; [MSCR_FONT, MSCR_FONT0].forEach(function(FT){ Object.keys(FT).forEach(function(ch){ var h=FT[ch][0], b=new Uint8Array(576); for(var i=0;i<144;i++){ var v=parseInt(h[i],16); for(var k=0;k<4;k++) b[i*4+k]=(v>>(3-k))&1; } mscrFontB.push({ch:ch, b:b, ar:FT[ch][1]}); }); }); return mscrFontB; }
+function mscrCutT(t, k){ var x1=0, x0=23; for(var i=0;i<576;i++) if(t.b[i]){ var x=i%24; if(x>x1) x1=x; if(x<x0) x0=x; }
+  var b=new Uint8Array(576), sh=Math.round(k/2); for(i=0;i<576;i++){ var x=i%24; if(t.b[i] && x<=x1-k && x+sh<24) b[i+sh]=1; }
+  return {ch:t.ch, b:b, ar:t.ar*(x1-x0+1-k)/(x1-x0+1)}; }
 function mscrGlyph(q){
-  var F=mscrFont(), sc=F.map(function(t){ var best=1;
-    for(var dy=-1;dy<=1;dy++) for(var dx=-2;dx<=2;dx++){ var mis=0; for(var y=0;y<24;y++) for(var x=0;x<24;x++){ var yy=y+dy, xx=x+dx, a=(yy>=0&&yy<24&&xx>=0&&xx<24)? q.bm[yy*24+xx] : 0; if(a!==t.b[y*24+x]) mis++; } if(mis/576<best) best=mis/576; }
-    return {ch:t.ch, d:best+Math.abs(q.ar-t.ar)*0.25}; });
+  var F=mscrFont(), V=q.cutR? [0,2,3,4] : [0], sc=F.map(function(t0){ var best=1, bar=t0.ar;
+    V.forEach(function(k){ var t=k? mscrCutT(t0,k) : t0;
+    for(var dy=-1;dy<=1;dy++) for(var dx=-2;dx<=2;dx++){ var mis=0; for(var y=0;y<24;y++) for(var x=0;x<24;x++){ var yy=y+dy, xx=x+dx, a=(yy>=0&&yy<24&&xx>=0&&xx<24)? q.bm[yy*24+xx] : 0; if(a!==t.b[y*24+x]) mis++; } var dd=mis/576+Math.abs(q.ar-t.ar)*0.25; if(dd<best){ best=dd; } } });
+    return {ch:t0.ch, d:best}; });
+  var bc={}; sc.forEach(function(r){ if(!bc[r.ch] || r.d<bc[r.ch].d) bc[r.ch]=r; }); sc=Object.keys(bc).map(function(k){ return bc[k]; });   // best of both template sets per character
   sc.sort(function(a,b){ return a.d-b.d; });
   var d1=sc[0].d, d2=sc[1].d, c=Math.max(0, Math.min(1, (0.32-d1)/0.2)) * Math.max(0, Math.min(1, (d2-d1)/0.06));
   if(sc[0].ch==="6"||sc[0].ch==="8") c=Math.min(c, 0.75);
@@ -2185,7 +2193,7 @@ function mscrHoles(bm){ var seen=new Uint8Array(576), st=[], H=[];
 function mscrZero8(q, r){ if(!(r.ch==="0"||r.ch==="8") || !(r.alt==="0"||r.alt==="8"||true)) return r;
   var H=mscrHoles(q.bm); if(H.length!==2) return r; H.sort(function(a,b){ return a.y-b.y; });
   // measured on Allen's photos: Ø = small upper hole (~0.5-0.7 of the lower one) offset ~2 px by the slash; 8 = two equal holes stacked
-  var dx=Math.abs(H[0].x-H[1].x), rt=H[0].n/H[1].n, ch=(rt>0.8 && dx<1.4)? "8" : "0";
+  var dx=Math.abs(H[0].x-H[1].x), rt=H[0].n/H[1].n, ch=((rt>0.8 && dx<1.4) || (rt>0.75 && dx<0.85))? "8" : "0";   // v2.8.3: a slightly smaller upper hole with almost no slash offset is still an 8
   if(ch!==r.ch) return {ch:ch, d:r.d, c:Math.min(r.c,0.6), alt:r.ch}; return r; }
 function mscrReadGlyphs(G, sep){
   var R=G.map(function(q){ return mscrZero8(q, mscrGlyph(q)); });
@@ -2199,6 +2207,35 @@ function mscrTextCanvas(m){ // headings: yellow mask → black text on white (Te
   for(var i=0;i<m.W*m.H;i++){ var v=m.M[i]? 0 : 255; d[i*4]=d[i*4+1]=d[i*4+2]=v; d[i*4+3]=255; } g.putImageData(id,0,0); return c; }
 // read one screen photo → same result shape as msExtract (rows / header / found / total) + screen info and notes
 // v2.7.1: the screen may fill only part of the photo (shot from a distance / inside a shroud) → crop to the yellow drawing
+// v2.8.3: the cursor block (yellow rectangle, dark digits) — locate it inside/around the box from the full photo, invert, read
+function mscrCursor(src, s, x0, y0, x1, y1, digits){
+  mscrCursor.lastBlock=false;
+  var bw=(x1-x0)/s, bh=(y1-y0)/s, X0=Math.max(0,x0/s-bw*0.15), Y0=Math.max(0,y0/s-bh*0.2), w=Math.round(bw*1.3), h=Math.round(bh*1.4);
+  var sc=Math.min(2, 160/h), c=document.createElement("canvas"); c.width=Math.max(8,Math.round(w*sc)); c.height=Math.max(8,Math.round(h*sc));
+  var g=c.getContext("2d"); g.drawImage(src, X0, Y0, w, h, 0, 0, c.width, c.height); var id=g.getImageData(0,0,c.width,c.height), d=id.data, W=c.width, H=c.height;
+  var Y=new Float32Array(W*H), mx=0; for(var i=0;i<W*H;i++){ var v=Math.min(d[i*4],d[i*4+1]); Y[i]=v; if(v>mx) mx=v; }   // brightness of the yellow (R,G): the block is often blown out to white
+  var T=mx*0.45, rows=[], cols=[]; for(var y=0;y<H;y++){ var n=0; for(var x=0;x<W;x++) if(Y[y*W+x]>T) n++; rows.push(n/W); }
+  function run(a, th){ var b=[-1,-1], st=-1; for(var k=0;k<=a.length;k++){ if(k<a.length && a[k]>th){ if(st<0) st=k; } else if(st>=0){ if(k-st>b[1]-b[0]) b=[st,k]; st=-1; } } return b; }
+  if(window.__mscrDbg) window.__mscrDbg.push(['curA', c.toDataURL()]);
+  var ry=run(rows, 0.3); if(ry[0]>=0){ ry[0]=Math.max(0,ry[0]-3); ry[1]=Math.min(H,ry[1]+3); } if(window.__mscrDbg) window.__mscrDbg.push(['curR', JSON.stringify(ry)+' '+H]); if(ry[0]<0 || ry[1]-ry[0]<H*0.3) return null;
+  for(var x=0;x<W;x++){ var n=0; for(y=ry[0];y<ry[1];y++) if(Y[y*W+x]>T) n++; cols.push(n/(ry[1]-ry[0])); }
+  var rx=run(cols, 0.3); if(rx[0]<0 || rx[1]-rx[0]<W*0.25) return null;
+  mscrCursor.lastBlock=true;
+  // the box border is yellow too: if the run hugs a 1-2px border line, shrink to the solid part
+  var pdx=Math.round((rx[1]-rx[0])*0.15), bx0=Math.max(0,rx[0]-pdx), bx1=Math.min(W,rx[1]+pdx), by0=ry[0], by1=ry[1], iw=bx1-bx0, ih=by1-by0;
+  var o=document.createElement("canvas"); o.width=iw; o.height=ih; var og=o.getContext("2d"), od=og.createImageData(iw,ih);
+  for(x=0;x<iw;x++){ var fy=-1, ly=-1; for(y=0;y<ih;y++){ if(Y[(y+by0)*W+x+bx0]>T){ if(fy<0) fy=y; ly=y; } }   // ink only between the block's own yellow top and bottom in each column
+    for(y=0;y<ih;y++){ var k=((y+by0)*W+(x+bx0)), v=(fy<0 || y<=fy+2 || y>=ly-2 || ly-fy<ih*0.5)? 0 : Math.max(0,Math.min(255,255-Y[k]*255/mx)); var j=(y*iw+x)*4; od.data[j]=od.data[j+1]=v; od.data[j+2]=0; od.data[j+3]=255; } }
+  og.putImageData(od,0,0);
+  if(window.__mscrDbg) window.__mscrDbg.push(['curB', o.toDataURL(), JSON.stringify(rx)]);
+  mscrInk.loose=true; var cv=mscrInk(o, 1, 0, ih*0.06, iw, ih*0.94, 64, window.__curK!=null? window.__curK : 0), GG=cv._glyphs||[]; mscrInk.loose=false;
+  // the block edge cuts the last digit's right-hand column off (TMC draws the cursor one pixel short) → match that one against cut templates
+  if(GG.length) GG[GG.length-1].cutR=true;
+  var rg=mscrReadGlyphs(GG);
+  if(window.__mscrDbg) window.__mscrDbg.push(['curC', cv.toDataURL(), rg.t+' '+JSON.stringify((cv._glyphs||[]).map(function(q){return [q.x0,q.x1,q.y0,q.y1];}))+' '+JSON.stringify(mscrReadGlyphs(cv._glyphs||[]).g)+' W'+cv.width]);
+  if(!rg.t || (digits && rg.t.replace(/[<>]/g,"").length!==digits)) return null;
+  return {cv:cv, rg:rg};
+}
 function mscrLocate(src){
   var w0=src.naturalWidth||src.width, h0=src.naturalHeight||src.height, m=mscrMask(src, 400), xs=[], ys=[];
   for(var y=0;y<m.H;y++) for(var x=0;x<m.W;x++) if(m.M[y*m.W+x]){ xs.push(x); ys.push(y); }
@@ -2240,29 +2277,51 @@ function mscrMonitor(src, m, words, out){
   var items=[], temps=[], seen={};
   // value columns: under the two "STATUS-SETUP" headings; each line is read there in the screen font (no Tesseract digits)
   var hw=W0.filter(function(w){ return /status|setup/i.test(w.t); }), cyc=W.filter(function(w){ return /^cycle$/i.test(w.t); })[0];
-  if(cyc) hw=hw.filter(function(w){ return w.y1<=cyc.y0+2; });
+  if(cyc) hw=hw.filter(function(w){ return w.y1<=cyc.y0+2 && w.y1>cyc.y0-(cyc.y1-cyc.y0)*3; });   // v2.8.3: not POSITION STATUS higher up
   hw.sort(function(a,b){ return a.x0-b.x0; }); var cols=[];
   hw.forEach(function(w){ var c=cols[cols.length-1]; if(c && w.x0-c.x1<(w.y1-w.y0)*4){ c.x1=Math.max(c.x1,w.x1); c.y1=Math.max(c.y1,w.y1); } else cols.push({x0:w.x0, x1:w.x1, y1:w.y1}); });
   cols=cols.filter(function(c){ return c.x1-c.x0>m.W*0.06; }).slice(-2);
+  if(cols.length<2 && cyc){ // v2.8.3: a heading Tesseract missed (glare / slant) → the value columns from where the numbers sit below CYCLE TIME
+    var ch=cyc.y1-cyc.y0, nt=W.filter(function(w){ return w.y0>cyc.y0-ch*2.2 && num.test(w.t) && w.t.replace(/[^0-9OoDQSsBZz]/g,"").length>=3; }).sort(function(a,b){ return a.x0-b.x0; }), cl=[];
+    nt.forEach(function(w){ var c=cl[cl.length-1]; if(c && w.x0-c.x1<ch*3){ c.x1=Math.max(c.x1,w.x1); c.n++; c.ys.push(w.y0); c.xs.push(w.x1); c.x0s.push(w.x0); } else cl.push({x0:w.x0, x1:w.x1, n:1, ys:[w.y0], xs:[w.x1], x0s:[w.x0]}); });
+    cl=cl.filter(function(c){ return c.n>=4; }).sort(function(a,b){ return b.n-a.n; }).slice(0,2).sort(function(a,b){ return a.x0-b.x0; });
+    if(cl.length===2) cols=cl.map(function(c){ c.ys.sort(function(a,b){ return a-b; }); c.xs.sort(function(a,b){ return a-b; }); c.x0s.sort(function(a,b){ return a-b; }); return {x0:c.x0s[Math.floor(c.x0s.length*0.15)], x1:c.xs[Math.floor(c.xs.length*0.8)], y1:c.ys[0]-ch*0.6, nums:true}; }); }   // percentiles: one stray token (menu, range note) must not stretch the column
+  if(window.__mscrDbg) out.monHw=JSON.stringify(W0.filter(function(w){ return /status|setup|cycle/i.test(w.t); }).map(function(w){ return [w.t,Math.round(w.x0),Math.round(w.y0),Math.round(w.x1),Math.round(w.y1)]; }))+' W'+m.W+' cols '+JSON.stringify(cols);
   function band(x0, y0, x1, y1){ var cv=mscrInk(src, m.s, x0, y0, x1, y1, window.__monTH||64, window.__monK!=null? window.__monK : 0.3), G=cv._glyphs||[]; if(window.__mscrDbg) window.__mscrDbg.push(['band', cv.toDataURL(), mscrCropUrl(m.c,x0,y0,x1,y1,0)]); if(window.__mscrDbg) window.__mscrGl=(window.__mscrGl||[]).concat([['band', G.map(function(x){ return Array.from(x.bm).join(''); }), G.map(function(x){return +x.ar.toFixed(2);})]]); if(!G.length) return [];
     var R=G.map(function(q){ return mscrZero8(q, mscrGlyph(q)); }), aw=G.reduce(function(a,q){ return a+(q.x1-q.x0); },0)/G.length, grp=[[0]];
     for(var i=1;i<G.length;i++){ if(G[i].x0-G[i-1].x1>aw*0.8) grp.push([]); grp[grp.length-1].push(i); }
     return grp.map(function(g){ var t=g.map(function(i){ return R[i].ch; }).join("").replace(/[^0-9]/g,""); return {v:t, c:Math.min.apply(null, g.map(function(i){ return R[i].c; })), n:g.length, x0:x0+(G[g[0]].x0-20)/cv.width*(x1-x0)}; }).filter(function(r){ return r.v; }); }
-  lines.forEach(function(L){ L.w.sort(function(a,b){ return a.x0-b.x0; });
+  // v2.8.3: skew of the photo from neighbouring words on one text line (median dy/dx); lines are grouped on de-skewed centres
+  var sl=[]; W.forEach(function(a){ var h=a.y1-a.y0, ac=(a.y0+a.y1)/2, best=null; W.forEach(function(b){ if(b===a || b.x0<a.x1 || b.x0-a.x1>h*3) return; var bc=(b.y0+b.y1)/2; if(Math.abs(bc-ac)>h*0.5 || Math.abs((b.y1-b.y0)-h)>h*0.3) return; if(!best || b.x0<best.x0) best=b; });
+    if(best){ var dx=(best.x0+best.x1-a.x0-a.x1)/2; if(dx>h) sl.push(((best.y0+best.y1)/2-ac)/dx); } });
+  sl.sort(function(a,b){ return a-b; }); var slope=sl.length>=8? sl[sl.length>>1] : 0, xm=m.W/2; if(Math.abs(slope)>0.08) slope=0;
+  function ycAt(w){ return (w.y0+w.y1)/2 - slope*((w.x0+w.x1)/2-xm); }
+  out.monSlope=+slope.toFixed(4);
+  function mkLines(WW){ var ls=[]; WW.slice().sort(function(a,b){ return ycAt(a)-ycAt(b); }).forEach(function(w){ var cy=ycAt(w), h=w.y1-w.y0, L=ls.length? ls[ls.length-1] : null;
+    if(L && Math.abs(cy-L.cy)<Math.max(h,L.h)*0.55){ L.w.push(w); L.cy=(L.cy*(L.w.length-1)+cy)/L.w.length; } else ls.push({cy:cy, h:h, w:[w]}); }); return ls; }
+  // v2.8.3: the photo is slanted — the right-hand column sits half a line higher than the left, so lines are grouped per column
+  var sideL=null; if(cols.length===2){ var bnd0=cols[0].x1+(cols[0].x1-cols[0].x0)*0.15; sideL=[mkLines(W.filter(function(w){ return w.x0<bnd0; })), mkLines(W.filter(function(w){ return w.x0>=bnd0; }))]; }
+  lines.forEach(function(L){ if(!(cols.length===2 && L.cy>cols[0].y1)) L.w.forEach(function(w){ if(num.test(w.t)) temps.push(w); }); });
+  if(sideL) [0,1].forEach(function(ci){ sideL[ci].forEach(function(L){ L.w.sort(function(a,b){ return a.x0-b.x0; });
     var hs=L.w.map(function(w){ return w.y1-w.y0; }).sort(function(a,b){ return a-b; }), h=hs[hs.length>>1];
-    if(cols.length===2 && L.cy>cols[0].y1){
-      [0,1].forEach(function(ci){ var c=cols[ci], bx0=c.x0-(c.x1-c.x0)*0.1, bx1=c.x1+(c.x1-c.x0)*0.15, lx0= ci? cols[0].x1+(cols[0].x1-cols[0].x0)*0.15 : -1;
+    if(!(L.cy+slope*((cols[ci].x0+cols[ci].x1)/2-xm)>cols[ci].y1)) return;
+    var c=cols[ci], bx0=c.x0-(c.x1-c.x0)*(c.nums? 0.04 : 0.1), bx1=c.x1+(c.x1-c.x0)*(c.nums? 0.04 : 0.15), lx0= ci? cols[0].x1+(cols[0].x1-cols[0].x0)*0.15 : -1;
         var lab=L.w.filter(function(w){ return w.x0>lx0 && w.x1<bx0+h && !num.test(w.t) && !/^[:;.]+$/.test(w.t); });
         if(!lab.length) return;
-        var vals=band(bx0, L.cy-h*0.8, bx1, L.cy+h*0.8), tk=L.w.filter(function(w){ return num.test(w.t) && w.x0>bx0-h && w.x1<bx1+h; }).map(function(w){ return w.t.replace(/[^0-9OoDQSsBZz]/g,"").replace(/[OoDQ]/g,"0").replace(/[Ss]/g,"5").replace(/[B]/g,"8").replace(/[Zz]/g,"2"); });
+        // the value band follows the line's own tilt: centre from the number tokens near the column when there are any
+        var nk=L.w.filter(function(w){ return num.test(w.t) && w.x0>bx0-h && w.x1<bx1+h; }), vcy=L.cy+slope*((bx0+bx1)/2-xm);
+        var vals=band(bx0, vcy-h*0.8, bx1, vcy+h*0.8), tk=null; tk=nk.map(function(w){ return w.t.replace(/[^0-9OoDQSsBZz]/g,"").replace(/[OoDQ]/g,"0").replace(/[Ss]/g,"5").replace(/[B]/g,"8").replace(/[Zz]/g,"2"); });
+        if(vals.length<2 || vals.some(function(r){ return r.c<0.1; })){ // v2.8.3: cursor on the SETUP value (dark digits on a yellow block)
+          var mx2=bx0+(bx1-bx0)*0.52, cr=mscrCursor(src, m.s, mx2, vcy-h*0.8, bx1, vcy+h*0.8, 0);
+          if(cr && cr.rg.t.replace(/[^0-9]/g,"").length>=3){ var st0=band(bx0, vcy-h*0.8, mx2, vcy+h*0.8).slice(-1);
+            vals=st0.concat([{v:cr.rg.t.replace(/[^0-9]/g,""), c:Math.min(0.55, cr.rg.c), n:cr.rg.t.length, cursor:true}]); tk=[]; } }
         // fuse with Tesseract: it reads the slashed zero as 8 but gets 1/2/5/6/7 right where the small glyphs blur
         if(vals.length>2) vals=vals.slice(-2);
         if(tk.length && tk.length===vals.length) vals=vals.map(function(r,i){ var t=tk[i]; if(t.length!==r.v.length){ if(r.c<0.3 && t.length>=2 && t.length<=4){ return {v:t.replace(/8/g,"0"), c:0.3, n:t.length}; } return r; }
           var v="", agree=true; for(var k=0;k<t.length;k++){ var a=t[k], g=r.v[k]; if(a===g || a==="8") v+=g; else { v+=a; if(!(g==="0"&&a==="0")) agree=false; } }
           return {v:v, c:agree? Math.max(r.c, 0.75) : Math.max(0.5, Math.min(0.7, r.c+0.3)), n:r.n}; });
-        items.push({label:lab.map(function(w){ return w.t; }).join(" ").replace(/[:;.]+$/,"").trim(), vals:vals, cy:L.cy, box:[bx0, L.cy-h*0.8, bx1, L.cy+h*0.8]}); });
-      return; }
-    L.w.forEach(function(w){ if(num.test(w.t)) temps.push(w); }); });
+        items.push({label:lab.map(function(w){ return w.t; }).join(" ").replace(/[:;.]+$/,"").trim(), vals:vals, cy:vcy, box:[bx0, vcy-h*0.8, bx1, vcy+h*0.8]}); }); });
+
   // older path when the headings were not found: Tesseract tokens re-read one by one
   if(cols.length<2) lines.forEach(function(L){
     var lab=[], vals=[];
@@ -2286,6 +2345,16 @@ function mscrMonitor(src, m, words, out){
   var rpm=words.filter(function(w){ return /r\.?p\.?m/i.test(w.t); })[0], tit=words.filter(function(w){ return /machine/i.test(w.t); })[0];
   var tz=temps.filter(function(w){ var cy=(w.y0+w.y1)/2; return (!rpm || cy<rpm.y0) && (!tit || cy>tit.y0-(tit.y1-tit.y0)*2) && w.t.replace(/[^0-9OoDQ]/g,"").length===3; }).sort(function(a,b){ return a.x0-b.x0; });
   if(rpm){ var rw=words.filter(function(w){ return num.test(w.t) && Math.abs((w.y0+w.y1)/2-(rpm.y0+rpm.y1)/2)<(rpm.y1-rpm.y0) && w.x0>rpm.x0; })[0]; if(rw){ var rv=readNum(rw,3); out.notesList.push({label:"Screw R.P.M.", text:rv.v, conf:rv.c}); } }
+  if(rpm && tz.length<4){ // v2.8.3: Tesseract found (almost) none of the heater temps → read the strip above SCREW R.P.M. in the screen font
+    var rh=rpm.y1-rpm.y0, rcy=(rpm.y0+rpm.y1)/2-slope*0, ty0=rcy-rh*2.9, bx0h=rpm.x0-rh*24, bx1h=rpm.x0+rh*21;
+    var cand=[]; [-0.3,0,0.3].forEach(function(o){ var bb=[], NS=6, sw=(bx1h-bx0h)/NS;   // short overlapping pieces, each at its own height (the strip is slanted)
+      for(var si=0; si<NS; si++){ var xa=bx0h+si*sw-sw*0.25, xb=xa+sw*1.5, yy=ty0+o*rh+slope*((xa+xb)/2-rpm.x0);
+        band(xa, yy-rh*0.55, xb, yy+rh*0.55).forEach(function(r){ if(r.v.length!==3) return; var dup=bb.filter(function(q){ return Math.abs(q.x0-r.x0)<rh*1.2; })[0]; if(dup){ if(r.c>dup.c){ dup.v=r.v; dup.c=r.c; } } else bb.push(r); }); }
+      bb.sort(function(a,b){ return a.x0-b.x0; }); if(bb.length>cand.length || (bb.length===cand.length && bb.reduce(function(a,r){ return a+r.c; },0)>cand.reduce(function(a,r){ return a+r.c; },0))) cand=bb; });
+    if(cand.length>=4){ var gp=[]; for(var gi=1; gi<cand.length; gi++) gp.push(cand[gi].x0-cand[gi-1].x0); var gm=gp.slice().sort(function(a,b){ return a-b; })[gp.length>>1];   // heater boxes are evenly spaced: drop PRESSURE 14: 020 etc.
+      while(cand.length>4 && cand[1].x0-cand[0].x0>gm*1.35) cand.shift(); while(cand.length>4 && cand[cand.length-1].x0-cand[cand.length-2].x0>gm*1.35) cand.pop(); }
+    if(window.__mscrDbg) out.monHeat=JSON.stringify(cand);
+    if(cand.length>=4){ var tw3=rh*1.6; tz=cand.map(function(r){ return {t:r.v, x0:r.x0, x1:r.x0+tw3, y0:ty0-rh/2, y1:ty0+rh/2, c:r.c, _r:r}; }); } }
   if(tz.length>=2 && tz.length<7){ // v2.8.1: Tesseract drops boxed temps (box edges read as brackets) — read the whole heater row in the screen font
     var ty=tz.map(function(w){ return (w.y0+w.y1)/2; }).sort(function(a,b){ return a-b; })[tz.length>>1], th=tz.reduce(function(a,w){ return a+(w.y1-w.y0); },0)/tz.length, xr=Math.max.apply(null, words.map(function(w){ return w.x1; }));
     var bnd=band(tz[0].x0-th*6, ty-th*0.32, Math.min(xr, tz[tz.length-1].x1+th*8), ty+th*0.32);
@@ -2304,6 +2373,57 @@ function mscrMonitor(src, m, words, out){
   if(window.__mscrDbg) out.monTemps=temps.map(function(w){ return w.t+'@'+Math.round(w.x0)+','+Math.round(w.y0); })+' rpm '+(rpm&&rpm.y0)+' tit '+(tit&&tit.y0)+' bnd '+window.__monBnd;
   if(window.__mscrDbg) out.monItems=items.map(function(it){ return [it.label, it.vals.map(function(w){ return w.v+"("+w.c+")"; })]; });
 }
+// v2.8.3: TMC 250E TEMPERATURE SETTING screen — a table (zones H1-H6, COLLAR, OIL × alarm / status temp / preset temp) with
+// POWER SWITCH / HIGH ALARM / LOW ALARM lines under it. No boxes: columns come from the zone headings, rows from the labels.
+function mscrIsTemp(text){ var t=String(text||""), n=0;
+  if(/temperature/i.test(t) && /setting/i.test(t)) n++;
+  [/zone/i, /collar/i, /\boil\b/i, /power/i, /alarm/i, /preset|status\s*temp/i, /switch/i, /keep/i].forEach(function(re){ if(re.test(t)) n++; });
+  return n>=6 && !/cushion\s*limit|suck\s*back|corepull/i.test(t); }
+function mscrTemp(src, m, words, out){
+  out.screen={id:"tmc-temp", title:"TMC 250E · Temperature setting screen", kw:1, found:0, total:8};
+  var zw=words.filter(function(w){ return /^zone$/i.test(w.t); })[0], W=words;
+  function cy(w){ return (w.y0+w.y1)/2; } function cx(w){ return (w.x0+w.x1)/2; }
+  if(!zw){ out.unknown=true; return; }
+  var zh=zw.y1-zw.y0, hdr=W.filter(function(w){ return w.x0>zw.x1+zh*2 && Math.abs(cy(w)-cy(zw))<zh*1.2 && /^(h\s*\w|collar|oil|0il|ol)/i.test(w.t); }).sort(function(a,b){ return a.x0-b.x0; });
+  var col=W.filter(function(w){ return /^collar$/i.test(w.t) && Math.abs(cy(w)-cy(zw))<zh*1.5; })[0], oil=W.filter(function(w){ return /^(oil|0il|o1l)$/i.test(w.t) && Math.abs(cy(w)-cy(zw))<zh*1.5; })[0];
+  var hs=hdr.filter(function(w){ return /^h/i.test(w.t) && w.t.length<=3 && (!col || w.x1<col.x0); });
+  if(hs.length<3){ out.unknown=true; return; }
+  var th=hs.reduce(function(a,w){ return a+(w.y1-w.y0); },0)/hs.length;
+  // evenly spaced H1..H6: fit centre = a + b·i on the headings found (Tesseract reads H5 as HS, H6 as HG)
+  var hx=hs.map(cx), sp=(hx[hx.length-1]-hx[0])/Math.max(1,Math.round((hx[hx.length-1]-hx[0])/((hx[1]-hx[0])||1))), idx=hx.map(function(x){ return Math.round((x-hx[0])/sp); });
+  var X=[]; for(var i=0;i<6;i++) X.push(hx[0]+(i-idx[0])*sp);
+  var xCol=col? cx(col) : X[5]+sp*1.15, xOil=oil? cx(oil) : xCol+sp*1.05; X.push(xCol, xOil);
+  var hy=hs.map(cy), slope=hs.length>=2? (hy[hy.length-1]-hy[0])/(hx[hx.length-1]-hx[0]) : 0; if(Math.abs(slope)>0.08) slope=0;
+  var y0h=hy[0]-slope*hx[0];
+  function yAt(yref, x){ return yref+slope*x; }   // yref: y at x=0 on the de-skewed grid
+  var al=W.filter(function(w){ return /^alarm$/i.test(w.t) && w.x0<X[0]-sp && w.y0>zw.y1; }).sort(function(a,b){ return a.y0-b.y0; })[0];
+  var ps=W.filter(function(w){ return /^(power|pomer|powek|pover)$/i.test(w.t) && w.y0>zw.y1+zh; }).sort(function(a,b){ return a.y0-b.y0; })[0];
+  var r0=(al? cy(al)-slope*cx(al) : y0h+th*3), r3=ps? cy(ps)-slope*cx(ps) : r0+(r0-y0h)*2.2, rs=(r3-r0)/3;
+  var rows={alarm:r0, status:r0+rs, preset:r0+rs*2, power:r3, high:r3+rs*0.55, low:r3+rs*1.1};
+  function rd(x, yr, n){ var y=yAt(yr, x), hw=sp*0.42, hh=Math.min(rs*0.36, th*1.05), x0=x-hw, x1=x+hw, y0=y-hh, y1=y+hh;
+    var cv=mscrInk(src, m.s, x0, y0, x1, y1, 48, 0.4), rg=mscrReadGlyphs(cv._glyphs||[]), cur=false;
+    if(cv._inkF>0.25){ var cr=mscrCursor(src, m.s, x0, y0, x1, y1, 0); if(cr){ rg=cr.rg; cur=true; } }
+    var D=(rg.g||[]).filter(function(r){ return /[0-9]/.test(r.ch); });
+    if(D.length>n){ var bi=0, bs=1e9; for(var a=0;a+n<=D.length;a++){ var sd=0; for(var b=a;b<a+n;b++) sd+=D[b].d; if(sd<bs){ bs=sd; bi=a; } } D=D.slice(bi,bi+n); }
+    var v=D.map(function(r){ return r.ch; }).join(""), c=D.length? Math.min.apply(null, D.map(function(r){ return r.c; })) : 0, md=D.length? Math.max.apply(null, D.map(function(r){ return r.d; })) : 1;
+    if(!cur && D.length===n && md<0.19) c=Math.max(c, md<0.14? 0.85 : 0.72);
+    if(D.length!==n) c=Math.min(c, 0.4); if(cur) c=Math.min(c, 0.55);
+    if(window.__mscrDbg) window.__mscrDbg.push(["tp", cv.toDataURL(), v+" "+c]);
+    return {v:v, c:+c.toFixed(2), crop:mscrCropUrl(m.c, x0, y0, x1, y1, 6), cursor:cur}; }
+  var names=["H1","H2","H3","H4","H5","H6","Collar","Oil"], ids=["nozzle","zone1","zone2","zone3","zone4","zone5","collar","oil_temp"];
+  var pre=X.map(function(x){ return rd(x, rows.preset, 3); }), st=X.map(function(x){ return rd(x, rows.status, 3); });
+  var hi=X.map(function(x){ return rd(x, rows.high, 3); }), lo=X.map(function(x){ return rd(x, rows.low, 3); });
+  var found=0;
+  pre.forEach(function(r, i){ if(!r.v || !MS_P[ids[i]]) return; found++;
+    out.rows.push({id:ids[i], vals:[r.v], extra:"", same:false, crop:r.crop, typed:true, ocr:"preset temp "+names[i]+" "+r.v+(st[i].v? " (actual "+st[i].v+")" : ""), state:"read", conf:Math.min(0.9, r.c), screen:true}); });
+  var pw=X.map(function(x){ var y=yAt(rows.power, x), t=W.filter(function(w){ return Math.abs(cx(w)-x)<sp*0.45 && Math.abs(cy(w)-y)<rs*0.4; })[0]; return t? (/^y/i.test(t.t)? "YES" : /^n/i.test(t.t)? "NO" : "?") : "?"; });
+  function nl(label, arr){ if(arr.some(function(r){ return r && r.v; })) out.notesList.push({label:label, text:names.map(function(n,i){ return n+" "+((arr[i]&&arr[i].v)||"?"); }).join(", "), conf:Math.min.apply(null, arr.map(function(r){ return r? r.c : 0; }))}); }
+  nl("Preset temp", pre); nl("Status temp (actual)", st);
+  if(pw.some(function(v){ return v!=="?"; })) out.notesList.push({label:"Power switch", text:names.map(function(n,i){ return n+" "+pw[i]; }).join(", "), conf:0.6});
+  nl("High alarm (+)", hi); nl("Low alarm (−)", lo);
+  out.screen.found=found; out.found=found; out.total=8;
+  if(window.__mscrDbg) out.tempDbg={X:X.map(Math.round), rows:rows, slope:slope, sp:sp};
+}
 function mscrRead(src, onProg){
   src=mscrLocate(src);
   var m=mscrMask(src, MSCR_W), boxes=mscrBoxes(m), wkP=tessWorker(), out={kind:"screen", rows:[], header:{}, notesList:[], boxes:boxes.length};
@@ -2312,8 +2432,9 @@ function mscrRead(src, onProg){
     if(onProg) onProg("Reading the screen headings…", 5);
     return wk.setParameters({tessedit_pageseg_mode:"11", tessedit_char_whitelist:""}).then(function(){ return wk.recognize(m.ink); }).then(function(r){
       words=(r.data.words||[]).map(function(w){ return {t:String(w.text||"").trim(), x0:w.bbox.x0, y0:w.bbox.y0, x1:w.bbox.x1, y1:w.bbox.y1, c:(w.confidence||0)/100}; }).filter(function(w){ return w.t; });
-      text=words.map(function(w){ return w.t; }).join(" ");
-      if(mscrIsMonitor(text)) return mscrMonitor(src, m, words, out);   // v2.8.1: Machine Monitor (no boxes: label : status setup)
+      text=words.map(function(w){ return w.t; }).join(" "); if(window.__mscrDbg) out.words=words.map(function(w){ return [w.t,Math.round(w.x0),Math.round(w.y0),Math.round(w.x1),Math.round(w.y1)]; });
+      if(mscrIsMonitor(text)) return mscrMonitor(src, m, words, out);
+      if(mscrIsTemp(text)){ mscrTemp(src, m, words, out); if(!out.unknown) return; out.unknown=false; }   // v2.8.3   // v2.8.1: Machine Monitor (no boxes: label : status setup)
       // pick the screen: header keywords + how well its box layout fits
       var best=null;
       MSCR_DEFS.forEach(function(def){ var kw=def.keys.filter(function(re){ return re.test(text); }).length/def.keys.length, fit=mscrFit(def, boxes); if(!fit) return;
@@ -2332,13 +2453,10 @@ function mscrRead(src, onProg){
         if(window.__mscrDbg) window.__mscrDbg.push([q.key, cv.toDataURL()]);
         // digits are matched against the screen font (Tesseract reads the slashed zero as 8)
         var rg0=mscrReadGlyphs(cv._glyphs||[]);
-        if(cv._inkF>0.45){ // v2.8.1: cursor box = dark digits on a yellow block → invert the block and read it the same way
-          var X0=(q.x0+bw*0.12)/m.s, Y0=(q.y0+bh*0.16)/m.s, iw=Math.max(4,(bw*0.76)/m.s), ih=Math.max(4,(bh*0.68)/m.s), ic=document.createElement("canvas"); ic.width=Math.round(iw); ic.height=Math.round(ih);
-          var ig=ic.getContext("2d"); ig.drawImage(src, X0, Y0, iw, ih, 0, 0, ic.width, ic.height); var idt=ig.getImageData(0,0,ic.width,ic.height), dd=idt.data;
-          for(var k2=0;k2<dd.length;k2+=4){ var L=0.3*dd[k2]+0.59*dd[k2+1]+0.11*dd[k2+2], v2=255-L; dd[k2]=dd[k2+1]=v2; dd[k2+2]=0; }
-          ig.putImageData(idt,0,0); var cv2=mscrInk(ic, 1, ic.width*0.02, 0, ic.width*0.98, ic.height, 64), rg2=mscrReadGlyphs(cv2._glyphs||[]);
-          if(window.__mscrDbg) window.__mscrDbg.push([q.key+"-inv", cv2.toDataURL()]);
-          if(rg2.t && (!q.digits || rg2.t.length===q.digits)){ rg0=rg2; rg0.cursor=true; cv=cv2; } }
+        if(cv._inkF>0.3){ // v2.8.1/2.8.3: cursor box = dark digits on a yellow block → find the block, invert it, read it the same way
+          var cr=mscrCursor(src, m.s, q.x0, q.y0, q.x1, q.y1, q.digits);
+          if(cr){ if(window.__mscrDbg) window.__mscrDbg.push([q.key+"-inv", cr.cv.toDataURL()]); rg0=cr.rg; rg0.cursor=true; cv=cr.cv; }
+          else if(cv._inkF>0.3 && mscrCursor.lastBlock){ if(String(rg0.t||"").replace(/[<>]/g,"").length!==q.digits) rg0={t:"", c:0, g:[], cursorFail:true}; else rg0.cursorWeak=true; } }   // v2.8.3: block found but not readable → keep a full-length plain read, unchecked
         return Promise.resolve(rg0).then(function(rg){
           var r={text:rg.t, conf:rg.c}, t=rg.t.replace(/[<>]/g,""), c=rg.c, G=cv._glyphs||[];
           if(q.digits && t.length>q.digits){ t=t.slice(0,q.digits); c=Math.min(c,0.7); } // marker (◆) after the number
@@ -2346,14 +2464,18 @@ function mscrRead(src, onProg){
           var inkF=cv._inkF, state="read";
           if(!t){ state= inkF<0.04? "blank" : "unread"; c= state==="blank"? 0.7 : 0.2; }
           else if(q.digits && t.length!==q.digits){ c=Math.min(c, 0.45); }
-          if(!q.found) c=Math.min(c, 0.55);   // box hidden by glare / cursor: placed from the layout, check it
+          // v2.8.3: every glyph a close match to the screen font and the digit count right → trust it even if the 2nd-best margin is thin
+          var md=(rg.g||[]).length? Math.max.apply(null, rg.g.map(function(r){ return r.d; })) : 1, clean=!rg.cursor && q.digits && t.length===q.digits && md<0.19;
+          if(clean) c=Math.max(c, md<0.14? 0.85 : 0.72);
+          if(!q.found) c=Math.min(c, clean? 0.8 : 0.55);   // box edge broken by the ◆ marker / glare: placed from the layout
+          if(rg.cursorWeak) c=Math.min(c,0.3);
           if(rg.cursor){ inkF=0.2; c=Math.min(c,0.55); state=t? "read" : state; }   // cursor block read inverted: show it, let Allen check it
           else if(inkF>0.45){ c=Math.min(c,0.3); }  // highlighted (cursor) box: dark digits on a yellow block
           if(window.__mscrDbg) window.__mscrGl=(window.__mscrGl||[]).concat([[q.key, G.map(function(x){ return Array.from(x.bm).join(''); }), G.map(function(x){return +x.ar.toFixed(2);})]]);
-          slotVal[q.key]={v:t, c:+c.toFixed(2), state:state, q:q, raw:r.text, mr:G.map(function(x){return x.midRuns;}).join('')};
+          slotVal[q.key]={v:t, c:+c.toFixed(2), md:+md.toFixed(3), state:state, q:q, raw:r.text, mr:G.map(function(x){return x.midRuns;}).join('')};
         });
       }); }, Promise.resolve()).then(function(){
-        out.slots={}; Object.keys(slotVal).forEach(function(k){ var s=slotVal[k]; out.slots[k]={v:s.v, c:s.c, state:s.state, found:s.q.found, raw:s.raw, mr:s.mr}; });
+        out.slots={}; Object.keys(slotVal).forEach(function(k){ var s=slotVal[k]; out.slots[k]={v:s.v, c:s.c, md:s.md, state:s.state, found:s.q.found, raw:s.raw, mr:s.mr}; });
         // picture for a review row: the boxes side by side in stage order 1 / 2 / 3 (the screen shows clamp open as 3 2 1)
         function cropOf(ks){ var qs=ks.map(function(k){ return by[k]; }), pad=8, H=Math.max.apply(null, qs.map(function(q){ return q.y1-q.y0; }))+pad*2, gap=14;
           var Wt=qs.reduce(function(a,q){ return a+(q.x1-q.x0)+pad*2; },0)+gap*(qs.length-1), c=document.createElement("canvas"); c.width=Math.round(Wt); c.height=Math.round(H);
@@ -2378,10 +2500,13 @@ function mscrRead(src, onProg){
         // status strip at the bottom: date, cycle time, shot count (same font, no boxes)
         var txt={}; fit.placed.filter(function(q){ return q.text; }).forEach(function(q){
           var cv=mscrInk(src, m.s, q.x0, q.y0, q.x1, q.y1, 48, window.__mscrK2!=null? window.__mscrK2 : 0.4); if(window.__mscrDbg) window.__mscrDbg.push([q.key, cv.toDataURL(), mscrCropUrl(m.c,q.x0,q.y0,q.x1,q.y1,0)]); var rg=mscrReadGlyphs(cv._glyphs||[], q.key==="date"? "/" : "");
+          if(q.key!=="date" && cv._inkF>0.25){ var cr=mscrCursor(src, m.s, q.x0, q.y0, q.x1, q.y1, q.digits); if(cr){ rg=cr.rg; rg.cursor=true; } }   // v2.8.3: cursor on a <value>
           if(q.key!=="date" && q.digits && rg.g.length>q.digits){ // v2.8.1: <0010> / [2478]: keep the best-matching run of digits (brackets can pass for a 1)
             var bi=0, bs=1e9; for(var w0=0; w0+q.digits<=rg.g.length; w0++){ var sd=0; for(var w1=w0; w1<w0+q.digits; w1++) sd+=rg.g[w1].d+(/[0-9]/.test(rg.g[w1].ch)? 0 : 1); if(sd<bs){ bs=sd; bi=w0; } }
             var gg=rg.g.slice(bi, bi+q.digits); rg={t:gg.map(function(r){ return r.ch; }).join(""), c:Math.min.apply(null, gg.map(function(r){ return r.c; })), g:gg}; }
-          txt[q.key]={v:rg.t, c:rg.c, q:q}; if(window.__mscrDbg) window.__mscrGl=(window.__mscrGl||[]).concat([[q.key, (cv._glyphs||[]).map(function(x){ return Array.from(x.bm).join(''); }), (cv._glyphs||[]).map(function(x){return +x.ar.toFixed(2);})]]); });
+          var tmd=(rg.g||[]).filter(function(r){ return /[0-9]/.test(r.ch); }), tdd=tmd.length? Math.max.apply(null, tmd.map(function(r){ return r.d; })) : 1, tc=rg.c;
+          if(!rg.cursor && q.digits && tmd.length===q.digits && tdd<0.19) tc=Math.max(tc, tdd<0.14? 0.85 : 0.72);   // v2.8.3 (see boxes)
+          txt[q.key]={v:rg.t, c:rg.cursor? Math.min(rg.c,0.55) : tc, q:q}; if(window.__mscrDbg) window.__mscrGl=(window.__mscrGl||[]).concat([[q.key, (cv._glyphs||[]).map(function(x){ return Array.from(x.bm).join(''); }), (cv._glyphs||[]).map(function(x){return +x.ar.toFixed(2);})]]); });
         var dt=txt.date, dm=dt && dt.v.match(/^(\d{1,2})\/(\d{1,2})\/(\d{2})$/);
         if(dm) out.header.date={value:dm[1]+"/"+dm[2]+"/"+dm[3], conf:Math.min(0.5, dt.c),  // small blurry status font: always let Allen check it
  crop:mscrCropUrl(m.c, dt.q.x0, dt.q.y0, dt.q.x1, dt.q.y1, 8)};
