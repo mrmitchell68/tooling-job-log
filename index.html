@@ -646,6 +646,7 @@ pre.raw{white-space:pre-wrap;font-size:12px;background:var(--surface-2);padding:
   <input type="file" id="inPhotoFiles" accept="image/*,application/pdf,.jpg,.jpeg,.png,.webp,.gif" multiple>
   <input type="file" id="inScanFiles" accept="image/*,application/pdf,.pdf,.jpg,.jpeg,.png,.webp" multiple>
   <input type="file" id="inImport" accept="application/json,.json">
+  <input type="file" id="inPhotoRecovery" accept="application/json,.json">
   <input type="file" id="inLogo" accept="image/*">
   <input type="file" id="inReplace" accept="image/*">
   <input type="file" id="inCleanBg" accept="image/*">
@@ -653,7 +654,7 @@ pre.raw{white-space:pre-wrap;font-size:12px;background:var(--surface-2);padding:
 <script>
 (function(){
 "use strict";
-var APP_VERSION = "2.8.5";
+var APP_VERSION = "2.8.6";
 // Public OAuth client id (not a secret). Web client, authorized JavaScript origins:
 //   https://mrmitchell68.github.io   and   http://localhost:8766
 // Leave empty until that client exists — Save-to-Drive is hidden and the button uses the Android share sheet.
@@ -4502,6 +4503,8 @@ function viewSettings(){
   h += '<dl class="kvlist"><dt>Jobs</dt><dd>'+state.jobs.length+'</dd><dt>Templates</dt><dd>'+state.templates.length+'</dd><dt>Photos</dt><dd>'+photos+' ('+fmtBytes(bytes)+')</dd>'+(origN? '<dt>Kept originals</dt><dd>'+origN+' ('+fmtBytes(origB)+') <small class="faint">for Revert</small></dd>' : '')+'<dt>Last backup</dt><dd style="color:'+(lb && Date.now()-new Date(lb)<14*DAY?'var(--good)':'var(--danger)')+'">'+(lb? esc(fmtDate(lb))+' ('+esc(ago(lb))+')' : 'Never')+'</dd><dt>Storage</dt><dd id="storageInfo">…</dd></dl><div class="sp"></div>';
   h += '<div class="menu"><button data-act="backupShare"><span class="ic">📤</span><span>Share backup file<small>Send to Google Drive, Gmail, etc. (jobs + photos, one .json)</small></span></button>';
   h += '<button data-act="backupDownload"><span class="ic">💾</span><span>Download backup file<small>Saves to your Downloads folder</small></span></button>';
+  h += '<button data-act="photoRecoveryCheck"><span class="ic">🔎</span><span>Check photo storage<small>Read-only count of present and missing image records</small></span></button>';
+  h += '<button data-act="photoRecoveryPick"><span class="ic">🖼️</span><span>Recover missing photos only<small>Select a verified photo-recovery file; existing images and job details stay untouched</small></span></button>';
   h += '<button data-act="importPick"><span class="ic">📥</span><span>Import / merge a backup<small>Adds new jobs; newer copy wins for the same job</small></span></button>';
   if(origN) h += '<button data-act="forgetOriginals"><span class="ic">🧹</span><span>Forget kept originals ('+origN+')<small>Frees '+fmtBytes(origB)+'; cleaned-up photos can no longer be reverted</small></span></button>';
   h += '</div>';
@@ -5241,6 +5244,146 @@ function saveOrShare(obj, name, share){
 }
 function download(blob, name){ var u=URL.createObjectURL(blob); var a=document.createElement("a"); a.href=u; a.download=name; document.body.appendChild(a); a.click(); a.remove(); setTimeout(function(){ URL.revokeObjectURL(u); }, 4000); }
 ACT.backupShare = function(){ buildBackup(state.jobs, true).then(function(o){ saveOrShare(o, "job-log-backup-"+todayStr()+".json", true); }); };
+/* ---------- Photo-only recovery v1: no job or settings writes ---------- */
+var photoRecoveryBusy=false;
+function prError(s){ return new Error(s); }
+function prJobs(){
+  var raw=localStorage.getItem(K.jobs), jobs;
+  try{ jobs=JSON.parse(raw||"[]"); }catch(e){ throw prError("Saved jobs could not be read. Nothing was changed."); }
+  if(!Array.isArray(jobs)) throw prError("Saved jobs have an unexpected format.");
+  return {raw:raw,jobs:jobs};
+}
+function prSlots(snapshot){
+  var jobs=new Map(), keys=new Set(), slots=[];
+  snapshot.jobs.forEach(function(j){
+    if(!j || typeof j.id!=="string" || jobs.has(j.id)) throw prError("Invalid or duplicate job IDs. Nothing was changed.");
+    jobs.set(j.id,j);
+    if(j.photos!=null && !Array.isArray(j.photos)) throw prError("Invalid photo list.");
+    (j.photos||[]).forEach(function(p){
+      if(!p || typeof p.id!=="string" || !p.id || keys.has(p.id)) throw prError("Invalid or duplicate photo IDs. Nothing was changed.");
+      keys.add(p.id); slots.push({job:j,photo:p});
+    });
+  });
+  return slots;
+}
+function prMatch(entries,snapshot){
+  var slots=prSlots(snapshot), lookup=new Map(), seen=new Set();
+  slots.forEach(function(s){lookup.set(s.photo.id,s);});
+  entries.forEach(function(e){
+    if(!e || typeof e.jobId!=="string" || typeof e.photoId!=="string" || typeof e.expectedDriveName!=="string" || !e.expectedDriveName || seen.has(e.photoId)) throw prError("Invalid or duplicate recovery mapping.");
+    seen.add(e.photoId); var s=lookup.get(e.photoId);
+    if(!s || s.job.id!==e.jobId || s.photo.driveName!==e.expectedDriveName) throw prError("A recovery photo does not exactly match a saved job, photo ID and Drive filename. Nothing was changed.");
+    if(s.photo.bytes!==e.expectedBytes || s.photo.w!==e.expectedWidth || s.photo.h!==e.expectedHeight) throw prError("Photo size or dimensions do not match the saved job. Nothing was changed.");
+  });
+}
+function prOpen(){
+  return new Promise(function(resolve,reject){
+    var ended=false, req, timer=setTimeout(function(){fail(prError("Photo storage did not open in time. Missing-photo count is unknown."));},15000);
+    function fail(e){if(ended)return;ended=true;clearTimeout(timer);reject(e);}
+    try{req=indexedDB.open("toolingJobLogPhotos",1);}catch(e){fail(e);return;}
+    req.onupgradeneeded=function(){try{req.transaction.abort();}catch(e){} fail(prError("The existing photo database is unavailable. No database was created."));};
+    req.onblocked=function(){fail(prError("Photo storage is blocked. Close other copies of this app and try again; do not clear data."));};
+    req.onerror=function(){fail(req.error||prError("Photo storage could not be opened."));};
+    req.onsuccess=function(){
+      var d=req.result;if(ended){d.close();return;}
+      try{if(!d.objectStoreNames.contains("photos"))throw prError("Photo store is unavailable.");
+        var tx=d.transaction("photos","readonly"),st=tx.objectStore("photos");
+        if(st.keyPath!==null || st.autoIncrement)throw prError("Unexpected photo-store format.");
+      }catch(e){d.close();fail(e);return;}
+      ended=true;clearTimeout(timer);d.onversionchange=function(){d.close();};resolve(d);
+    };
+  });
+}
+function prTransaction(d,entries,write,snapshot){
+  return new Promise(function(resolve,reject){
+    var tx,st,why=null,out={present:0,absent:0,inserted:0},timer,ended=false;
+    function changed(){return snapshot && localStorage.getItem(K.jobs)!==snapshot.raw;}
+    function abort(e){why=why||e;try{tx.abort();}catch(x){} }
+    function storage(e){if(e.key===K.jobs || e.key===null)abort(prError("Jobs changed in another tab. Recovery was rolled back; preview again."));}
+    function finish(ok){if(ended)return;ended=true;clearTimeout(timer);window.removeEventListener("storage",storage);if(ok)resolve(out);else reject(why||tx.error||prError("Photo storage transaction failed; no insertions committed."));}
+    try{
+      if(changed())throw prError("Jobs changed. Please preview the file again.");
+      tx=d.transaction("photos",write?"readwrite":"readonly");st=tx.objectStore("photos");
+      tx.oncomplete=function(){finish(true);};tx.onabort=function(){finish(false);};
+      tx.onerror=function(){why=why||tx.error||prError("Photo storage request failed.");};
+      timer=setTimeout(function(){abort(prError("Photo storage timed out; transaction aborted."));},30000);
+      if(write)window.addEventListener("storage",storage);
+      entries.forEach(function(e){
+        var r=st.count(e.photoId);r.onerror=function(){why=why||r.error;};
+        r.onsuccess=function(){
+          try{
+            if(changed())throw prError("Jobs changed during recovery; all insertions rolled back.");
+            if(r.result){out.present++;return;}out.absent++;
+            if(write){var a=st.add(e.blob,e.photoId);a.onsuccess=function(){out.inserted++;};a.onerror=function(){why=why||a.error;};}
+          }catch(err){abort(err);}
+        };
+      });
+    }catch(e){if(tx)abort(e);else{clearTimeout(timer);reject(e);}}
+  });
+}
+function prDimensions(blob){
+  return new Promise(function(resolve,reject){
+    var u=URL.createObjectURL(blob),im=new Image(),done=false;
+    var timer=setTimeout(function(){end(prError("An image could not be decoded in time."));},15000);
+    function end(err){if(done)return;done=true;clearTimeout(timer);im.onload=im.onerror=null;im.src="";URL.revokeObjectURL(u);err?reject(err):resolve(size);}
+    var size;im.onload=function(){size=[im.naturalWidth,im.naturalHeight];end();};im.onerror=function(){end(prError("A recovery image could not be decoded."));};im.src=u;
+  });
+}
+async function prValidate(bundle,snapshot,progress){
+  if(!bundle || bundle.kind!=="tooling-job-log-photo-recovery" || bundle.version!==1 || bundle.policy!=="insert-absent-photo-blobs-only" || !/^[a-f0-9]{64}$/.test(bundle.sourceBackupSha256||"") || !Array.isArray(bundle.entries) || !bundle.entries.length || bundle.entries.length>1000)throw prError("Not a supported photo-only recovery file. Do not select an ordinary backup.");
+  prMatch(bundle.entries,snapshot);
+  var entries=[],total=0;
+  for(var i=0;i<bundle.entries.length;i++){
+    var e=bundle.entries[i],m=typeof e.dataUrl==="string" && /^data:(image\/(?:jpeg|png|webp));base64,([A-Za-z0-9+/]*={0,2})$/.exec(e.dataUrl);
+    if(!Number.isSafeInteger(e.expectedBytes) || e.expectedBytes<1 || e.expectedBytes>20*1024*1024 || !Number.isSafeInteger(e.expectedWidth) || !Number.isSafeInteger(e.expectedHeight) || e.expectedWidth<1 || e.expectedHeight<1 || e.expectedWidth*e.expectedHeight>40000000)throw prError("Invalid or oversized recovery image.");
+    if(!m || m[1]!==e.expectedMimeType || m[2].length>Math.ceil(e.expectedBytes/3)*4 || !/^[a-f0-9]{64}$/.test(e.sha256||""))throw prError("The recovery file is incomplete or contains invalid image data. Nothing was changed.");
+    var bin;try{bin=atob(m[2]);}catch(x){throw prError("Invalid image encoding.");}
+    if(bin.length!==e.expectedBytes || btoa(bin)!==m[2])throw prError("An image is truncated or has an invalid size.");
+    total+=bin.length;if(total>180*1024*1024)throw prError("Recovery file is too large for one import.");
+    var bytes=new Uint8Array(bin.length);for(var k=0;k<bin.length;k++)bytes[k]=bin.charCodeAt(k);
+    var magic=m[1]==="image/jpeg"?bytes[0]===255&&bytes[1]===216&&bytes[2]===255:m[1]==="image/png"?bytes[0]===137&&bytes[1]===80&&bytes[2]===78&&bytes[3]===71:String.fromCharCode.apply(null,bytes.subarray(0,4))==="RIFF"&&String.fromCharCode.apply(null,bytes.subarray(8,12))==="WEBP";
+    if(!magic)throw prError("Image content does not match its file type.");
+    if(!crypto.subtle)throw prError("Secure image verification is unavailable. Nothing was changed.");
+    var hash=Array.from(new Uint8Array(await crypto.subtle.digest("SHA-256",bytes))).map(function(b){return b.toString(16).padStart(2,"0");}).join("");
+    if(hash!==e.sha256)throw prError("Image checksum failed. Nothing was changed.");
+    var blob=new Blob([bytes],{type:m[1]}),size=await prDimensions(blob);
+    if(size[0]!==e.expectedWidth || size[1]!==e.expectedHeight)throw prError("Decoded image dimensions do not match the saved photo.");
+    entries.push({jobId:e.jobId,photoId:e.photoId,expectedDriveName:e.expectedDriveName,expectedBytes:e.expectedBytes,expectedWidth:e.expectedWidth,expectedHeight:e.expectedHeight,blob:blob});
+    if(progress)progress(i+1,bundle.entries.length);
+  }
+  return entries;
+}
+async function prDiagnostic(){
+  if(photoRecoveryBusy || state.busy)return;
+  photoRecoveryBusy=true;var d;
+  try{setBusy("Checking photo storage (read only)…");var snap=prJobs(),slots=prSlots(snap);d=await prOpen();var out=await prTransaction(d,slots.map(function(s){return {photoId:s.photo.id};}),false,snap);
+    alert("Photo-storage snapshot\n"+slots.length+" saved photo slots\n"+out.present+" stored image records present\n"+out.absent+" absent image records\n\nPresent records are not a guarantee that their images decode. No data was changed.");
+  }catch(e){alert("Photo storage could not be checked. Missing-photo count is unknown.\n\n"+e.message+"\n\nDo not clear data or reinstall.");}
+  finally{if(d)d.close();setBusy(null);photoRecoveryBusy=false;}
+}
+async function prRecover(file){
+  if(photoRecoveryBusy || state.busy || !file)return;
+  photoRecoveryBusy=true;var d,committed=false;
+  try{
+    if(!confirm("Recovery is supported only with one copy of this app open. Close any other Tooling Job Log tabs or windows on this phone before continuing.\n\nHave you closed the other copies?"))return;
+    if(file.size>256*1024*1024)throw prError("Recovery file exceeds the 256 MB limit.");
+    setBusy("Validating photo-only recovery file…");var snapshot=prJobs(),bundle=JSON.parse(await file.text());
+    var entries=await prValidate(bundle,snapshot,function(i,n){setBusy("Verifying photo "+i+" of "+n+"…",{pct:Math.round(100*i/n)});});
+    d=await prOpen();var preview=await prTransaction(d,entries,false,snapshot);
+    setBusy(null);
+    if(!preview.absent){alert("All "+preview.present+" image records in this file already exist. Nothing was changed.");return;}
+    if(!confirm("Photo-only recovery preview\n"+entries.length+" exactly matched, verified images\n"+preview.present+" existing image records will be left untouched\n"+preview.absent+" missing images can be restored\n\nKeep other copies of this app closed. Job settings, labels, order and timestamps will not be changed.\n\nRestore missing photos only?"))return;
+    prMatch(entries,prJobs());if(localStorage.getItem(K.jobs)!==snapshot.raw)throw prError("Jobs changed since the preview. Please select the file again.");
+    setBusy("Restoring missing images only…");var result=await prTransaction(d,entries,true,snapshot);committed=true;
+    hydratePhotos(document); // Render-only; missing URLs are not cached by photoUrl.
+    alert("Photo recovery committed\n"+result.inserted+" missing images restored\n"+result.present+" existing images left untouched\n\nJob settings, labels and photo order were not changed. Photos not included in this file still need locating. Open your jobs to check the pictures.");
+  }catch(e){alert((committed?"Photo insertions committed, but reporting failed.":"Recovery did not complete. No photo insertions committed.")+"\n\n"+e.message+"\n\nKeep your backup; do not clear data or reinstall.");}
+  finally{if(d)d.close();setBusy(null);photoRecoveryBusy=false;}
+}
+ACT.photoRecoveryCheck=prDiagnostic;
+ACT.photoRecoveryPick=function(){if(photoRecoveryBusy || state.busy)return;$("inPhotoRecovery").click();};
+/* ---------- End photo-only recovery ---------- */
+
 ACT.backupDownload = function(){ buildBackup(state.jobs, true).then(function(o){ saveOrShare(o, "job-log-backup-"+todayStr()+".json", false); }); };
 ACT.importPick = function(){ $("inImport").click(); };
 function importFile(file){
@@ -7898,6 +8041,7 @@ $("inPhotoFiles").addEventListener("change", function(){ var all=Array.prototype
 ["inScanCam","inScanImg","inScanPdf","inScanFiles"].forEach(function(id){ $(id).addEventListener("change", function(){ var f=Array.prototype.slice.call(this.files); this.value=""; runScanFiles(f); }); });
 $("inReplace").addEventListener("change", function(){ var f=this.files[0]; this.value=""; if(f) arrReplaceFile(f); });
 $("inCleanBg").addEventListener("change", function(){ var f=this.files[0]; this.value=""; if(f) ceBgPhoto(f); });
+$("inPhotoRecovery").addEventListener("change", function(){ var f=this.files[0]; this.value=""; if(f) prRecover(f); });
 $("inImport").addEventListener("change", function(){ var f=this.files[0]; this.value=""; if(f) importFile(f); });
 $("inLogo").addEventListener("change", function(){ var f=this.files[0]; this.value=""; if(!f) return; compressLogo(f).then(function(u){ state.meta.brand=state.meta.brand||{}; state.meta.brand.logo=u; if(saveMeta()!==false){ render(); showToast("Logo saved ("+fmtBytes(Math.round(u.length*0.75))+")"); } }).catch(function(e){ showToast("Logo failed: "+(e.message||e), {err:true}); }); });
 window.addEventListener("resize", debounce(function(){ if(state.route.view==="print") fitSheet(); if(CE) ceLayout(); }, 150));
