@@ -3090,15 +3090,18 @@ function yzRead(im, onProg, pre){
         r=P.segs.filter(function(s){ return Math.abs(s.cy-l.cy)<lh*0.6 && s.x0>l.x1+lh; }).sort(function(a,b){ return a.x0-b.x0; })[0];
         if(r) vals[td[0]]={v:r.t, c:0.8, x0:r.x0, x1:r.x1, y0:r.y0, y1:r.y1}; });
       // v2.8.8: Cut off — which switch-over conditions are ticked (green check left of each label); an unticked row's set box is greyed (not in use)
-      if(def.cutoff){ var cot=yzFind(P, /^cut\s*off$/i)[0], gd0=P0.g.getContext("2d"), tk=[];
+      if(def.cutoff){ var cot=yzFind(P, /^cut\s*off$/i)[0], gd0=P0.g.getContext("2d"), tk=[], cls=[];
         def.cutoff.forEach(function(cd){ var ls=yzFind(P, cd[1]).filter(function(l){ return !cot || (l.cy>cot.cy && l.cy<cot.cy+lh*9); }).sort(function(a,b){ return b.cy-a.cy; }), l=ls[0]; if(!l) return;
-          var fw=(l.ws||[]).filter(function(w){ return /^(screw|inject)/i.test(w.t.replace(/[^A-Za-z]/g,"")); })[0], lx=fw? fw.x0 : l.x0;
-          var bX=Math.round(lx-lh*3.2), bY=Math.round(l.cy-lh), bW=Math.round(lh*2.9), bH=Math.round(lh*2); if(bX<0 || bY<0) return;
-          var id=gd0.getImageData(bX, bY, bW, bH).data, sum=0, n=0, dk=0, cx0=Math.round(lh*0.8), cx1=Math.round(lh*2.1), cy0=Math.round(lh*0.65), cy1=Math.round(lh*1.35);
-          for(var i=0;i<id.length;i+=4){ sum+=id[i]; n++; } var mean=sum/n, nc=0;
-          for(var yy=cy0;yy<cy1;yy++) for(var xx=cx0;xx<cx1;xx++){ nc++; if(id[(yy*bW+xx)*4]<mean-50) dk++; }
-          if(window.__yzDbg) (window.__yzX=window.__yzX||[]).push([cd[0], Math.round(mean), dk, nc]);
-          tk.push({name:cd[0], key:cd[2], on:dk/nc>0.08, l:l}); });
+          var fw=(l.ws||[]).filter(function(w){ return /^(screw|inject)/i.test(w.t.replace(/[^A-Za-z]/g,"")); })[0]; cls.push({cd:cd, l:l, lx:fw? fw.x0 : l.x0}); });
+        // the three labels are left-aligned; a tick can stick to its word and pull that edge left, so use the middle edge
+        var lxs=cls.map(function(c){ return c.lx; }).sort(function(a,b){ return a-b; }), lxm=lxs[lxs.length>>1];
+        cls.forEach(function(c){ var l=c.l, bX=Math.round(lxm-lh*3.0), bY=Math.round(l.cy-lh*0.45), bW=Math.round(lh*2.1), bH=Math.round(lh*0.9); if(bX<0 || bY<0) return;
+          var big=gd0.getImageData(Math.round(lxm-lh*3.4), Math.round(l.cy-lh), Math.round(lh*3.2), Math.round(lh*2)).data, sum=0, n=0; for(var i=0;i<big.length;i+=4){ sum+=big[i]; n++; } var mean=sum/n;
+          var id=gd0.getImageData(bX, bY, bW, bH).data, dk=0, nc=0; for(i=0;i<id.length;i+=4){ nc++; if(id[i]<mean-50) dk++; }
+          if(window.__yzDbg) (window.__yzX=window.__yzX||[]).push([c.cd[0], Math.round(mean), dk, nc]);
+          tk.push({name:c.cd[0], key:c.cd[2], dk:dk, nc:nc, l:l}); });
+        var mnD=Math.min.apply(null, tk.map(function(t){ return t.dk; }).concat([1e9]));
+        tk.forEach(function(t){ t.on=t.dk/t.nc>0.15 || (t.dk/t.nc>0.05 && t.dk>mnD*2.5+t.nc*0.01); });
         if(tk.length>=2){ var on=tk.filter(function(t){ return t.on; }); if(on.length){ var l0=on[0].l;
           vals.coMode={v:on.map(function(t){ return t.name; }).join(" + "), c:0.7, x0:l0.x0-lh*2, x1:l0.x1, y0:l0.y0, y1:l0.y1, text:true};
           tk.forEach(function(t){ if(!t.on) out.coOff=(out.coOff||[]).concat([t.key]); }); } } }
@@ -3147,7 +3150,7 @@ function yzRead(im, onProg, pre){
           while(bk.length && !okB(bk[0])) bk.shift(); while(bk.length && !okB(bk[bk.length-1])) bk.pop();
           if(bk.length>8) bk=bk.slice(0,8);
           Object.keys(vals).forEach(function(k){ if(/^brl\./.test(k) && bk.indexOf(k)<0) delete vals[k]; });
-          bk.forEach(function(k, i){ var q=vals[k], ok1=okB(k); delete vals[k]; if(!ok1 && q.v) q.c=Math.min(q.c,0.4); q.c=Math.min(q.c,0.75); vals["barrel."+i]=q; }); }
+          bk.forEach(function(k, i){ var q=vals[k], ok1=okB(k); delete vals[k]; if(!ok1 && q.v) q.c=Math.min(q.c,0.4); q.c=Math.min(q.c,0.75); vals["ov.barrel."+i]=q; }); }
         if(P.tok) yzStrips(P, P0, vals, yzSl, out);   // v2.8.7: top status bar + bottom cycle monitor (every screen)
         // v2.8.7: a mode of "No" turns its row off (greyed on the screen) — those numbers are not the job's settings
         (out.coOff||[]).forEach(function(k){ [".1"].forEach(function(sx){ if(vals[k+sx]) vals[k+sx].inactive=true; }); if(k==="coPress" && vals["coPress.1"]) vals["coPress.1"].inactive=true; });
@@ -3173,7 +3176,7 @@ function yzRead(im, onProg, pre){
           if(Pm.staged && vs.length>1 && vs.every(function(v){ return v===vs[0]; }) && vs.length===3) row.same=false;
           if(/^zone[6-8]$/.test(id) && !any && out.rows.some(function(r){ return r.id==="zone5" && r.state==="read"; })) return;   // v2.8.5: a 5-zone barrel has no zones 6-8 — leave them out instead of red blanks
           out.rows.push(row); });
-        if(def.barrel && vals["barrel.0"]){ var bvs=[]; for(var bi2=0;vals["barrel."+bi2];bi2++) bvs.push(vals["barrel."+bi2].v||"?"); out.notesList.push({label:"Barrel actual °F (nozzle at the left)", text:bvs.join(" / ")+" (check)", conf:0.5}); }
+        if(def.barrel && vals["ov.barrel.0"]){ var bvs=[]; for(var bi2=0;vals["ov.barrel."+bi2];bi2++) bvs.push(vals["ov.barrel."+bi2].v||"?"); out.notesList.push({label:"Barrel actual °F (nozzle at the left)", text:bvs.join(" / ")+" (check)", conf:0.5}); }
         else if(def.barrel){ var bx=P.nums.filter(function(b){ return /^\d{3}\.\d$/.test(b.v) && b.cy<P0.H*0.45; }), grp=[];   // v2.8.4: Overview barrel strip (actual temps, nozzle → hopper)
           bx.forEach(function(b){ var g=grp.find(function(g){ return Math.abs(g.cy-b.cy)<lh*0.7; }); if(g){ g.b.push(b); } else grp.push({cy:b.cy, b:[b]}); });
           grp.sort(function(a,b){ return b.b.length-a.b.length; }); if(grp[0] && grp[0].b.length>=4) out.notesList.push({label:"Barrel actual °F (left → right)", text:grp[0].b.sort(function(a,b){ return a.cx-b.cx; }).map(function(b){ return b.v; }).join(" / ")+" (check)", conf:0.5}); }
