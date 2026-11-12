@@ -2842,14 +2842,14 @@ function yzReadGlyphs(ink, t){ var W=ink.W, out=[];
     (bestR? bestR.r : [{d:"?", s:0, m:0}]).forEach(function(q){ out.push(q); }); if(dotR) out.push({dot:true}); });
   return out; }
 function yzReadToks(wk, ink, toks, onProg){
-  toks.forEach(function(t){ var r0=yzReadGlyphs(ink, t), di=-1, r=[]; r0.forEach(function(q){ if(q.dot){ if(di<0 && r.length) di=r.length; } else r.push(q); }); if(di>0 && di<r.length) t.dot=di;
+  toks.forEach(function(t){ var r0=yzReadGlyphs(ink, t), di=-1, r=[]; r0.forEach(function(q){ if(q.dot){ if(di<0 && r.length) di=r.length; } else r.push(q); }); var trim=0; while(r.length>1 && r[r.length-1].d==="?" && !r[r.length-1].z){ r.pop(); trim++; } while(r.length>1 && r[0].d==="?" && !r[0].z){ r.shift(); if(di>0) di--; trim++; }   // v2.8.7: a sliver of the box edge stuck to the value if(di>0 && di<r.length) t.dot=di;
     if(window.__yzGlyphs) window.__yzGlyphs.push({x0:t.x0, x1:t.x1, cy:Math.round(t.cy), z:r.map(function(q){ return q.z? Array.from(q.z).map(function(v){ return Math.round(v*100)/100; }) : null; })});
     var ds=r.map(function(q){ return q.d; }).join(""), mn=Math.min.apply(null, r.map(function(q){ return q.s; })), av=r.reduce(function(a,q){ return a+q.s; },0)/Math.max(1,r.length), mm=Math.min.apply(null, r.map(function(q){ return q.m; }));
     t.td=ds; t.sc=+mn.toFixed(2); t.mg=+mm.toFixed(2);
     if(ds.indexOf("?")>=0 || av<0.68 || mn<0.5){ t.word=true; return; }
     var v=ds; if(t.dot>0 && t.dot<ds.length) v=ds.slice(0,t.dot)+"."+ds.slice(t.dot);
     v=v.replace(/^0+(?=\d)/,""); if(t.neg) v="-"+v;
-    var c=mn>=0.8 && mm>=0.1? 0.92 : mn>=0.72 && mm>=0.05? 0.75 : 0.45; t.v=v; t.c=c; t.mn=mn; });
+    var c=mn>=0.8 && mm>=0.1? 0.92 : mn>=0.72 && mm>=0.05? 0.75 : 0.45; if(trim) c=Math.min(c,0.6); t.v=v; t.c=c; t.mn=mn; });
   // a faint decimal point leaves "0" and "60" as two tokens: join neighbours on one line with a dot-wide gap and some ink low in it
   var W=ink.W, nt=toks.filter(function(t){ return !t.word && t.v && t.v.indexOf(".")<0; }).sort(function(a,b){ return a.x0-b.x0; });
   nt.forEach(function(L){ if(L.word || L.joined) return; var h=L.y1-L.y0+1;
@@ -2879,7 +2879,7 @@ function yzDec(v, d, c){ var neg=/^-/.test(v), ds=String(v).replace(/[^0-9]/g,""
   return {v:(neg?"-":"")+out, c:c}; }
 function yzTplFit(NT, T, sl, W, y0, y1){
   var tk=NT.filter(function(t){ return t.cy>=y0 && t.cy<=y1; }); if(tk.length<2) return null;
-  var cyc=function(t){ return t.cy-sl*(t.cx-W/2); }, an=tk.filter(function(t){ return String(t.v).replace(/\D/g,"").length>=2; }), best=null;
+  var cyc=function(t){ return t.cy-sl*(t.cx-W/2); }, an=tk.filter(function(t){ return String(t.v).replace(/\D/g,"").length>=2 && t.c>0.6; }), best=null;
   var score=function(s, ox, oy){ var n=0, cs=0, used={}, got={}; T.rows.forEach(function(r){ r.cols.forEach(function(cx, ci){ var px=ox+s*cx, py=oy+s*r.dy, tol=0.065*s*T.pitch, b=null;
       tk.forEach(function(t, ti){ if(used[ti]) return; var dx=Math.abs(t.x1-px), dy=Math.abs(cyc(t)-py); if(dx<tol && dy<t.h*0.5 && (!b || t.w>b.t.w)) b={t:t, ti:ti}; });
       if(b){ used[b.ti]=1; n++; cs+=b.t.c; got[r.keys[ci]]={t:b.t, d:r.dec[ci]}; } }); }); return {n:n, cs:cs, got:got, s:s, ox:ox, oy:oy}; };
@@ -2982,7 +2982,7 @@ function yzRead(im, onProg, pre){
             cells.push({key:gd.k+rk+"."+ci, w:w||null, ghost:!w && !!P0.rect, v:w? w.v : "", c:w? w.c : 0, x0:xs[ci]-bw, x1:xs[ci]+bw, y0:r.cy-lh*0.8, y1:r.cy+lh*0.8, d:cdef[1], rows:rows.length, want:rows.length}); }); }); return; }
         gd.rows.forEach(function(rk, ri){ var r=rows[ri], cy=r? r.cy : (rows.length? rows[0].cy+ri*pitch : hy+lh*2.5+ri*lh*1.9);
           gd.cols.forEach(function(cdef, ci){ var w=r && r.ws.filter(function(w){ return Math.abs(w.cx-xs[ci])<sp*0.5; })[0];
-            var bw=sp*0.42; cells.push({key:gd.k+rk+"."+ci, w:w||null, v:w? w.v : "", c:w? w.c : 0, x0:xs[ci]-bw, x1:xs[ci]+bw, y0:cy-lh*0.85, y1:cy+lh*0.85, d:cdef[1], rows:rows.length, want:gd.rows.length}); }); });
+            var bw=sp*0.42; cells.push({key:gd.k+rk+"."+ci, w:w||null, ghost:!!(P.tok && r && !w), v:w? w.v : "", c:w? w.c : 0, x0:xs[ci]-bw, x1:xs[ci]+bw, y0:cy-lh*0.85, y1:cy+lh*0.85, d:cdef[1], rows:rows.length, want:gd.rows.length}); }); });
       });
       var yzSl=(function(){ var sl=[]; P.nums.forEach(function(a){ P.nums.forEach(function(b){ var dx=b.cx-a.cx; if(dx>lh*2 && dx<lh*14 && Math.abs(b.cy-a.cy)<lh*0.9) sl.push((b.cy-a.cy)/dx); }); });
         sl.sort(function(a,b){ return a-b; }); var m=sl.length>=4? sl[sl.length>>1] : 0; return Math.max(-0.12, Math.min(0.12, m)); })();  // v2.8.4: angled photo → rows slope
