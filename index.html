@@ -2709,6 +2709,13 @@ function yzRectify(im){
   th=Math.round(dk+(th-dk)*0.6);   // dim screen edges still count; the bezel is far darker
   var M=new Uint8Array(N); for(i=0;i<N;i++) M[i]=L[i]>th? 1 : 0;
   var C=mscrComponents(M,W,H), k=C.comps.sort(function(a,b){ return b.n-a.n; })[0];
+  // v2.8.8: some Yizumi screens are cut into panels by dark divider bars, so the brightest blob is only one panel —
+  // close those thin gaps (the bezel around the screen is much wider) and use the joined screen when it is clearly bigger
+  var yzDil=function(A, r){ var B=new Uint8Array(N), x, y, d; for(y=0;y<H;y++) for(x=0;x<W;x++){ if(!A[y*W+x]) continue; for(d=-r;d<=r;d++){ var xx=x+d; if(xx>=0 && xx<W) B[y*W+xx]=1; } }
+    var Cc=new Uint8Array(N); for(y=0;y<H;y++) for(x=0;x<W;x++){ if(!B[y*W+x]) continue; for(d=-r;d<=r;d++){ var yy=y+d; if(yy>=0 && yy<H) Cc[yy*W+x]=1; } } return Cc; };
+  var Mc=yzDil(M,4); for(i=0;i<N;i++) Mc[i]=Mc[i]? 0 : 1; Mc=yzDil(Mc,4); for(i=0;i<N;i++) Mc[i]=Mc[i]? 0 : 1;
+  var C2=mscrComponents(Mc,W,H), k2=C2.comps.sort(function(a,b){ return b.n-a.n; })[0];
+  if(k && k2 && k2.n>k.n*1.4 && k2.n<N*0.92 && !(k2.w>W*0.97 && k2.h>H*0.97)){ C=C2; k=k2; }
   if(!k || k.n<N*0.12 || k.n>N*0.92 || (k.w>W*0.97 && k.h>H*0.97)) return null;   // already fills the photo (or no clear screen)
   var best=[null,null,null,null], sc=[-1e9,-1e9,-1e9,-1e9];
   for(var y=k.y0;y<=k.y1;y++) for(var x=k.x0;x<=k.x1;x++){ if(C.L[y*W+x]!==k.id) continue; var s=[-x-y, x-y, x+y, -x+y];
@@ -2833,7 +2840,7 @@ function yzReadGlyphs(ink, t){ var W=ink.W, out=[];
       var sw=X1-X0+1, sh=Y1-Y0+1, S=new Float32Array(sw*sh); for(y=0;y<sh;y++) for(x=0;x<sw;x++) S[y*sw+x]=A[(Y0+y)*w+X0+x];
       var z=yzGlyphNorm(S, sw, sh), cr=yzClassify(z); cr.z=z; cr.ar=sw/h; if(sw<h*0.33){ cr.s-=0.2; } return cr; };
     // touching digits: try 1-3 pieces, cut anywhere near the expected places, keep the reading that matches the font best
-    var ww=R0-L0, bestR=null, maxN=Math.max(1,Math.min(3,Math.round(ww/(h*0.45))));
+    var ww=R0-L0, bestR=null, maxN=Math.max(1,Math.min(3,Math.floor((ww+h*0.1)/(h*0.55))));
     var tryCuts=function(cuts){ var rr=[]; for(var j=0;j<cuts.length-1;j++){ if(cuts[j+1]-cuts[j]<h*0.3) return; rr.push(part(cuts[j],cuts[j+1])); }
       var sc=rr.reduce(function(a,q){ return a+q.s; },0)/rr.length-(rr.length-1)*0.03; if(rr.some(function(q){ return q.d==="?"; })) sc-=1; if(!bestR || sc>bestR.sc) bestR={sc:sc, r:rr}; };
     tryCuts([L0,R0]);
