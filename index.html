@@ -654,7 +654,7 @@ pre.raw{white-space:pre-wrap;font-size:12px;background:var(--surface-2);padding:
 <script>
 (function(){
 "use strict";
-var APP_VERSION = "2.8.7";
+var APP_VERSION = "2.8.8";
 // Public OAuth client id (not a secret). Web client, authorized JavaScript origins:
 //   https://mrmitchell68.github.io   and   http://localhost:8766
 // Leave empty until that client exists — Save-to-Drive is hidden and the button uses the Android share sheet.
@@ -2537,35 +2537,36 @@ function mscrRead(src, onProg){
 // label → boxes to its right (key/value), every uncertain box is OCR'd again on its own. To add a screen add a YZ_DEFS entry.
 var YZ_W = 2400;
 function yzG(h,d){ return [h,d]; }
-var YZ_COLS3 = [yzG(/^p?ress/i,0), yzG(/^veloc/i,0), yzG(/^to$/i,2)], YZ_COLSF = [yzG(/^force/i,0), yzG(/^veloc/i,0), yzG(/^to$/i,2)];
-var YZ_MODE=/^(no|none|pos\w*|time|continu\w*|shake)$/i;
+var YZ_COLS3 = [yzG(/^p?ress/i,0), yzG(/^vel[oa0]/i,0), yzG(/^to$/i,2)], YZ_COLSF = [yzG(/^force/i,0), yzG(/^vel[oa0]/i,0), yzG(/^to$/i,2)];
+var YZ_MODE=/^(no|none|pos\w*|time|continu\w*|shake|hold)$/i;
 var YZ_DEFS = [
  {id:"yz-mold", sig:[/protect\s*time/i, /protect\s*from/i, /clamp\s*force/i, /smart\s*mold/i, /(^|\s)c?lose$/i, /(^|\s)(ld\s*|old\s*|mold\s*)?open$/i, /mold\s*adj/i, /lubrica/i], tab:/^mold$/i, title:"Yizumi Mold (clamp)", titles:[/^mold\s*close$/i, /^mold\s*open$/i],
   grids:[{k:"cl", pw:/c?lose$/i, panel:/^mold\s*close$/i, cols:YZ_COLS3, rows:["1","2","3","pr","hp"]}, {k:"op", pw:/open$/i, panel:/^mold\s*open$/i, cols:YZ_COLS3, rows:["1","2","3","E"]}],
-  kvs:[["prot",/mold\s*protect\s*time/i,2,1],["protFT",/protect\s*from/i,2,2],["force",/clamp\s*force/i,1,1]],
+  kvs:[["prot",/mold\s*protect\s*time/i,2,1],["protFT",/protect\s*from/i,2,2],["force",/clamp\s*force/i,2,1]],
   fields:{close_press:["cl1.0","cl2.0","cl3.0"], close_speed:["cl1.1","cl2.1","cl3.1"], close_int:["cl1.2","cl2.2","cl3.2"],
     open_press:["op1.0","op2.0","op3.0","opE.0"], open_speed:["op1.1","op2.1","op3.1","opE.1"], open_int:["op1.2","op2.2","op3.2","opE.2"], clamp_tonnage:["force.0"]},
-  notes:[["Mold protect psi/%/in",["clpr.0","clpr.1","clpr.2"]],["High pressure psi/%",["clhp.0","clhp.1"]],["Mold protect time s",["prot.0","prot.1"]],["Protect from-to in",["protFT.0","protFT.1"]],["Actual clamp force US ton",["force.0"]]]},
+  notes:[["Mold protect psi/%/in",["clpr.0","clpr.1","clpr.2"]],["High pressure psi/%",["clhp.0","clhp.1"]],["Mold protect time s",["prot.0","prot.1"]],["Protect from-to in",["protFT.0","protFT.1"]],["Clamp force US ton (actual / set)",["force.0","force.1"]],["Mold close stages",["clStages"]],["Mold open stages",["opStages"]]]},
  {id:"yz-inject", sig:[/^in[jil]ect$/i, /cut\s*off/i, /plasticize\s*stroke/i, /max\.?\s*veloc/i, /inject\s*time/i, /inject\s*pressure/i, /valve\s*gat/i, /^hold$/i, /inj\.?\s*graph/i], tab:/^inject/i, title:"Yizumi Injection", titles:[/^inject$/i, /^cut\s*off$/i, /allowable/i],
   grids:[{k:"in", panel:/^inject$/i, cols:YZ_COLS3, rows:["1","2","3","E"]}],
-  kvs:[["stroke",/plasticize\s*stroke/i,1,2],["allow",/allowable/i,1,0],["coPos",/screw\s*position/i,2,2],["coTime",/^inject\s*time/i,2,[2,1]],["coPress",/^inject\s*pressure/i,1,0,"last"],["coAct",/activation/i,1,2],["injP",/^inject\s*pressure/i,1,0],["maxV",/max\.?\s*veloc/i,1,1]],
+  kvs:[["stroke",/plasticize\s*stroke/i,1,2],["allow",/allowable/i,1,0],["coPos",/screw\s*position/i,2,2],["coTime",/^inject\s*time/i,2,[2,1]],["coPress",/^inject\s*pressure/i,1,0,"last"],["coAct",/activation/i,1,2],["injP",/^inject\s*pressure/i,1,0,"first"],["maxV",/max\.?\s*veloc/i,1,1]],
   fields:{inj_press:["in1.0","in2.0","in3.0","inE.0"], inj_speed:["in1.1","in2.1","in3.1","inE.1"], inj_int:["in1.2","in2.2","in3.2"], switchover:["coPos.1"]},
-  notes:[["Inject pressure psi",["injP.0"]],["Plasticize stroke in",["stroke.0"]],["Max. velocity mm/s",["maxV.0"]],["Allowable inject pressure psi",["allow.0"]],["Cut off: screw position in (actual / set)",["coPos.0","coPos.1"]],["Cut off: inject time s (actual / set)",["coTime.0","coTime.1"]],["Cut off: inject pressure psi",["coPress.0"]],["Cut off activation position in",["coAct.0"]]]},
+  cutoff:[["Screw position",/screw\s*position$/i,"coPos"],["Inject time",/inject\s*time$/i,"coTime"],["Inject pressure",/inject\s*pressure$/i,"coPress"]],
+  notes:[["Cut off: switch-over on (ticked)",["coMode"]],["Inject pressure psi",["injP.0"]],["Plasticize stroke in",["stroke.0"]],["Max. velocity mm/s",["maxV.0"]],["Allowable inject pressure psi",["allow.0"]],["Cut off: screw position in (actual / set)",["coPos.0","coPos.1"]],["Cut off: inject time s (actual / set)",["coTime.0","coTime.1"]],["Cut off: inject pressure psi",["coPress.0"]],["Cut off activation position in",["coAct.0"]],["Inject stages",["inStages"]]]},
  {id:"yz-plast", sig:[/backpress/i, /delay\s*plast/i, /compression/i, /green\s*plast/i, /act\s*back/i, /screw\s*revol/i, /and\s*backpressure/i], tab:/^plast/i, title:"Yizumi Plasticize", titles:[/plasticize\s*and/i, /^decompression$/i, /delay\s*plast/i],
   grids:[{k:"pl", panel:/plasticize\s*and/i, cols:[yzG(/^back/i,0), yzG(/^charge/i,0), yzG(/^to$/i,2)], rows:["E"]}],
-  kvs:[["dly",/delay\s*plast/i,2,2],["decB",/(ression|ompression|^)\s*before\s*plast/i,4,[0,0,2,1],null,{mode:"decB.mode"}],["decA",/(ression|ompression|^)\s*after\s*plast/i,4,[0,0,2,1],null,{mode:"decA.mode"}],["plPos",/^screw\s*position/i,1,2],["plRev",/screw\s*revol/i,1,1],["plBP",/act\.?\s*back/i,1,0]],
-  texts:[["decB.mode",/before\s*plast/i,YZ_MODE],["decA.mode",/after\s*plast/i,YZ_MODE]],
+  kvs:[["dly",/delay\s*p[il1]?ast/i,2,2],["decB",/(ression|ompression|^)\s*before\s*plast/i,4,[0,0,2,1],null,{mode:"decB.mode"}],["decA",/(ression|ompression|^)\s*after\s*plast/i,4,[0,0,2,1],null,{mode:"decA.mode"}],["plPos",/^screw\s*position/i,1,2],["plRev",/screw\s*revol/i,1,1],["plBP",/act\.?\s*back/i,1,0],["plP",/^pressure$/i,1,0,"first"]],
+  texts:[["decB.mode",/before\s*plast/i,YZ_MODE],["decA.mode",/after\s*plast/i,YZ_MODE]], twins:[[/before\s*plast/i, /after\s*plast/i, "Decompression after plasticize"]],
   fields:{back_press:["plE.0"], screw_speed:["plE.1"], screw_int:["plE.2"], charge_delay:["dly.1"], suck_back:["decA.2"]},
-  notes:[["Delay plast (charge delay) s actual / set",["dly.0","dly.1"]],["Suck back before charging (decompression before plasticize) mode",["decB.mode"]],["Suck back before charging psi / % / in / s",["decB.0","decB.1","decB.2","decB.3"]],["Suck back after charging (decompression after plasticize) mode",["decA.mode"]],["Suck back after charging psi / % / in / s",["decA.0","decA.1","decA.2","decA.3"]],["Screw position in (live)",["plPos.0"]],["Screw revolution rpm (live)",["plRev.0"]],["Act. back pressure psi (live)",["plBP.0"]]]},
+  notes:[["Delay plast (charge delay) s actual / set",["dly.0","dly.1"]],["Suck back before charging (decompression before plasticize) mode",["decB.mode"]],["Suck back before charging psi / % / in / s",["decB.0","decB.1","decB.2","decB.3"]],["Suck back after charging (decompression after plasticize) mode",["decA.mode"]],["Suck back after charging psi / % / in / s",["decA.0","decA.1","decA.2","decA.3"]],["Screw position in (live)",["plPos.0"]],["Screw revolution rpm (live)",["plRev.0"]],["Act. back pressure psi (live)",["plBP.0"]],["Pressure psi (live)",["plP.0"]],["Plasticize stages",["plStages"]]]},
  {id:"yz-heat", sig:[/heating\s*zones/i, /tol\.?\s*(high|low)/i, /standby/i, /^(mon|tues|wednes|thurs|fri|satur|sun)day$/i, /optimize\s*nozzle/i, /keep\s*warm/i, /cool\s*prevent/i, /auto\s*heating/i], tab:/^heat/i, title:"Yizumi Heating", titles:[/heating\s*zones/i, /auto\s*heating/i, /tol\.?\s*high/i],
-  grids:[], kvs:[["set",/^set$/i,8,1],["tolH",/tol\.?\s*high/i,8,1,null,{col:"set"}],["tolL",/tol\.?\s*low/i,8,1,null,{col:"set"}],["outp",/^[oq0]u?tput$/i,8,1,null,{col:"set"}],["stby",/standby/i,1,0],["oil",/^oil$/i,1,0]], above:[["act","set",1]],
+  grids:[], kvs:[["set",/^set$/i,8,1],["tolH",/tol\.?\s*high/i,8,1,null,{col:"set"}],["tolL",/tol\.?\s*low/i,8,1,null,{col:"set"}],["outp",/^[oq0]u?tput$/i,8,1,null,{col:"set"}],["stby",/standby/i,1,0],["oil",/^oil$/i,1,0],["cpt",/cool\s*prevent/i,2,1]], above:[["act","set",1]],
   fields:{zone1:["set.0"],zone2:["set.1"],zone3:["set.2"],zone4:["set.3"],zone5:["set.4"],zone6:["set.5"],zone7:["set.6"],zone8:["set.7"],oil_temp:["oil.0"]},
-  notes:[["Zone actual °F (nozzle end at left)",["act.0","act.1","act.2","act.3","act.4","act.5","act.6","act.7"]],["Heater output % (zones 1-8)",["outp.0","outp.1","outp.2","outp.3","outp.4","outp.5","outp.6","outp.7"]],["Tolerance high °F (zones 1-8)",["tolH.0","tolH.1","tolH.2","tolH.3","tolH.4","tolH.5","tolH.6","tolH.7"]],["Tolerance low °F (zones 1-8)",["tolL.0","tolL.1","tolL.2","tolL.3","tolL.4","tolL.5","tolL.6","tolL.7"]],["Standby temperature °F",["stby.0"]],["Oil °F",["oil.0"]]]},
+  notes:[["Zone actual °F (nozzle end at left)",["act.0","act.1","act.2","act.3","act.4","act.5","act.6","act.7"]],["Heater output % (zones 1-8)",["outp.0","outp.1","outp.2","outp.3","outp.4","outp.5","outp.6","outp.7"]],["Tolerance high °F (zones 1-8)",["tolH.0","tolH.1","tolH.2","tolH.3","tolH.4","tolH.5","tolH.6","tolH.7"]],["Tolerance low °F (zones 1-8)",["tolL.0","tolL.1","tolL.2","tolL.3","tolL.4","tolL.5","tolL.6","tolL.7"]],["Standby temperature °F",["stby.0"]],["Oil °F",["oil.0"]],["Cool prevent time min (actual / set)",["cpt.0","cpt.1"]]]},
  {id:"yz-eject", sig:[/(ject|ctor|tor)\s*forward$/i, /(ject|ctor|tor)\s*backward$/i, /ejector\s*mode/i, /shake/i, /fwd\s*delay/i, /backword/i, /air\s*valve/i, /continuous/i], tab:/^eject/i, title:"Yizumi Ejector", titles:[/ejector\s*forward/i, /ejector\s*backward/i, /shake/i],
   grids:[{k:"ef", panel:/ejector\s*forward/i, cols:YZ_COLSF, rows:["1","2","3","E"]}, {k:"eb", panel:/ejector\s*backward/i, cols:YZ_COLSF, rows:["1","2","3","E"]}],
   kvs:[["shake",/shake\s*counter/i,1,0]], texts:[["mode",/ejector\s*mode/i,YZ_MODE]],
   fields:{ej_fwd_press:["ef1.0","ef2.0","ef3.0","efE.0"], ej_fwd_speed:["ef1.1","ef2.1","ef3.1","efE.1"], ej_fwd_int:["ef1.2","ef2.2","ef3.2","efE.2"], ej_strokes:["shake.0"], ej_back_press:["eb1.0","eb2.0","eb3.0","ebE.0"], ej_back_speed:["eb1.1","eb2.1","eb3.1","ebE.1"], ej_back_set:["eb1.2","eb2.2","eb3.2","ebE.2"]},
-  notes:[["Ejector mode",["mode"]]]},
+  notes:[["Ejector mode",["mode"]],["Ejector forward stages",["efStages"]],["Ejector backward stages",["ebStages"]]]},
  {id:"yz-overview", sig:[/cycle\s*time\s*mach/i, /prod\.?\s*counter/i, /prod\.?\s*time/i, /mold\s*data/i, /cavity/i, /energy/i, /prod\s*info/i], tab:/^overvi/i, title:"Yizumi Overview", titles:[/prod\.?\s*counter/i, /cycle\s*delay/i, /plasticize\s*time/i, /decomp/i, /plast\s*end/i],
   grids:[], kvs:[["prod",/prod\.?\s*counter/i,2,0],["cdly",/cycle\s*delay/i,2,1],["cyc",/^cycle\s*time/i,2,1],["cool",/cooling\s*time/i,2,1],["mct",/mold\s*close\s*time/i,2,1],["mot",/mold\s*open\s*time/i,2,1],["ijt",/^injection\s*time/i,2,1],["plt",/plasticize\s*time/i,2,1],["dct",/decomp/i,2,1],["cush",/^cushion/i,1,2],["pend",/plast\s*end/i,1,2]],
   fields:{cycle:["cyc.1"], cooling:["cool.1"], cycle_int:["cdly.1"], cushion:["cush.0"]},
@@ -2609,7 +2610,7 @@ function yzMeanOf(sid, id, ks){ var z=/^zone(\d)$/.exec(id);
   if(z) return "Heat tab › Set °F, zone "+z[1]+(z[1]==="1"? " (nozzle end, at the left)" : "")+" — barrel heater setpoint";
   if(ks && ks.some(function(k){ return /^bm\./.test(k); })) return YZ_MEAN["strip:"+id]||"";
   return YZ_MEAN[sid+":"+id]||""; }
-var YZ_STRIP_NOTES=[["Top bar: ejector position in",["tb.ejPos"]],["Top bar: screw position in",["tb.screwPos"]],["Top bar: screw rpm",["tb.rpm"]],["Top bar: date / time",["tb.dateTime"]],["Top bar: mold position in",["tb.moldPos"]],["Top bar: nozzle position in",["tb.nozPos"]],["Top bar: injection pressure psi",["tb.injP"]],["Top bar: system pressure psi (circled F)",["tb.sysP"]],["Top bar: valve %",["tb.valve"]],
+var YZ_STRIP_NOTES=[["Top bar: ejector position in",["tb.ejPos"]],["Top bar: screw position in",["tb.screwPos"]],["Top bar: screw rpm",["tb.rpm"]],["Top bar: date / time",["tb.dateTime"]],["Top bar: mold position in",["tb.moldPos"]],["Top bar: nozzle position in",["tb.nozPos"]],["Top bar: injection pressure psi",["tb.injP"]],["Top bar: system pressure psi (circled F; 4P icon on HPM)",["tb.sysP"]],["Top bar: valve %",["tb.valve"]],
   ["Cycle monitor: running cycle s",["bm.run"]],["Cycle monitor: last cycle time s",["bm.last"]],["Cycle monitor: mold close s / mold open s",["bm.mc","bm.mo"]],["Cycle monitor: ejector fwd s / back s",["bm.ef","bm.eb"]],["Cycle monitor: other s",["bm.eo"]],["Cycle monitor: cooling elapsed s / cooling time s",["bm.coolEl","bm.cool"]],["Cycle monitor: injection time s",["bm.inj"]],["Cycle monitor: hold time s",["bm.hold"]],["Cycle monitor: plasticize (charge) time s",["bm.plast"]],["Cycle monitor: cushion in",["bm.cush"]],["Cycle monitor: switchover pressure psi",["bm.coP"]],["Cycle monitor: shot size in",["bm.shot"]],["Cycle monitor: clamp force US ton",["bm.clamp"]],["Cycle monitor: energy Wh",["bm.energy"]],["Cycle monitor: live system pressure psi",["bm.sysP"]]];
 var YZ_BRAND = [/yizumi/i, /^mold$/i, /^heating$/i, /^core/i, /\bhpm\b/i, /administrator/i, /^overvi/i, /^ejector$/i, /^injection$/i, /^plastic/i, /^nozzle$/i, /^heating$/i, /^produ/i, /^alarm$/i, /^return$/i, /^cooling$/i];
 // cheap look: big light-grey low-colour area + a small bright green block (the highlighted tab)
@@ -2668,6 +2669,32 @@ function yzFixDec(v, d, grid){ if(v==="" || d==null) return {v:v, ok:true}; var 
   if(n===d) return {v:v, ok:true};
   if(!p[1] && d>0 && v.length>d){ return {v:v.slice(0,v.length-d)+"."+v.slice(v.length-d), ok:false}; }  // dot lost in OCR
   if(d===0 && n) return {v:v, ok:false}; return {v:v, ok:false}; }
+// v2.8.8: header words missed in the photo (thin HPM font) — the stage labels (1, 2 … End) under the panel title with their
+// row of value boxes give the columns instead: the n-th box right of each label is column n
+function yzRowCols(P, gd, tt, def, lh){
+  var lim=tt.cy+lh*14; def.titles.concat(def.grids.map(function(g){ return g.panel; })).forEach(function(re){ yzFind(P, re).forEach(function(s){ if(s.cy>tt.cy+lh*1.5 && s.cy<lim) lim=s.cy; }); });
+  var labs=P.words.filter(function(w){ return w.cy>tt.cy+lh*1.5 && w.cy<lim-lh*0.5 && w.x1<tt.x1+lh*4 && /^(end|[1-9]|[Il|])$/i.test(w.t.replace(/[^A-Za-z0-9|]/g,"")); });
+  var n=gd.cols.length, rows=[];
+  labs.forEach(function(l){ var ns=P.nums.filter(function(w){ return Math.abs(w.cy-l.cy)<lh*0.6 && w.x0>l.x1+lh*0.5; }).sort(function(a,b){ return a.x0-b.x0; }), seq=[];
+    for(var i=0;i<ns.length && seq.length<n;i++){ var pv=seq[seq.length-1]; if(pv && ns[i].x0-pv.x1>lh*6) break; if(!pv && ns[i].x0-l.x1>lh*12) break; seq.push(ns[i]); }
+    if(seq.length===n && !rows.some(function(r){ return Math.abs(r.cy-l.cy)<lh*0.6; })) rows.push({cy:l.cy, xs:seq.map(function(w){ return w.cx; })}); });
+  if(!rows.length) return null; rows.sort(function(a,b){ return a.cy-b.cy; });
+  var xs=[]; for(var j=0;j<n;j++) xs.push(rows.reduce(function(a,r){ return a+r.xs[j]; },0)/rows.length);
+  for(j=1;j<n;j++) if(xs[j]-xs[j-1]<lh*2) return null;
+  var hy=rows[0].cy-lh*1.9; return xs.map(function(x, j){ return {t:"(col "+j+")", cx:x, cy:hy, x0:x-lh, x1:x+lh, y0:hy-lh*0.4, y1:hy+lh*0.4}; });
+}
+// v2.8.8: a mode box (No / Position / Continuous …) whose word the page read missed — read just that strip right of its label
+function yzModeName(mw){ return /^no(ne)?$/i.test(mw)? "No" : /^pos/i.test(mw)? "Position" : /^time$/i.test(mw)? "Time" : /^continu/i.test(mw)? "Continuous" : /^shake$/i.test(mw)? "Shake" : /^hold$/i.test(mw)? "Hold" : mw; }
+function yzModeRedo(wk, P0, pend, vals, lh){
+  if(!pend.length) return Promise.resolve();
+  return pend.reduce(function(p, m){ return p.then(function(){ var l=m.l, x0=Math.round(l.x1+lh*0.6), y0=Math.round(l.cy-lh*0.85), w=Math.round(Math.min(P0.W-x0, lh*13)), h=Math.round(lh*1.7); if(w<lh*3 || y0<0) return;
+      var c=document.createElement("canvas"), S=2; c.width=w*S+40; c.height=h*S+40; var g=c.getContext("2d"); g.fillStyle="#fff"; g.fillRect(0,0,c.width,c.height); g.drawImage(P0.g, x0, y0, w, h, 20, 20, w*S, h*S);
+      return wk.setParameters({tessedit_pageseg_mode:"7", tessedit_char_whitelist:""}).then(function(){ return wk.recognize(c); }).then(function(r){
+        var ws=(r.data.words||[]).map(function(x){ return {t:String(x.text||"").replace(/[^A-Za-z]/g,""), c:(x.confidence||0)/100}; }).filter(function(x){ return m.re.test(x.t); })[0];
+        if(window.__yzDbg) (window.__yzTry=window.__yzTry||[]).push([m.key,"mode",r.data.text]);
+        if(ws) vals[m.key]={v:yzModeName(ws.t), c:Math.min(0.6, Math.max(0.45, ws.c)), x0:x0, x1:x0+w, y0:y0, y1:y0+h, text:true}; }, function(){}); }); }, Promise.resolve())
+    .then(function(){ return wk.setParameters({tessedit_pageseg_mode:"11", tessedit_char_whitelist:""}); });
+}
 function yzWords(raw){
   var ws=(raw||[]).map(function(w){ var t=String(w.text||"").trim(); return {t:t, x0:w.bbox.x0, y0:w.bbox.y0, x1:w.bbox.x1, y1:w.bbox.y1, cx:(w.bbox.x0+w.bbox.x1)/2, cy:(w.bbox.y0+w.bbox.y1)/2, h:Math.max(1,w.bbox.y1-w.bbox.y0), c:(w.confidence||0)/100}; })
     .filter(function(w){ return w.t && w.h>4; });
@@ -2709,6 +2736,13 @@ function yzRectify(im){
   th=Math.round(dk+(th-dk)*0.6);   // dim screen edges still count; the bezel is far darker
   var M=new Uint8Array(N); for(i=0;i<N;i++) M[i]=L[i]>th? 1 : 0;
   var C=mscrComponents(M,W,H), k=C.comps.sort(function(a,b){ return b.n-a.n; })[0];
+  // v2.8.8: some Yizumi screens are cut into panels by dark divider bars, so the brightest blob is only one panel —
+  // close those thin gaps (the bezel around the screen is much wider) and use the joined screen when it is clearly bigger
+  var yzDil=function(A, r){ var B=new Uint8Array(N), x, y, d; for(y=0;y<H;y++) for(x=0;x<W;x++){ if(!A[y*W+x]) continue; for(d=-r;d<=r;d++){ var xx=x+d; if(xx>=0 && xx<W) B[y*W+xx]=1; } }
+    var Cc=new Uint8Array(N); for(y=0;y<H;y++) for(x=0;x<W;x++){ if(!B[y*W+x]) continue; for(d=-r;d<=r;d++){ var yy=y+d; if(yy>=0 && yy<H) Cc[yy*W+x]=1; } } return Cc; };
+  var Mc=yzDil(M,4); for(i=0;i<N;i++) Mc[i]=Mc[i]? 0 : 1; Mc=yzDil(Mc,4); for(i=0;i<N;i++) Mc[i]=Mc[i]? 0 : 1;
+  var C2=mscrComponents(Mc,W,H), k2=C2.comps.sort(function(a,b){ return b.n-a.n; })[0];
+  if(k && k2 && (k2.n>k.n*1.4 || (k2.n>k.n*1.12 && k.y0-k2.y0>H*0.05)) && k2.n<N*0.92 && !(k2.w>W*0.97 && k2.h>H*0.97)){ C=C2; k=k2; }
   if(!k || k.n<N*0.12 || k.n>N*0.92 || (k.w>W*0.97 && k.h>H*0.97)) return null;   // already fills the photo (or no clear screen)
   var best=[null,null,null,null], sc=[-1e9,-1e9,-1e9,-1e9];
   for(var y=k.y0;y<=k.y1;y++) for(var x=k.x0;x<=k.x1;x++){ if(C.L[y*W+x]!==k.id) continue; var s=[-x-y, x-y, x+y, -x+y];
@@ -2833,7 +2867,7 @@ function yzReadGlyphs(ink, t){ var W=ink.W, out=[];
       var sw=X1-X0+1, sh=Y1-Y0+1, S=new Float32Array(sw*sh); for(y=0;y<sh;y++) for(x=0;x<sw;x++) S[y*sw+x]=A[(Y0+y)*w+X0+x];
       var z=yzGlyphNorm(S, sw, sh), cr=yzClassify(z); cr.z=z; cr.ar=sw/h; if(sw<h*0.33){ cr.s-=0.2; } return cr; };
     // touching digits: try 1-3 pieces, cut anywhere near the expected places, keep the reading that matches the font best
-    var ww=R0-L0, bestR=null, maxN=Math.max(1,Math.min(3,Math.round(ww/(h*0.45))));
+    var ww=R0-L0, bestR=null, maxN=Math.max(1,Math.min(3,Math.floor((ww+h*0.1)/(h*0.55))));
     var tryCuts=function(cuts){ var rr=[]; for(var j=0;j<cuts.length-1;j++){ if(cuts[j+1]-cuts[j]<h*0.3) return; rr.push(part(cuts[j],cuts[j+1])); }
       var sc=rr.reduce(function(a,q){ return a+q.s; },0)/rr.length-(rr.length-1)*0.03; if(rr.some(function(q){ return q.d==="?"; })) sc-=1; if(!bestR || sc>bestR.sc) bestR={sc:sc, r:rr}; };
     tryCuts([L0,R0]);
@@ -2869,7 +2903,10 @@ var YZ_STRIPS={
              {dy:76, cols:[0,434,804,1157,1506], keys:["tb.moldPos","tb.nozPos","tb.injP","tb.sysP","tb.valve"], dec:[2,2,0,0,0]}], pitch:380},
   mon:{rows:[{dy:0, cols:[0,338,677,1017,1358,1694,2038], keys:["bm.run","bm.last","bm.mc","bm.mo","bm.ef","bm.eb","bm.eo"], dec:[1,1,1,1,1,1,1]},
              {dy:103, cols:[0,338,677,1017,1358,1694,2038], keys:["bm.coolEl","bm.cool","bm.inj","bm.hold","bm.plast","bm.cush","bm.coP"], dec:[1,1,2,1,2,2,0]},
-             {dy:208, cols:[0,339,663,1019], keys:["bm.shot","bm.clamp","bm.energy","bm.sysP"], dec:[2,0,2,0]}], pitch:340}
+             {dy:208, cols:[0,339,663,1019], keys:["bm.shot","bm.clamp","bm.energy","bm.sysP"], dec:[2,0,2,0]}], pitch:340},
+  // v2.8.8: HPM-badged Yizumi top bar — row 1 ejector in | screw in | Ⓟ psi | valve % | system psi | date time, row 2 mold in | rpm | status
+  topH:{rows:[{dy:0, cols:[0,397,726,1016,1345], keys:["tb.ejPos","tb.screwPos","tb.injP","tb.valve","tb.sysP"], dec:[2,2,1,1,1]},
+              {dy:72, cols:[0,395], keys:["tb.moldPos","tb.rpm"], dec:[2,0]}], pitch:400}
 };
 function yzDec(v, d, c){ var neg=/^-/.test(v), ds=String(v).replace(/[^0-9]/g,""), had=String(v).indexOf("."), out;
   if(!ds) return {v:"", c:0};
@@ -2888,20 +2925,31 @@ function yzTplFit(NT, T, sl, W, y0, y1){
       var ox=A.x1-s*r.cols[a], oy=cyc(A)-s*r.dy, q=score(s, ox, oy); if(!best || q.n>best.n || (q.n===best.n && q.cs>best.cs)) best=q; } }); }); });
   return best; }
 function yzStrips(P, P0, vals, sl, out){
-  var NT=P.nums.filter(function(t){ return t.tok; }), H=P0.H, W=P0.W;
-  [["top",0,H*0.16],["mon",H*0.55,H]].forEach(function(z){ var T=YZ_STRIPS[z[0]], f=yzTplFit(NT, T, sl, W, z[1], z[2]); if(!f || f.n<3) return;
+  var NT=P.nums.filter(function(t){ return t.tok; }), H=P0.H, W=P0.W, lh0=P.lh||30;
+  [["top",0,H*0.16],["mon",H*0.55,H]].forEach(function(z){ var T=YZ_STRIPS[z[0]], f=yzTplFit(NT, T, sl, W, z[1], z[2]);
+    if(z[0]==="top"){ var fh=yzTplFit(NT, YZ_STRIPS.topH, sl, W, z[1], z[2]); var hSign=P.words.some(function(w){ return w.cy<H*0.16 && (/^\d{1,2}\/\d{1,2}\/\d{2}$/.test(w.t) || /^admini/i.test(w.t)); });
+      if(fh && ((hSign && fh.n>=4 && (!f || fh.n>=f.n)) || (fh.n>=6 && (!f || fh.n>f.n+2)))){ f=fh; z=["topH"]; T=YZ_STRIPS.topH; } }
+    if(!f || f.n<3) return;
     Object.keys(f.got).forEach(function(k){ var g=f.got[k], t=g.t, tv=t.v, tc=t.c;
       // "1.89" sometimes splits at its decimal point: the whole part sits just left of the box's token
       if(g.d>0 && String(tv).indexOf(".")<0 && P.tok){ var L=P.tok.filter(function(u){ return u!==t && u.td && !/\?/.test(u.td) && u.td.length<=2 && u.x1<t.x0 && t.x0-u.x1<t.h*0.7 && t.x0-u.x1>=t.h*0.12 && Math.abs(u.cy-t.cy)<t.h*0.35 && Math.abs(u.h-t.h)<t.h*0.25; }).sort(function(a,b){ return b.x1-a.x1; })[0];
         if(L){ tv=L.td.replace(/^0+(?=\d)/,"")+"."+String(tv).replace(/\D/g,""); tc=Math.min(tc, L.c||0.45, 0.75); } }
-      if(f.n<5) tc=Math.min(tc,0.55);   // few boxes matched the strip layout (photo cropped there) → Allen checks it
+      if(f.n<(z[0]==="topH"? 4 : 5)) tc=Math.min(tc,0.55);   // few boxes matched the strip layout (photo cropped there) → Allen checks it
       var r=yzDec(tv, g.d, tc); if(!r.v) return;
       vals[k]={v:r.v, c:+r.c.toFixed(2), x0:t.x0, x1:t.x1, y0:t.y0, y1:t.y1, state:"read", strip:z[0]}; });
     if(z[0]==="top"){ // date + time sit right of the rpm box on the first row
       var r0=f.oy, px=f.ox+f.s*804; var dt=NT.filter(function(t){ return Math.abs(t.cy-sl*(t.cx-W/2)-r0)<t.h*0.6 && t.x0>px+f.s*60 && t.x1<f.ox+f.s*1506; }).sort(function(a,b){ return a.x0-b.x0; });
       var d6=dt.filter(function(t){ return String(t.v).replace(/\D/g,"").length===6; })[0], tm=dt.filter(function(t){ return d6 && t.x0>d6.x1 && String(t.v).replace(/\D/g,"").length===4; })[0];
       if(d6){ var a=String(d6.v).replace(/\D/g,""), txt=a.slice(0,2)+"-"+a.slice(2,4)+"-"+a.slice(4); if(tm){ var b=String(tm.v).replace(/\D/g,""); txt+=" "+b.slice(0,2)+":"+b.slice(2); }
-        vals["tb.dateTime"]={v:txt, c:Math.min(d6.c, tm? tm.c : 0.4), x0:d6.x0, x1:(tm||d6).x1, y0:d6.y0, y1:d6.y1, state:"read", strip:"top"}; } } });
+        vals["tb.dateTime"]={v:txt, c:Math.min(d6.c, tm? tm.c : 0.4), x0:d6.x0, x1:(tm||d6).x1, y0:d6.y0, y1:d6.y1, state:"read", strip:"top"}; } }
+    if(z[0]==="topH"){ // date "10/23/26" + time "1:18" + AM/PM right of the system pressure box (US format on this machine)
+      var r1=f.oy, px2=f.ox+f.s*1345, cyw=function(t){ return t.cy-sl*(t.cx-W/2); };
+      var dw=P.words.filter(function(w){ return Math.abs(cyw(w)-r1)<lh0*0.9 && w.x0>px2+f.s*40; }).sort(function(a,b){ return a.x0-b.x0; });
+      var dd=dw.filter(function(w){ return /^\d{1,2}[\/7]\d{1,2}[\/7]\d{2}$/.test(w.t) && /\//.test(w.t); })[0], tw=dd && dw.filter(function(w){ return w.x0>dd.x1 && /^\d{1,2}[:.]\d{2}$/.test(w.t); })[0], ap=tw && dw.filter(function(w){ return w.x0>tw.x1 && /^[AP]M$/i.test(w.t); })[0];
+      if(!dd){ var t8=NT.filter(function(t){ return Math.abs(cyw(t)-r1)<t.h*0.6 && t.x0>px2+f.s*40 && /^\d{2}[71]\d{2}[71]\d{2}$/.test(String(t.v).replace(/\D/g,"")); })[0];
+        if(t8){ var a8=String(t8.v).replace(/\D/g,""); dd={t:a8.slice(0,2)+"/"+a8.slice(3,5)+"/"+a8.slice(6), x0:t8.x0, x1:t8.x1, y0:t8.y0, y1:t8.y1, c:Math.min(t8.c,0.5)}; tw=NT.filter(function(t){ return Math.abs(cyw(t)-r1)<t.h*0.6 && t.x0>t8.x1 && t.x0-t8.x1<t8.h*3 && /^\d{1,2}\.\d{2}$/.test(String(t.v)); })[0]; if(tw) tw={t:String(tw.v).replace(".",":"), x1:tw.x1, c:tw.c}; } }
+      if(dd && /^(0?[1-9]|1[0-2])\/(0?[1-9]|[12]\d|3[01])\/\d{2}$/.test(dd.t)){ var tt2=dd.t+(tw && /^(0?[1-9]|1[0-2])[:.][0-5]\d$/.test(tw.t)? " "+tw.t.replace(".",":")+(ap? " "+ap.t.toUpperCase() : "") : "");
+        vals["tb.dateTime"]={v:tt2, c:Math.min(dd.c==null? 0.6 : dd.c, tw && tw.c!=null? tw.c : 0.6, ap? 1 : 0.55), x0:dd.x0, x1:(ap||tw||dd).x1, y0:dd.y0, y1:dd.y1, state:"read", strip:"top"}; } } });
 }
 // read one Yizumi photo → same result shape as mscrRead
 function yzRead(im, onProg, pre){
@@ -2941,6 +2989,11 @@ function yzRead(im, onProg, pre){
       var tN=best? best.def.titles.filter(function(re){ return yzFind(P, re).length; }).length : 0;   // v2.8.4: real photos — the tab strip is small/glary, the panel titles are not
       if(!best || best.sc<0.6 || (brand<3 && tN<2 && best.sg<2 && !(best.tabHit && best.sg>=1))){ out.unknown=true; return restore(); }
       var def=best.def; out.screen={id:def.id, title:def.title, tab:tabName, kw:+best.sc.toFixed(2)};
+      // v2.8.8: a row label too blurred to read, right under its twin (Decompression after plasticize under … before plasticize) — the row below stands in for it
+      (def.twins||[]).forEach(function(tw){ if(yzFind(P, tw[1]).length) return; var a=yzFind(P, tw[0])[0]; if(!a) return;
+        var below=P.nums.filter(function(n){ return n.cy>a.cy+lh*1.2 && n.cy<a.cy+lh*3.2 && n.x0>a.x1; }).sort(function(x,y){ return x.cy-y.cy; })[0]; if(!below) return;
+        var cy=below.cy, row=P.nums.filter(function(n){ return Math.abs(n.cy-cy)<lh*0.6 && n.x0>a.x1; }); if(row.length<2) return;
+        P.segs.push({t:tw[2], x0:a.x0, x1:a.x1, y0:cy-lh*0.5, y1:cy+lh*0.5, cy:cy, cx:(a.x0+a.x1)/2, ws:[], synth:true}); });
       // panel bounds: from its title down to the next panel title below it
       var titleY=[]; YZ_DEFS.forEach(function(d){ d.titles.slice(0,2).forEach(function(re){ yzFind(P, re).forEach(function(s){ titleY.push(s.cy); }); }); });
       var tabY=P.words.filter(function(w){ return /^(overvi|alarm|return|produ)/i.test(w.t); }).map(function(w){ return w.y0; }); var bottom=Math.min(tabY.length? Math.min.apply(null,tabY) : P0.H, P0.tab? P0.tab.y0 : P0.H);
@@ -2950,6 +3003,7 @@ function yzRead(im, onProg, pre){
         var hdOf=function(tt){ var cs=gd.cols.map(function(cdef){ return yzFind(P, cdef[0], {y0:tt.cy, y1:tt.cy+lh*6, words:true}); }), bestH=null;   // v2.8.5: the column headers sit on one line, left to right (not "Inject pressure" / "Max. velocity" further right)
           cs.forEach(function(cl, ai){ cl.forEach(function(an){ var set=gd.cols.map(function(c, j){ if(j===ai) return an; return cs[j].filter(function(w){ return Math.abs(w.cy-an.cy)<lh*0.8 && (j>ai? w.cx>an.cx : w.cx<an.cx) && Math.abs(w.cx-an.cx)<lh*10*Math.abs(j-ai); }).sort(function(a,b){ return Math.abs(a.cx-an.cx)-Math.abs(b.cx-an.cx); })[0]||null; });
             var n=set.filter(Boolean).length, dd=Math.hypot(an.cx-tt.x1, an.cy-tt.cy), sc=n-dd/(lh*8); if(!bestH || sc>bestH.sc) bestH={set:set, n:n, d:dd, sc:sc}; }); });
+          if((!bestH || bestH.n<2) && P.tok && tt.t!=="(header)"){ var rc=yzRowCols(P, gd, tt, def, lh); if(rc) return rc; }
           return bestH && bestH.n>=2? bestH.set : gd.cols.map(function(){ return null; }); }; var okH=function(h){ return h.filter(Boolean).length>=2; };
         if(!tt || !okH(hdOf(tt))){ tt=null; // v2.8.4: title missed (glare) or cropped off the photo → the grid's own header row (Pressure|Force + Velocity side by side)
           var hc=P.words.filter(function(w){ return gd.cols[0][0].test(w.t) && P.words.some(function(v){ return (gd.cols[1][0].test(v.t) && Math.abs(v.cy-w.cy)<lh*0.8 && v.x0>w.x1 && v.x0-w.x1<lh*4) || (/^psi$/i.test(v.t) && v.cy>w.cy+lh*0.4 && v.cy<w.cy+lh*2.2 && Math.abs(v.cx-w.cx)<lh*1.5); }); }).sort(function(a,b){ return a.cy-b.cy; });
@@ -2985,12 +3039,30 @@ function yzRead(im, onProg, pre){
           gd.cols.forEach(function(cdef, ci){ var w=r && r.ws.filter(function(w){ return Math.abs(w.cx-xs[ci])<sp*0.5; })[0];
             var bw=sp*0.42; cells.push({key:gd.k+rk+"."+ci, w:w||null, ghost:!!(P.tok && r && !w), v:w? w.v : "", c:w? w.c : 0, x0:xs[ci]-bw, x1:xs[ci]+bw, y0:cy-lh*0.85, y1:cy+lh*0.85, d:cdef[1], rows:rows.length, want:gd.rows.length}); }); });
       });
+      // v2.8.8: Overview barrel strip — one box per heater zone (nozzle at the left) on a regular pitch; boxes the token pass missed get a box read of their own
+      var yzSlope0=0;
+      if(def.barrel && P.tok){ var bt=P.nums.filter(function(b){ return /^\d{3}\.\d$/.test(b.v) && b.cy<P0.H*0.45 && b.tok; }), bg=[];
+        bt.forEach(function(b){ var g=bg.find(function(g){ return Math.abs(g.cy-b.cy)<lh*0.7; }); if(g) g.b.push(b); else bg.push({cy:b.cy, b:[b]}); });
+        bg.sort(function(a,b){ return b.b.length-a.b.length; }); var B0=bg[0];
+        if(B0 && B0.b.length>=3){ B0.b.sort(function(a,b){ return a.cx-b.cx; }); var dxs=[]; for(var bi=1;bi<B0.b.length;bi++) dxs.push(B0.b[bi].cx-B0.b[bi-1].cx);
+          var mdx=Math.min.apply(null, dxs), pit=dxs.reduce(function(a,d){ return a+d/Math.max(1,Math.round(d/mdx)); },0)/dxs.length, x0b=B0.b[0].cx, bw2=B0.b[0].w/2+lh*0.3;
+          if(pit>lh*2.5){ var idx=B0.b.map(function(b){ return Math.round((b.cx-x0b)/pit); }), lo=Math.max(-3, -Math.floor((x0b-lh*2)/pit)), hi=Math.max.apply(null, idx)+1;
+            while(hi-lo+1>10) { if(-lo>hi-Math.max.apply(null, idx)) lo++; else hi--; }
+            for(var ix=lo; ix<=hi; ix++){ var cx2=x0b+ix*pit; if(cx2+bw2>P0.W) break; var bb2=B0.b[idx.indexOf(ix)]||null, ccy=B0.cy+yzSlope0*(cx2-x0b);
+              cells.push({key:"brl."+(ix+20), w:bb2, ghost:!bb2, v:bb2? bb2.v : "", c:bb2? bb2.c : 0, x0:cx2-bw2, x1:cx2+bw2, y0:ccy-lh*0.8, y1:ccy+lh*0.8, d:1}); } } } }
+      // v2.8.8: "Stages [n]" at the right end of each grid panel's title bar — how many stages are set
+      def.grids.forEach(function(gd){ var tt=yzFind(P, gd.panel)[0]; if(!tt) return;
+        var sl2=yzFind(P, /^stages?$/i).concat(yzFind(P, /stages?$/i)).filter(function(l){ return Math.abs(l.cy-tt.cy)<lh*1.5 && l.x0>tt.x1; }).sort(function(a,b){ return Math.abs(a.cy-tt.cy)-Math.abs(b.cy-tt.cy); })[0]; if(!sl2) return;
+        var w=P.nums.filter(function(n){ return Math.abs(n.cy-sl2.cy)<lh*0.8 && n.x0>sl2.x1-lh*0.2 && n.x0-sl2.x1<lh*9 && /^\d$/.test(String(n.v)); }).sort(function(a,b){ return a.x0-b.x0; })[0];
+        var bx=sl2.x1+lh*3; cells.push({key:gd.k+"Stages", w:w||null, v:w? String(w.v) : "", c:w? w.c : 0, x0:w? w.x0-lh*0.3 : sl2.x1+lh, x1:w? w.x1+lh*0.3 : bx+lh*2, y0:sl2.cy-lh*0.8, y1:sl2.cy+lh*0.8, d:0}); });
       var yzSl=(function(){ var sl=[]; P.nums.forEach(function(a){ P.nums.forEach(function(b){ var dx=b.cx-a.cx; if(dx>lh*2 && dx<lh*14 && Math.abs(b.cy-a.cy)<lh*0.9) sl.push((b.cy-a.cy)/dx); }); });
         sl.sort(function(a,b){ return a-b; }); var m=sl.length>=4? sl[sl.length>>1] : 0; return Math.max(-0.12, Math.min(0.12, m)); })();  // v2.8.4: angled photo → rows slope
       if(window.__yzDbg) window.__yzSlope=yzSl;
       def.kvs.forEach(function(kd){
-        var ls=yzFind(P, kd[1]); if(kd[4]==="last") ls.sort(function(a,b){ return b.cy-a.cy; }); var l=ls[0]; if(!l) return;
+        var ls=yzFind(P, kd[1]); if(kd[4]==="last") ls.sort(function(a,b){ return b.cy-a.cy; }); if(kd[4]==="first") ls.sort(function(a,b){ return a.cy-b.cy; }); var l=ls[0]; if(!l) return;
         var ns=P.nums.filter(function(w){ return Math.abs(w.cy-l.cy-yzSl*(w.cx-l.cx))<lh*0.6 && w.x0>l.x1-lh*0.2; }).sort(function(a,b){ return a.x0-b.x0; });
+        if(kd[5] && kd[5].mode){ var mw0=P.words.filter(function(w){ return Math.abs(w.cy-l.cy)<lh*0.8 && w.x0>l.x1 && YZ_MODE.test(w.t.replace(/[^A-Za-z]/g,"")); }).sort(function(a,b){ return a.x0-b.x0; })[0];   // v2.8.8: letters of the mode box (Position) are not values
+          if(mw0){ var mx1=mw0.x1+lh*1.5; ns=ns.filter(function(w){ return w.x0>mx1 || w.x1<mw0.x0; }); } }
         if(P.tok && !ns.length){ // v2.8.7: photo — the value boxes can sit a little above/below the label's text line
           var nr=P.nums.filter(function(w){ return Math.abs(w.cy-l.cy-yzSl*(w.cx-l.cx))<lh*1.0 && w.x0>l.x1-lh*0.2 && w.x0<l.x1+lh*22; }).sort(function(a,b){ return a.x0-b.x0; })[0];
           if(nr){ var ry=nr.cy-yzSl*(nr.cx-l.cx); ns=P.nums.filter(function(w){ return Math.abs(w.cy-yzSl*(w.cx-l.cx)-ry)<lh*0.4 && w.x0>l.x1-lh*0.2; }).sort(function(a,b){ return a.x0-b.x0; }); } }
@@ -3008,24 +3080,45 @@ function yzRead(im, onProg, pre){
           var cx=w? w.cx : (ns.length? ns[ns.length-1].cx+(i-ns.length+1)*step : l.x1+lh*3+i*step), bw=w? (w.x1-w.x0)/2+lh*0.5 : lh*1.8;
           var ky=l.cy+yzSl*(cx-l.cx); cells.push({key:kd[0]+"."+i, w:w||null, v:w? w.v : "", c:w? w.c : 0, x0:cx-bw, x1:cx+bw, y0:ky-lh*0.85, y1:ky+lh*0.85, d:d}); }
       });
+      var modePend=[];
       (def.texts||[]).forEach(function(td){ var l=yzFind(P, td[1])[0]; if(!l) return; var r;
         if(td[2]){ // v2.8.7: a mode box (No / Position / Time / Continuous / Shake) — take the first mode word right of the label
           r=P.words.filter(function(w){ return Math.abs(w.cy-l.cy-yzSl*(w.cx-l.cx))<lh*0.8 && w.x0>l.x1+lh*0.3 && w.x0<l.x1+lh*14 && td[2].test(w.t.replace(/[^A-Za-z]/g,"")); }).sort(function(a,b){ return a.x0-b.x0; })[0];
-          if(r){ var mw=r.t.replace(/[^A-Za-z]/g,""); mw=/^no(ne)?$/i.test(mw)? "No" : /^pos/i.test(mw)? "Position" : /^time$/i.test(mw)? "Time" : /^continu/i.test(mw)? "Continuous" : /^shake$/i.test(mw)? "Shake" : mw;
+          if(!r) modePend.push({key:td[0], l:l, re:td[2]});
+          if(r){ var mw=r.t.replace(/[^A-Za-z]/g,""); mw=/^no(ne)?$/i.test(mw)? "No" : /^pos/i.test(mw)? "Position" : /^time$/i.test(mw)? "Time" : /^continu/i.test(mw)? "Continuous" : /^shake$/i.test(mw)? "Shake" : /^hold$/i.test(mw)? "Hold" : mw;
             vals[td[0]]={v:mw, c:0.75, x0:r.x0, x1:r.x1, y0:r.y0, y1:r.y1, text:true}; } return; }
         r=P.segs.filter(function(s){ return Math.abs(s.cy-l.cy)<lh*0.6 && s.x0>l.x1+lh; }).sort(function(a,b){ return a.x0-b.x0; })[0];
         if(r) vals[td[0]]={v:r.t, c:0.8, x0:r.x0, x1:r.x1, y0:r.y0, y1:r.y1}; });
+      // v2.8.8: Cut off — which switch-over conditions are ticked (green check left of each label); an unticked row's set box is greyed (not in use)
+      if(def.cutoff){ var cot=yzFind(P, /^cut\s*off$/i)[0], gd0=P0.g.getContext("2d"), tk=[], cls=[];
+        def.cutoff.forEach(function(cd){ var ls=yzFind(P, cd[1]).filter(function(l){ return !cot || (l.cy>cot.cy && l.cy<cot.cy+lh*9); }).sort(function(a,b){ return b.cy-a.cy; }), l=ls[0]; if(!l) return;
+          var fw=(l.ws||[]).filter(function(w){ return /^(screw|inject)/i.test(w.t.replace(/[^A-Za-z]/g,"")); })[0]; cls.push({cd:cd, l:l, lx:fw? fw.x0 : l.x0}); });
+        // the three labels are left-aligned; a tick can stick to its word and pull that edge left, so use the middle edge
+        var lxs=cls.map(function(c){ return c.lx; }).sort(function(a,b){ return a-b; }), lxm=lxs[lxs.length>>1];
+        cls.forEach(function(c){ var l=c.l, bX=Math.round(lxm-lh*3.0), bY=Math.round(l.cy-lh*0.45), bW=Math.round(lh*2.1), bH=Math.round(lh*0.9); if(bX<0 || bY<0) return;
+          var big=gd0.getImageData(Math.round(lxm-lh*3.4), Math.round(l.cy-lh), Math.round(lh*3.2), Math.round(lh*2)).data, sum=0, n=0; for(var i=0;i<big.length;i+=4){ sum+=big[i]; n++; } var mean=sum/n;
+          var id=gd0.getImageData(bX, bY, bW, bH).data, dk=0, nc=0; for(i=0;i<id.length;i+=4){ nc++; if(id[i]<mean-50) dk++; }
+          if(window.__yzDbg) (window.__yzX=window.__yzX||[]).push([c.cd[0], Math.round(mean), dk, nc]);
+          tk.push({name:c.cd[0], key:c.cd[2], dk:dk, nc:nc, l:l}); });
+        var mnD=Math.min.apply(null, tk.map(function(t){ return t.dk; }).concat([1e9]));
+        tk.forEach(function(t){ t.on=t.dk/t.nc>0.15 || (t.dk/t.nc>0.05 && t.dk>mnD*2.5+t.nc*0.01); });
+        if(tk.length>=2){ var on=tk.filter(function(t){ return t.on; }); if(on.length){ var l0=on[0].l;
+          vals.coMode={v:on.map(function(t){ return t.name; }).join(" + "), c:0.7, x0:l0.x0-lh*2, x1:l0.x1, y0:l0.y0, y1:l0.y1, text:true};
+          tk.forEach(function(t){ if(!t.on) out.coOff=(out.coOff||[]).concat([t.key]); }); } } }
       // v2.8.7: a row with no label of its own, right above a labelled row (Heat: zone actual temperatures sit above Set)
       (def.above||[]).forEach(function(ad){ if(!P.tok) return; cells.filter(function(q){ return q.key.indexOf(ad[1]+".")===0 && q.w; }).forEach(function(q){
           var i=q.key.split(".")[1], cx=(q.w.x0+q.w.x1)/2, bh=q.w.y1-q.w.y0, n=P.nums.filter(function(w){ return Math.abs(w.cx-cx)<lh*1.6 && w.cy<q.w.cy-lh*0.8 && w.cy>q.w.cy-lh*4; }).sort(function(a,b){ return b.cy-a.cy; })[0];
           if(!n) return; var c=n.c, a=parseFloat(n.v), sv=parseFloat(q.w.v);
           if(String(n.v).replace(/\D/g,"").length<String(q.w.v).replace(/\D/g,"").length || !(a>=0) || (sv>0 && Math.abs(a-sv)>sv*0.5)) c=Math.min(c,0.4);   // a digit lost at the box edge, or far from its set point → Allen checks it
-          cells.push({key:ad[0]+"."+i, w:n, v:n.v, c:c, x0:n.x0, x1:n.x1, y0:n.y0, y1:n.y1, d:ad[2]}); }); });
+          var av=n.v; if(String(q.w.v).indexOf(".")<0 && q.d>0) sv=sv/Math.pow(10,q.d); if(sv>=100 && a>=0 && String(Math.floor(a)).length<String(Math.floor(sv)).length){   // v2.8.8: leading "3"/"40" lost at the box's left edge — put back the digits that bring it next to its set point, always checked
+            var sI=String(Math.floor(sv)), fits=[]; [1,2].forEach(function(k){ for(var dg=(k===1? 1 : 10);dg<(k===1? 10 : 100);dg++){ var t=String(dg)+String(n.v); if((t.split(".")[0]).length!==sI.length) continue; var tv=parseFloat(t); if(Math.abs(tv-sv)<=sv*0.08) fits.push(t); } });
+            if(fits.length===1){ av=fits[0]; c=Math.min(c,0.45); } }
+          cells.push({key:ad[0]+"."+i, w:n, v:av, c:c, x0:n.x0, x1:n.x1, y0:n.y0, y1:n.y1, d:ad[2]}); }); });
       // second look at every box that is missing, unsure or has the wrong number of decimals: OCR that box alone
       cells.forEach(function(q){ var w=q.w; if(!P.tok || !w || !w.tok || !(q.d>0) || !w.td || String(w.v).indexOf(".")>=0 || w.td.length<=q.d || /\D/.test(w.td)) return;   // v2.8.7: "04" in a box that shows one decimal is 0.4 (the dot was too faint to see)
         q.v=(w.td.slice(0,w.td.length-q.d).replace(/^0+(?=\d)/,"")||"0")+"."+w.td.slice(w.td.length-q.d); if(w.td.charAt(0)!=="0") q.c=Math.min(q.c,0.55); });
       var redo=cells.filter(function(q){ return (q.w && !q.w.tok) || q.ghost; });   // v2.8.7: a box with no clean token (photo) still gets a Tesseract look, capped as check   // v2.8.7: tokens were already read clean, one by one   // v2.8.5: ghost = a grid cell whose box was not found in a photo: read the spot anyway, always checked by Allen  // no box at that spot (e.g. High pressure has no To) → left blank
-      return wk.setParameters({tessedit_pageseg_mode:"7", tessedit_char_whitelist:"0123456789.-"}).then(function(){
+      return yzModeRedo(wk, P0, modePend, vals, lh).then(function(){ return wk.setParameters({tessedit_pageseg_mode:"7", tessedit_char_whitelist:"0123456789.-"}); }).then(function(){
         return redo.reduce(function(p, q, i){ return p.then(function(){
           if(onProg) onProg("Checking screen values — "+(i+1)+" of "+redo.length, Math.round(40+i/Math.max(1,redo.length)*55));
           var bi=q.w? Math.max(3,q.w.h*0.12) : 0, qx0=q.w? q.w.x0+bi : q.x0, qx1=q.w? q.w.x1-bi : q.x1, x0=Math.max(0,qx0), y0=Math.max(0,q.w? q.w.y0+bi : q.y0), w=Math.max(8,qx1-x0), h=Math.max(8,(q.w? q.w.y1-bi : q.y1)-y0), S=Math.max(1,Math.min(4,60/h)), c=document.createElement("canvas");
@@ -3053,8 +3146,14 @@ function yzRead(im, onProg, pre){
           var bb=q.w||q; vals[q.key]={nr:q.rows, v:q.v, c:+Math.max(0,Math.min(1,q.c)).toFixed(2), x0:bb.x0, x1:bb.x1, y0:bb.y0, y1:bb.y1, state:q.v? "read" : "unread"}; });
         if(def.id==="yz-overview") ["cyc","mct","mot","ijt","plt","dct","cool"].forEach(function(k){ var A=vals[k+".0"], B=vals[k+".1"];  // v2.8.4: set/max is never below the actual; tilt can swap the pair
           if(A && B && A.v && B.v && +A.v > +B.v){ vals[k+".0"]=B; vals[k+".1"]=A; } });
+        if(def.barrel){ var bk=Object.keys(vals).filter(function(k){ return /^brl\./.test(k); }).sort(function(a,b){ return +a.split(".")[1]-+b.split(".")[1]; }), okB=function(k){ return /^\d{3}\.\d$/.test(vals[k].v); };
+          while(bk.length && !okB(bk[0])) bk.shift(); while(bk.length && !okB(bk[bk.length-1])) bk.pop();
+          if(bk.length>8) bk=bk.slice(0,8);
+          Object.keys(vals).forEach(function(k){ if(/^brl\./.test(k) && bk.indexOf(k)<0) delete vals[k]; });
+          bk.forEach(function(k, i){ var q=vals[k], ok1=okB(k); delete vals[k]; if(!ok1 && q.v) q.c=Math.min(q.c,0.4); q.c=Math.min(q.c,0.75); vals["ov.barrel."+i]=q; }); }
         if(P.tok) yzStrips(P, P0, vals, yzSl, out);   // v2.8.7: top status bar + bottom cycle monitor (every screen)
         // v2.8.7: a mode of "No" turns its row off (greyed on the screen) — those numbers are not the job's settings
+        (out.coOff||[]).forEach(function(k){ [".1"].forEach(function(sx){ if(vals[k+sx]) vals[k+sx].inactive=true; }); if(k==="coPress" && vals["coPress.1"]) vals["coPress.1"].inactive=true; });
         def.kvs.forEach(function(kd){ var mk=kd[5] && kd[5].mode, m=mk && vals[mk] && vals[mk].v; if(!m) return;
           for(var i=0;i<kd[2];i++){ var q=vals[kd[0]+"."+i]; if(!q) continue; if(m==="No" || (m==="Position" && i===3) || (m==="Time" && i===2)) q.inactive=true; } });
 
@@ -3077,7 +3176,8 @@ function yzRead(im, onProg, pre){
           if(Pm.staged && vs.length>1 && vs.every(function(v){ return v===vs[0]; }) && vs.length===3) row.same=false;
           if(/^zone[6-8]$/.test(id) && !any && out.rows.some(function(r){ return r.id==="zone5" && r.state==="read"; })) return;   // v2.8.5: a 5-zone barrel has no zones 6-8 — leave them out instead of red blanks
           out.rows.push(row); });
-        if(def.barrel){ var bx=P.nums.filter(function(b){ return /^\d{3}\.\d$/.test(b.v) && b.cy<P0.H*0.45; }), grp=[];   // v2.8.4: Overview barrel strip (actual temps, nozzle → hopper)
+        if(def.barrel && vals["ov.barrel.0"]){ var bvs=[]; for(var bi2=0;vals["ov.barrel."+bi2];bi2++) bvs.push(vals["ov.barrel."+bi2].v||"?"); out.notesList.push({label:"Barrel actual °F (nozzle at the left)", text:bvs.join(" / ")+" (check)", conf:0.5}); }
+        else if(def.barrel){ var bx=P.nums.filter(function(b){ return /^\d{3}\.\d$/.test(b.v) && b.cy<P0.H*0.45; }), grp=[];   // v2.8.4: Overview barrel strip (actual temps, nozzle → hopper)
           bx.forEach(function(b){ var g=grp.find(function(g){ return Math.abs(g.cy-b.cy)<lh*0.7; }); if(g){ g.b.push(b); } else grp.push({cy:b.cy, b:[b]}); });
           grp.sort(function(a,b){ return b.b.length-a.b.length; }); if(grp[0] && grp[0].b.length>=4) out.notesList.push({label:"Barrel actual °F (left → right)", text:grp[0].b.sort(function(a,b){ return a.cx-b.cx; }).map(function(b){ return b.v; }).join(" / ")+" (check)", conf:0.5}); }
         (def.notes||[]).concat(P.tok? YZ_STRIP_NOTES : []).forEach(function(n){ var vs=n[1].map(function(k){ var s=vals[k]; return s && s.v? s.v+(s.inactive? " (off)" : "")+(s.c<0.6? " (check)" : "") : "?"; }); if(vs.every(function(v){ return v==="?"; })) return;
