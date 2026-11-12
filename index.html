@@ -2548,9 +2548,10 @@ var YZ_DEFS = [
   notes:[["Mold protect psi/%/in",["clpr.0","clpr.1","clpr.2"]],["High pressure psi/%",["clhp.0","clhp.1"]],["Mold protect time s",["prot.0","prot.1"]],["Protect from-to in",["protFT.0","protFT.1"]],["Actual clamp force US ton",["force.0"]],["Mold close stages",["clStages"]],["Mold open stages",["opStages"]]]},
  {id:"yz-inject", sig:[/^in[jil]ect$/i, /cut\s*off/i, /plasticize\s*stroke/i, /max\.?\s*veloc/i, /inject\s*time/i, /inject\s*pressure/i, /valve\s*gat/i, /^hold$/i, /inj\.?\s*graph/i], tab:/^inject/i, title:"Yizumi Injection", titles:[/^inject$/i, /^cut\s*off$/i, /allowable/i],
   grids:[{k:"in", panel:/^inject$/i, cols:YZ_COLS3, rows:["1","2","3","E"]}],
-  kvs:[["stroke",/plasticize\s*stroke/i,1,2],["allow",/allowable/i,1,0],["coPos",/screw\s*position/i,2,2],["coTime",/^inject\s*time/i,2,[2,1]],["coPress",/^inject\s*pressure/i,1,0,"last"],["coAct",/activation/i,1,2],["injP",/^inject\s*pressure/i,1,0],["maxV",/max\.?\s*veloc/i,1,1]],
+  kvs:[["stroke",/plasticize\s*stroke/i,1,2],["allow",/allowable/i,1,0],["coPos",/screw\s*position/i,2,2],["coTime",/^inject\s*time/i,2,[2,1]],["coPress",/^inject\s*pressure/i,1,0,"last"],["coAct",/activation/i,1,2],["injP",/^inject\s*pressure/i,1,0,"first"],["maxV",/max\.?\s*veloc/i,1,1]],
   fields:{inj_press:["in1.0","in2.0","in3.0","inE.0"], inj_speed:["in1.1","in2.1","in3.1","inE.1"], inj_int:["in1.2","in2.2","in3.2"], switchover:["coPos.1"]},
-  notes:[["Inject pressure psi",["injP.0"]],["Plasticize stroke in",["stroke.0"]],["Max. velocity mm/s",["maxV.0"]],["Allowable inject pressure psi",["allow.0"]],["Cut off: screw position in (actual / set)",["coPos.0","coPos.1"]],["Cut off: inject time s (actual / set)",["coTime.0","coTime.1"]],["Cut off: inject pressure psi",["coPress.0"]],["Cut off activation position in",["coAct.0"]],["Inject stages",["inStages"]]]},
+  cutoff:[["Screw position",/screw\s*position$/i,"coPos"],["Inject time",/inject\s*time$/i,"coTime"],["Inject pressure",/inject\s*pressure$/i,"coPress"]],
+  notes:[["Cut off: switch-over on (ticked)",["coMode"]],["Inject pressure psi",["injP.0"]],["Plasticize stroke in",["stroke.0"]],["Max. velocity mm/s",["maxV.0"]],["Allowable inject pressure psi",["allow.0"]],["Cut off: screw position in (actual / set)",["coPos.0","coPos.1"]],["Cut off: inject time s (actual / set)",["coTime.0","coTime.1"]],["Cut off: inject pressure psi",["coPress.0"]],["Cut off activation position in",["coAct.0"]],["Inject stages",["inStages"]]]},
  {id:"yz-plast", sig:[/backpress/i, /delay\s*plast/i, /compression/i, /green\s*plast/i, /act\s*back/i, /screw\s*revol/i, /and\s*backpressure/i], tab:/^plast/i, title:"Yizumi Plasticize", titles:[/plasticize\s*and/i, /^decompression$/i, /delay\s*plast/i],
   grids:[{k:"pl", panel:/plasticize\s*and/i, cols:[yzG(/^back/i,0), yzG(/^charge/i,0), yzG(/^to$/i,2)], rows:["E"]}],
   kvs:[["dly",/delay\s*plast/i,2,2],["decB",/(ression|ompression|^)\s*before\s*plast/i,4,[0,0,2,1],null,{mode:"decB.mode"}],["decA",/(ression|ompression|^)\s*after\s*plast/i,4,[0,0,2,1],null,{mode:"decA.mode"}],["plPos",/^screw\s*position/i,1,2],["plRev",/screw\s*revol/i,1,1],["plBP",/act\.?\s*back/i,1,0]],
@@ -2915,7 +2916,6 @@ function yzStrips(P, P0, vals, sl, out){
   var NT=P.nums.filter(function(t){ return t.tok; }), H=P0.H, W=P0.W, lh0=P.lh||30;
   [["top",0,H*0.16],["mon",H*0.55,H]].forEach(function(z){ var T=YZ_STRIPS[z[0]], f=yzTplFit(NT, T, sl, W, z[1], z[2]);
     if(z[0]==="top"){ var fh=yzTplFit(NT, YZ_STRIPS.topH, sl, W, z[1], z[2]); var hSign=P.words.some(function(w){ return w.cy<H*0.16 && (/^\d{1,2}\/\d{1,2}\/\d{2}$/.test(w.t) || /^admini/i.test(w.t)); });
-      if(window.__yzDbg) window.__yzX=[f&&f.n, fh&&fh.n, hSign];
       if(fh && ((hSign && fh.n>=4 && (!f || fh.n>=f.n)) || (fh.n>=6 && (!f || fh.n>f.n+2)))){ f=fh; z=["topH"]; T=YZ_STRIPS.topH; } }
     if(!f || f.n<3) return;
     Object.keys(f.got).forEach(function(k){ var g=f.got[k], t=g.t, tv=t.v, tc=t.c;
@@ -3042,7 +3042,7 @@ function yzRead(im, onProg, pre){
         sl.sort(function(a,b){ return a-b; }); var m=sl.length>=4? sl[sl.length>>1] : 0; return Math.max(-0.12, Math.min(0.12, m)); })();  // v2.8.4: angled photo → rows slope
       if(window.__yzDbg) window.__yzSlope=yzSl;
       def.kvs.forEach(function(kd){
-        var ls=yzFind(P, kd[1]); if(kd[4]==="last") ls.sort(function(a,b){ return b.cy-a.cy; }); var l=ls[0]; if(!l) return;
+        var ls=yzFind(P, kd[1]); if(kd[4]==="last") ls.sort(function(a,b){ return b.cy-a.cy; }); if(kd[4]==="first") ls.sort(function(a,b){ return a.cy-b.cy; }); var l=ls[0]; if(!l) return;
         var ns=P.nums.filter(function(w){ return Math.abs(w.cy-l.cy-yzSl*(w.cx-l.cx))<lh*0.6 && w.x0>l.x1-lh*0.2; }).sort(function(a,b){ return a.x0-b.x0; });
         if(P.tok && !ns.length){ // v2.8.7: photo — the value boxes can sit a little above/below the label's text line
           var nr=P.nums.filter(function(w){ return Math.abs(w.cy-l.cy-yzSl*(w.cx-l.cx))<lh*1.0 && w.x0>l.x1-lh*0.2 && w.x0<l.x1+lh*22; }).sort(function(a,b){ return a.x0-b.x0; })[0];
@@ -3068,6 +3068,19 @@ function yzRead(im, onProg, pre){
             vals[td[0]]={v:mw, c:0.75, x0:r.x0, x1:r.x1, y0:r.y0, y1:r.y1, text:true}; } return; }
         r=P.segs.filter(function(s){ return Math.abs(s.cy-l.cy)<lh*0.6 && s.x0>l.x1+lh; }).sort(function(a,b){ return a.x0-b.x0; })[0];
         if(r) vals[td[0]]={v:r.t, c:0.8, x0:r.x0, x1:r.x1, y0:r.y0, y1:r.y1}; });
+      // v2.8.8: Cut off — which switch-over conditions are ticked (green check left of each label); an unticked row's set box is greyed (not in use)
+      if(def.cutoff){ var cot=yzFind(P, /^cut\s*off$/i)[0], gd0=P0.g.getContext("2d"), tk=[];
+        def.cutoff.forEach(function(cd){ var ls=yzFind(P, cd[1]).filter(function(l){ return !cot || (l.cy>cot.cy && l.cy<cot.cy+lh*9); }).sort(function(a,b){ return b.cy-a.cy; }), l=ls[0]; if(!l) return;
+          var fw=(l.ws||[]).filter(function(w){ return /^(screw|inject)/i.test(w.t.replace(/[^A-Za-z]/g,"")); })[0], lx=fw? fw.x0 : l.x0;
+          var bX=Math.round(lx-lh*3.2), bY=Math.round(l.cy-lh), bW=Math.round(lh*2.9), bH=Math.round(lh*2); if(bX<0 || bY<0) return;
+          var id=gd0.getImageData(bX, bY, bW, bH).data, sum=0, n=0, dk=0, cx0=Math.round(lh*0.8), cx1=Math.round(lh*2.1), cy0=Math.round(lh*0.65), cy1=Math.round(lh*1.35);
+          for(var i=0;i<id.length;i+=4){ sum+=id[i]; n++; } var mean=sum/n, nc=0;
+          for(var yy=cy0;yy<cy1;yy++) for(var xx=cx0;xx<cx1;xx++){ nc++; if(id[(yy*bW+xx)*4]<mean-50) dk++; }
+          if(window.__yzDbg) (window.__yzX=window.__yzX||[]).push([cd[0], Math.round(mean), dk, nc]);
+          tk.push({name:cd[0], key:cd[2], on:dk/nc>0.08, l:l}); });
+        if(tk.length>=2){ var on=tk.filter(function(t){ return t.on; }); if(on.length){ var l0=on[0].l;
+          vals.coMode={v:on.map(function(t){ return t.name; }).join(" + "), c:0.7, x0:l0.x0-lh*2, x1:l0.x1, y0:l0.y0, y1:l0.y1, text:true};
+          tk.forEach(function(t){ if(!t.on) out.coOff=(out.coOff||[]).concat([t.key]); }); } } }
       // v2.8.7: a row with no label of its own, right above a labelled row (Heat: zone actual temperatures sit above Set)
       (def.above||[]).forEach(function(ad){ if(!P.tok) return; cells.filter(function(q){ return q.key.indexOf(ad[1]+".")===0 && q.w; }).forEach(function(q){
           var i=q.key.split(".")[1], cx=(q.w.x0+q.w.x1)/2, bh=q.w.y1-q.w.y0, n=P.nums.filter(function(w){ return Math.abs(w.cx-cx)<lh*1.6 && w.cy<q.w.cy-lh*0.8 && w.cy>q.w.cy-lh*4; }).sort(function(a,b){ return b.cy-a.cy; })[0];
@@ -3116,6 +3129,7 @@ function yzRead(im, onProg, pre){
           bk.forEach(function(k, i){ var q=vals[k], ok1=okB(k); delete vals[k]; if(!ok1 && q.v) q.c=Math.min(q.c,0.4); q.c=Math.min(q.c,0.75); vals["barrel."+i]=q; }); }
         if(P.tok) yzStrips(P, P0, vals, yzSl, out);   // v2.8.7: top status bar + bottom cycle monitor (every screen)
         // v2.8.7: a mode of "No" turns its row off (greyed on the screen) — those numbers are not the job's settings
+        (out.coOff||[]).forEach(function(k){ [".1"].forEach(function(sx){ if(vals[k+sx]) vals[k+sx].inactive=true; }); if(k==="coPress" && vals["coPress.1"]) vals["coPress.1"].inactive=true; });
         def.kvs.forEach(function(kd){ var mk=kd[5] && kd[5].mode, m=mk && vals[mk] && vals[mk].v; if(!m) return;
           for(var i=0;i<kd[2];i++){ var q=vals[kd[0]+"."+i]; if(!q) continue; if(m==="No" || (m==="Position" && i===3) || (m==="Time" && i===2)) q.inactive=true; } });
 
