@@ -3022,6 +3022,17 @@ function yzRead(im, onProg, pre){
           gd.cols.forEach(function(cdef, ci){ var w=r && r.ws.filter(function(w){ return Math.abs(w.cx-xs[ci])<sp*0.5; })[0];
             var bw=sp*0.42; cells.push({key:gd.k+rk+"."+ci, w:w||null, ghost:!!(P.tok && r && !w), v:w? w.v : "", c:w? w.c : 0, x0:xs[ci]-bw, x1:xs[ci]+bw, y0:cy-lh*0.85, y1:cy+lh*0.85, d:cdef[1], rows:rows.length, want:gd.rows.length}); }); });
       });
+      // v2.8.8: Overview barrel strip — one box per heater zone (nozzle at the left) on a regular pitch; boxes the token pass missed get a box read of their own
+      var yzSlope0=0;
+      if(def.barrel && P.tok){ var bt=P.nums.filter(function(b){ return /^\d{3}\.\d$/.test(b.v) && b.cy<P0.H*0.45 && b.tok; }), bg=[];
+        bt.forEach(function(b){ var g=bg.find(function(g){ return Math.abs(g.cy-b.cy)<lh*0.7; }); if(g) g.b.push(b); else bg.push({cy:b.cy, b:[b]}); });
+        bg.sort(function(a,b){ return b.b.length-a.b.length; }); var B0=bg[0];
+        if(B0 && B0.b.length>=3){ B0.b.sort(function(a,b){ return a.cx-b.cx; }); var dxs=[]; for(var bi=1;bi<B0.b.length;bi++) dxs.push(B0.b[bi].cx-B0.b[bi-1].cx);
+          var mdx=Math.min.apply(null, dxs), pit=dxs.reduce(function(a,d){ return a+d/Math.max(1,Math.round(d/mdx)); },0)/dxs.length, x0b=B0.b[0].cx, bw2=B0.b[0].w/2+lh*0.3;
+          if(pit>lh*2.5){ var idx=B0.b.map(function(b){ return Math.round((b.cx-x0b)/pit); }), lo=Math.max(-3, -Math.floor((x0b-lh*2)/pit)), hi=Math.max.apply(null, idx)+1;
+            while(hi-lo+1>10) { if(-lo>hi-Math.max.apply(null, idx)) lo++; else hi--; }
+            for(var ix=lo; ix<=hi; ix++){ var cx2=x0b+ix*pit; if(cx2+bw2>P0.W) break; var bb2=B0.b[idx.indexOf(ix)]||null, ccy=B0.cy+yzSlope0*(cx2-x0b);
+              cells.push({key:"brl."+(ix+20), w:bb2, ghost:!bb2, v:bb2? bb2.v : "", c:bb2? bb2.c : 0, x0:cx2-bw2, x1:cx2+bw2, y0:ccy-lh*0.8, y1:ccy+lh*0.8, d:1}); } } } }
       // v2.8.8: "Stages [n]" at the right end of each grid panel's title bar — how many stages are set
       def.grids.forEach(function(gd){ var tt=yzFind(P, gd.panel)[0]; if(!tt) return;
         var sl2=yzFind(P, /^stages?$/i).concat(yzFind(P, /stages?$/i)).filter(function(l){ return Math.abs(l.cy-tt.cy)<lh*1.5 && l.x0>tt.x1; }).sort(function(a,b){ return Math.abs(a.cy-tt.cy)-Math.abs(b.cy-tt.cy); })[0]; if(!sl2) return;
@@ -3098,6 +3109,11 @@ function yzRead(im, onProg, pre){
           var bb=q.w||q; vals[q.key]={nr:q.rows, v:q.v, c:+Math.max(0,Math.min(1,q.c)).toFixed(2), x0:bb.x0, x1:bb.x1, y0:bb.y0, y1:bb.y1, state:q.v? "read" : "unread"}; });
         if(def.id==="yz-overview") ["cyc","mct","mot","ijt","plt","dct","cool"].forEach(function(k){ var A=vals[k+".0"], B=vals[k+".1"];  // v2.8.4: set/max is never below the actual; tilt can swap the pair
           if(A && B && A.v && B.v && +A.v > +B.v){ vals[k+".0"]=B; vals[k+".1"]=A; } });
+        if(def.barrel){ var bk=Object.keys(vals).filter(function(k){ return /^brl\./.test(k); }).sort(function(a,b){ return +a.split(".")[1]-+b.split(".")[1]; }), okB=function(k){ return /^\d{3}\.\d$/.test(vals[k].v); };
+          while(bk.length && !okB(bk[0])) bk.shift(); while(bk.length && !okB(bk[bk.length-1])) bk.pop();
+          if(bk.length>8) bk=bk.slice(0,8);
+          Object.keys(vals).forEach(function(k){ if(/^brl\./.test(k) && bk.indexOf(k)<0) delete vals[k]; });
+          bk.forEach(function(k, i){ var q=vals[k], ok1=okB(k); delete vals[k]; if(!ok1 && q.v) q.c=Math.min(q.c,0.4); q.c=Math.min(q.c,0.75); vals["barrel."+i]=q; }); }
         if(P.tok) yzStrips(P, P0, vals, yzSl, out);   // v2.8.7: top status bar + bottom cycle monitor (every screen)
         // v2.8.7: a mode of "No" turns its row off (greyed on the screen) — those numbers are not the job's settings
         def.kvs.forEach(function(kd){ var mk=kd[5] && kd[5].mode, m=mk && vals[mk] && vals[mk].v; if(!m) return;
@@ -3122,7 +3138,8 @@ function yzRead(im, onProg, pre){
           if(Pm.staged && vs.length>1 && vs.every(function(v){ return v===vs[0]; }) && vs.length===3) row.same=false;
           if(/^zone[6-8]$/.test(id) && !any && out.rows.some(function(r){ return r.id==="zone5" && r.state==="read"; })) return;   // v2.8.5: a 5-zone barrel has no zones 6-8 — leave them out instead of red blanks
           out.rows.push(row); });
-        if(def.barrel){ var bx=P.nums.filter(function(b){ return /^\d{3}\.\d$/.test(b.v) && b.cy<P0.H*0.45; }), grp=[];   // v2.8.4: Overview barrel strip (actual temps, nozzle → hopper)
+        if(def.barrel && vals["barrel.0"]){ var bvs=[]; for(var bi2=0;vals["barrel."+bi2];bi2++) bvs.push(vals["barrel."+bi2].v||"?"); out.notesList.push({label:"Barrel actual °F (nozzle at the left)", text:bvs.join(" / ")+" (check)", conf:0.5}); }
+        else if(def.barrel){ var bx=P.nums.filter(function(b){ return /^\d{3}\.\d$/.test(b.v) && b.cy<P0.H*0.45; }), grp=[];   // v2.8.4: Overview barrel strip (actual temps, nozzle → hopper)
           bx.forEach(function(b){ var g=grp.find(function(g){ return Math.abs(g.cy-b.cy)<lh*0.7; }); if(g){ g.b.push(b); } else grp.push({cy:b.cy, b:[b]}); });
           grp.sort(function(a,b){ return b.b.length-a.b.length; }); if(grp[0] && grp[0].b.length>=4) out.notesList.push({label:"Barrel actual °F (left → right)", text:grp[0].b.sort(function(a,b){ return a.cx-b.cx; }).map(function(b){ return b.v; }).join(" / ")+" (check)", conf:0.5}); }
         (def.notes||[]).concat(P.tok? YZ_STRIP_NOTES : []).forEach(function(n){ var vs=n[1].map(function(k){ var s=vals[k]; return s && s.v? s.v+(s.inactive? " (off)" : "")+(s.c<0.6? " (check)" : "") : "?"; }); if(vs.every(function(v){ return v==="?"; })) return;
