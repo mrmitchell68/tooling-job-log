@@ -2729,7 +2729,7 @@ function yzRectify(im){
     var Cc=new Uint8Array(N); for(y=0;y<H;y++) for(x=0;x<W;x++){ if(!B[y*W+x]) continue; for(d=-r;d<=r;d++){ var yy=y+d; if(yy>=0 && yy<H) Cc[yy*W+x]=1; } } return Cc; };
   var Mc=yzDil(M,4); for(i=0;i<N;i++) Mc[i]=Mc[i]? 0 : 1; Mc=yzDil(Mc,4); for(i=0;i<N;i++) Mc[i]=Mc[i]? 0 : 1;
   var C2=mscrComponents(Mc,W,H), k2=C2.comps.sort(function(a,b){ return b.n-a.n; })[0];
-  if(k && k2 && k2.n>k.n*1.4 && k2.n<N*0.92 && !(k2.w>W*0.97 && k2.h>H*0.97)){ C=C2; k=k2; }
+  if(k && k2 && (k2.n>k.n*1.4 || (k2.n>k.n*1.12 && k.y0-k2.y0>H*0.05)) && k2.n<N*0.92 && !(k2.w>W*0.97 && k2.h>H*0.97)){ C=C2; k=k2; }
   if(!k || k.n<N*0.12 || k.n>N*0.92 || (k.w>W*0.97 && k.h>H*0.97)) return null;   // already fills the photo (or no clear screen)
   var best=[null,null,null,null], sc=[-1e9,-1e9,-1e9,-1e9];
   for(var y=k.y0;y<=k.y1;y++) for(var x=k.x0;x<=k.x1;x++){ if(C.L[y*W+x]!==k.id) continue; var s=[-x-y, x-y, x+y, -x+y];
