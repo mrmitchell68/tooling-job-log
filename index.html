@@ -2668,6 +2668,20 @@ function yzFixDec(v, d, grid){ if(v==="" || d==null) return {v:v, ok:true}; var 
   if(n===d) return {v:v, ok:true};
   if(!p[1] && d>0 && v.length>d){ return {v:v.slice(0,v.length-d)+"."+v.slice(v.length-d), ok:false}; }  // dot lost in OCR
   if(d===0 && n) return {v:v, ok:false}; return {v:v, ok:false}; }
+// v2.8.8: header words missed in the photo (thin HPM font) — the stage labels (1, 2 … End) under the panel title with their
+// row of value boxes give the columns instead: the n-th box right of each label is column n
+function yzRowCols(P, gd, tt, def, lh){
+  var lim=tt.cy+lh*14; def.titles.concat(def.grids.map(function(g){ return g.panel; })).forEach(function(re){ yzFind(P, re).forEach(function(s){ if(s.cy>tt.cy+lh*1.5 && s.cy<lim) lim=s.cy; }); });
+  var labs=P.words.filter(function(w){ return w.cy>tt.cy+lh*1.5 && w.cy<lim-lh*0.5 && w.x1<tt.x1+lh*4 && /^(end|[1-9]|[Il|])$/i.test(w.t.replace(/[^A-Za-z0-9|]/g,"")); });
+  var n=gd.cols.length, rows=[];
+  labs.forEach(function(l){ var ns=P.nums.filter(function(w){ return Math.abs(w.cy-l.cy)<lh*0.6 && w.x0>l.x1+lh*0.5; }).sort(function(a,b){ return a.x0-b.x0; }), seq=[];
+    for(var i=0;i<ns.length && seq.length<n;i++){ var pv=seq[seq.length-1]; if(pv && ns[i].x0-pv.x1>lh*6) break; if(!pv && ns[i].x0-l.x1>lh*12) break; seq.push(ns[i]); }
+    if(seq.length===n && !rows.some(function(r){ return Math.abs(r.cy-l.cy)<lh*0.6; })) rows.push({cy:l.cy, xs:seq.map(function(w){ return w.cx; })}); });
+  if(!rows.length) return null; rows.sort(function(a,b){ return a.cy-b.cy; });
+  var xs=[]; for(var j=0;j<n;j++) xs.push(rows.reduce(function(a,r){ return a+r.xs[j]; },0)/rows.length);
+  for(j=1;j<n;j++) if(xs[j]-xs[j-1]<lh*2) return null;
+  var hy=rows[0].cy-lh*1.9; return xs.map(function(x, j){ return {t:"(col "+j+")", cx:x, cy:hy, x0:x-lh, x1:x+lh, y0:hy-lh*0.4, y1:hy+lh*0.4}; });
+}
 function yzWords(raw){
   var ws=(raw||[]).map(function(w){ var t=String(w.text||"").trim(); return {t:t, x0:w.bbox.x0, y0:w.bbox.y0, x1:w.bbox.x1, y1:w.bbox.y1, cx:(w.bbox.x0+w.bbox.x1)/2, cy:(w.bbox.y0+w.bbox.y1)/2, h:Math.max(1,w.bbox.y1-w.bbox.y0), c:(w.confidence||0)/100}; })
     .filter(function(w){ return w.t && w.h>4; });
@@ -2876,7 +2890,10 @@ var YZ_STRIPS={
              {dy:76, cols:[0,434,804,1157,1506], keys:["tb.moldPos","tb.nozPos","tb.injP","tb.sysP","tb.valve"], dec:[2,2,0,0,0]}], pitch:380},
   mon:{rows:[{dy:0, cols:[0,338,677,1017,1358,1694,2038], keys:["bm.run","bm.last","bm.mc","bm.mo","bm.ef","bm.eb","bm.eo"], dec:[1,1,1,1,1,1,1]},
              {dy:103, cols:[0,338,677,1017,1358,1694,2038], keys:["bm.coolEl","bm.cool","bm.inj","bm.hold","bm.plast","bm.cush","bm.coP"], dec:[1,1,2,1,2,2,0]},
-             {dy:208, cols:[0,339,663,1019], keys:["bm.shot","bm.clamp","bm.energy","bm.sysP"], dec:[2,0,2,0]}], pitch:340}
+             {dy:208, cols:[0,339,663,1019], keys:["bm.shot","bm.clamp","bm.energy","bm.sysP"], dec:[2,0,2,0]}], pitch:340},
+  // v2.8.8: HPM-badged Yizumi top bar — row 1 ejector in | screw in | Ⓟ psi | valve % | system psi | date time, row 2 mold in | rpm | status
+  topH:{rows:[{dy:0, cols:[0,397,726,1016,1345], keys:["tb.ejPos","tb.screwPos","tb.injP","tb.valve","tb.sysP"], dec:[2,2,1,1,1]},
+              {dy:72, cols:[0,395], keys:["tb.moldPos","tb.rpm"], dec:[2,0]}], pitch:400}
 };
 function yzDec(v, d, c){ var neg=/^-/.test(v), ds=String(v).replace(/[^0-9]/g,""), had=String(v).indexOf("."), out;
   if(!ds) return {v:"", c:0};
@@ -2895,20 +2912,32 @@ function yzTplFit(NT, T, sl, W, y0, y1){
       var ox=A.x1-s*r.cols[a], oy=cyc(A)-s*r.dy, q=score(s, ox, oy); if(!best || q.n>best.n || (q.n===best.n && q.cs>best.cs)) best=q; } }); }); });
   return best; }
 function yzStrips(P, P0, vals, sl, out){
-  var NT=P.nums.filter(function(t){ return t.tok; }), H=P0.H, W=P0.W;
-  [["top",0,H*0.16],["mon",H*0.55,H]].forEach(function(z){ var T=YZ_STRIPS[z[0]], f=yzTplFit(NT, T, sl, W, z[1], z[2]); if(!f || f.n<3) return;
+  var NT=P.nums.filter(function(t){ return t.tok; }), H=P0.H, W=P0.W, lh0=P.lh||30;
+  [["top",0,H*0.16],["mon",H*0.55,H]].forEach(function(z){ var T=YZ_STRIPS[z[0]], f=yzTplFit(NT, T, sl, W, z[1], z[2]);
+    if(z[0]==="top"){ var fh=yzTplFit(NT, YZ_STRIPS.topH, sl, W, z[1], z[2]); var hSign=P.words.some(function(w){ return w.cy<H*0.16 && (/^\d{1,2}\/\d{1,2}\/\d{2}$/.test(w.t) || /^admini/i.test(w.t)); });
+      if(window.__yzDbg) window.__yzX=[f&&f.n, fh&&fh.n, hSign];
+      if(fh && ((hSign && fh.n>=4 && (!f || fh.n>=f.n)) || (fh.n>=6 && (!f || fh.n>f.n+2)))){ f=fh; z=["topH"]; T=YZ_STRIPS.topH; } }
+    if(!f || f.n<3) return;
     Object.keys(f.got).forEach(function(k){ var g=f.got[k], t=g.t, tv=t.v, tc=t.c;
       // "1.89" sometimes splits at its decimal point: the whole part sits just left of the box's token
       if(g.d>0 && String(tv).indexOf(".")<0 && P.tok){ var L=P.tok.filter(function(u){ return u!==t && u.td && !/\?/.test(u.td) && u.td.length<=2 && u.x1<t.x0 && t.x0-u.x1<t.h*0.7 && t.x0-u.x1>=t.h*0.12 && Math.abs(u.cy-t.cy)<t.h*0.35 && Math.abs(u.h-t.h)<t.h*0.25; }).sort(function(a,b){ return b.x1-a.x1; })[0];
         if(L){ tv=L.td.replace(/^0+(?=\d)/,"")+"."+String(tv).replace(/\D/g,""); tc=Math.min(tc, L.c||0.45, 0.75); } }
-      if(f.n<5) tc=Math.min(tc,0.55);   // few boxes matched the strip layout (photo cropped there) → Allen checks it
+      if(f.n<(z[0]==="topH"? 4 : 5)) tc=Math.min(tc,0.55);   // few boxes matched the strip layout (photo cropped there) → Allen checks it
       var r=yzDec(tv, g.d, tc); if(!r.v) return;
       vals[k]={v:r.v, c:+r.c.toFixed(2), x0:t.x0, x1:t.x1, y0:t.y0, y1:t.y1, state:"read", strip:z[0]}; });
     if(z[0]==="top"){ // date + time sit right of the rpm box on the first row
       var r0=f.oy, px=f.ox+f.s*804; var dt=NT.filter(function(t){ return Math.abs(t.cy-sl*(t.cx-W/2)-r0)<t.h*0.6 && t.x0>px+f.s*60 && t.x1<f.ox+f.s*1506; }).sort(function(a,b){ return a.x0-b.x0; });
       var d6=dt.filter(function(t){ return String(t.v).replace(/\D/g,"").length===6; })[0], tm=dt.filter(function(t){ return d6 && t.x0>d6.x1 && String(t.v).replace(/\D/g,"").length===4; })[0];
       if(d6){ var a=String(d6.v).replace(/\D/g,""), txt=a.slice(0,2)+"-"+a.slice(2,4)+"-"+a.slice(4); if(tm){ var b=String(tm.v).replace(/\D/g,""); txt+=" "+b.slice(0,2)+":"+b.slice(2); }
-        vals["tb.dateTime"]={v:txt, c:Math.min(d6.c, tm? tm.c : 0.4), x0:d6.x0, x1:(tm||d6).x1, y0:d6.y0, y1:d6.y1, state:"read", strip:"top"}; } } });
+        vals["tb.dateTime"]={v:txt, c:Math.min(d6.c, tm? tm.c : 0.4), x0:d6.x0, x1:(tm||d6).x1, y0:d6.y0, y1:d6.y1, state:"read", strip:"top"}; } }
+    if(z[0]==="topH"){ // date "10/23/26" + time "1:18" + AM/PM right of the system pressure box (US format on this machine)
+      var r1=f.oy, px2=f.ox+f.s*1345, cyw=function(t){ return t.cy-sl*(t.cx-W/2); };
+      var dw=P.words.filter(function(w){ return Math.abs(cyw(w)-r1)<lh0*0.9 && w.x0>px2+f.s*40; }).sort(function(a,b){ return a.x0-b.x0; });
+      var dd=dw.filter(function(w){ return /^\d{1,2}[\/7]\d{1,2}[\/7]\d{2}$/.test(w.t) && /\//.test(w.t); })[0], tw=dd && dw.filter(function(w){ return w.x0>dd.x1 && /^\d{1,2}[:.]\d{2}$/.test(w.t); })[0], ap=tw && dw.filter(function(w){ return w.x0>tw.x1 && /^[AP]M$/i.test(w.t); })[0];
+      if(!dd){ var t8=NT.filter(function(t){ return Math.abs(cyw(t)-r1)<t.h*0.6 && t.x0>px2+f.s*40 && /^\d{2}[71]\d{2}[71]\d{2}$/.test(String(t.v).replace(/\D/g,"")); })[0];
+        if(t8){ var a8=String(t8.v).replace(/\D/g,""); dd={t:a8.slice(0,2)+"/"+a8.slice(3,5)+"/"+a8.slice(6), x0:t8.x0, x1:t8.x1, y0:t8.y0, y1:t8.y1, c:Math.min(t8.c,0.5)}; tw=NT.filter(function(t){ return Math.abs(cyw(t)-r1)<t.h*0.6 && t.x0>t8.x1 && t.x0-t8.x1<t8.h*3 && /^\d{1,2}\.\d{2}$/.test(String(t.v)); })[0]; if(tw) tw={t:String(tw.v).replace(".",":"), x1:tw.x1, c:tw.c}; } }
+      if(dd && /^(0?[1-9]|1[0-2])\/(0?[1-9]|[12]\d|3[01])\/\d{2}$/.test(dd.t)){ var tt2=dd.t+(tw && /^(0?[1-9]|1[0-2])[:.][0-5]\d$/.test(tw.t)? " "+tw.t.replace(".",":")+(ap? " "+ap.t.toUpperCase() : "") : "");
+        vals["tb.dateTime"]={v:tt2, c:Math.min(dd.c==null? 0.6 : dd.c, tw && tw.c!=null? tw.c : 0.6, ap? 1 : 0.55), x0:dd.x0, x1:(ap||tw||dd).x1, y0:dd.y0, y1:dd.y1, state:"read", strip:"top"}; } } });
 }
 // read one Yizumi photo → same result shape as mscrRead
 function yzRead(im, onProg, pre){
@@ -2957,6 +2986,7 @@ function yzRead(im, onProg, pre){
         var hdOf=function(tt){ var cs=gd.cols.map(function(cdef){ return yzFind(P, cdef[0], {y0:tt.cy, y1:tt.cy+lh*6, words:true}); }), bestH=null;   // v2.8.5: the column headers sit on one line, left to right (not "Inject pressure" / "Max. velocity" further right)
           cs.forEach(function(cl, ai){ cl.forEach(function(an){ var set=gd.cols.map(function(c, j){ if(j===ai) return an; return cs[j].filter(function(w){ return Math.abs(w.cy-an.cy)<lh*0.8 && (j>ai? w.cx>an.cx : w.cx<an.cx) && Math.abs(w.cx-an.cx)<lh*10*Math.abs(j-ai); }).sort(function(a,b){ return Math.abs(a.cx-an.cx)-Math.abs(b.cx-an.cx); })[0]||null; });
             var n=set.filter(Boolean).length, dd=Math.hypot(an.cx-tt.x1, an.cy-tt.cy), sc=n-dd/(lh*8); if(!bestH || sc>bestH.sc) bestH={set:set, n:n, d:dd, sc:sc}; }); });
+          if((!bestH || bestH.n<2) && P.tok && tt.t!=="(header)"){ var rc=yzRowCols(P, gd, tt, def, lh); if(rc) return rc; }
           return bestH && bestH.n>=2? bestH.set : gd.cols.map(function(){ return null; }); }; var okH=function(h){ return h.filter(Boolean).length>=2; };
         if(!tt || !okH(hdOf(tt))){ tt=null; // v2.8.4: title missed (glare) or cropped off the photo → the grid's own header row (Pressure|Force + Velocity side by side)
           var hc=P.words.filter(function(w){ return gd.cols[0][0].test(w.t) && P.words.some(function(v){ return (gd.cols[1][0].test(v.t) && Math.abs(v.cy-w.cy)<lh*0.8 && v.x0>w.x1 && v.x0-w.x1<lh*4) || (/^psi$/i.test(v.t) && v.cy>w.cy+lh*0.4 && v.cy<w.cy+lh*2.2 && Math.abs(v.cx-w.cx)<lh*1.5); }); }).sort(function(a,b){ return a.cy-b.cy; });
