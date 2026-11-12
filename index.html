@@ -654,7 +654,7 @@ pre.raw{white-space:pre-wrap;font-size:12px;background:var(--surface-2);padding:
 <script>
 (function(){
 "use strict";
-var APP_VERSION = "2.8.7";
+var APP_VERSION = "2.8.8";
 // Public OAuth client id (not a secret). Web client, authorized JavaScript origins:
 //   https://mrmitchell68.github.io   and   http://localhost:8766
 // Leave empty until that client exists — Save-to-Drive is hidden and the button uses the Android share sheet.
@@ -2610,7 +2610,7 @@ function yzMeanOf(sid, id, ks){ var z=/^zone(\d)$/.exec(id);
   if(z) return "Heat tab › Set °F, zone "+z[1]+(z[1]==="1"? " (nozzle end, at the left)" : "")+" — barrel heater setpoint";
   if(ks && ks.some(function(k){ return /^bm\./.test(k); })) return YZ_MEAN["strip:"+id]||"";
   return YZ_MEAN[sid+":"+id]||""; }
-var YZ_STRIP_NOTES=[["Top bar: ejector position in",["tb.ejPos"]],["Top bar: screw position in",["tb.screwPos"]],["Top bar: screw rpm",["tb.rpm"]],["Top bar: date / time",["tb.dateTime"]],["Top bar: mold position in",["tb.moldPos"]],["Top bar: nozzle position in",["tb.nozPos"]],["Top bar: injection pressure psi",["tb.injP"]],["Top bar: system pressure psi (circled F)",["tb.sysP"]],["Top bar: valve %",["tb.valve"]],
+var YZ_STRIP_NOTES=[["Top bar: ejector position in",["tb.ejPos"]],["Top bar: screw position in",["tb.screwPos"]],["Top bar: screw rpm",["tb.rpm"]],["Top bar: date / time",["tb.dateTime"]],["Top bar: mold position in",["tb.moldPos"]],["Top bar: nozzle position in",["tb.nozPos"]],["Top bar: injection pressure psi",["tb.injP"]],["Top bar: system pressure psi (circled F; 4P icon on HPM)",["tb.sysP"]],["Top bar: valve %",["tb.valve"]],
   ["Cycle monitor: running cycle s",["bm.run"]],["Cycle monitor: last cycle time s",["bm.last"]],["Cycle monitor: mold close s / mold open s",["bm.mc","bm.mo"]],["Cycle monitor: ejector fwd s / back s",["bm.ef","bm.eb"]],["Cycle monitor: other s",["bm.eo"]],["Cycle monitor: cooling elapsed s / cooling time s",["bm.coolEl","bm.cool"]],["Cycle monitor: injection time s",["bm.inj"]],["Cycle monitor: hold time s",["bm.hold"]],["Cycle monitor: plasticize (charge) time s",["bm.plast"]],["Cycle monitor: cushion in",["bm.cush"]],["Cycle monitor: switchover pressure psi",["bm.coP"]],["Cycle monitor: shot size in",["bm.shot"]],["Cycle monitor: clamp force US ton",["bm.clamp"]],["Cycle monitor: energy Wh",["bm.energy"]],["Cycle monitor: live system pressure psi",["bm.sysP"]]];
 var YZ_BRAND = [/yizumi/i, /^mold$/i, /^heating$/i, /^core/i, /\bhpm\b/i, /administrator/i, /^overvi/i, /^ejector$/i, /^injection$/i, /^plastic/i, /^nozzle$/i, /^heating$/i, /^produ/i, /^alarm$/i, /^return$/i, /^cooling$/i];
 // cheap look: big light-grey low-colour area + a small bright green block (the highlighted tab)
