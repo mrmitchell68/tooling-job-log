@@ -2894,6 +2894,7 @@ function yzStrips(P, P0, vals, sl, out){
       // "1.89" sometimes splits at its decimal point: the whole part sits just left of the box's token
       if(g.d>0 && String(tv).indexOf(".")<0 && P.tok){ var L=P.tok.filter(function(u){ return u!==t && u.td && !/\?/.test(u.td) && u.td.length<=2 && u.x1<t.x0 && t.x0-u.x1<t.h*0.7 && t.x0-u.x1>=t.h*0.12 && Math.abs(u.cy-t.cy)<t.h*0.35 && Math.abs(u.h-t.h)<t.h*0.25; }).sort(function(a,b){ return b.x1-a.x1; })[0];
         if(L){ tv=L.td.replace(/^0+(?=\d)/,"")+"."+String(tv).replace(/\D/g,""); tc=Math.min(tc, L.c||0.45, 0.75); } }
+      if(f.n<5) tc=Math.min(tc,0.55);   // few boxes matched the strip layout (photo cropped there) → Allen checks it
       var r=yzDec(tv, g.d, tc); if(!r.v) return;
       vals[k]={v:r.v, c:+r.c.toFixed(2), x0:t.x0, x1:t.x1, y0:t.y0, y1:t.y1, state:"read", strip:z[0]}; });
     if(z[0]==="top"){ // date + time sit right of the rpm box on the first row
