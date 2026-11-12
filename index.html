@@ -654,7 +654,7 @@ pre.raw{white-space:pre-wrap;font-size:12px;background:var(--surface-2);padding:
 <script>
 (function(){
 "use strict";
-var APP_VERSION = "2.8.6";
+var APP_VERSION = "2.8.7";
 // Public OAuth client id (not a secret). Web client, authorized JavaScript origins:
 //   https://mrmitchell68.github.io   and   http://localhost:8766
 // Leave empty until that client exists — Save-to-Drive is hidden and the button uses the Android share sheet.
@@ -1681,7 +1681,7 @@ function msReviewModel(results, job){
     var has = r.state==="read"||r.state==="text"||r.state==="check";
     var prev = msRowText(cur.rows[p[0]], MS_P[p[0]]);
     list.push({id:p[0], label:MS_P[p[0]].label, sec:sec.title, staged:sec.staged, check:MS_P[p[0]].check, vals:r.vals.slice(), extra:r.extra||"", same:!!r.same, arrow:!!r.arrow,
-      conf:has? r.conf : (r.state==="unread"? 0.2 : r.conf), state:r.state, crop:r.crop||"", typed:r.typed, prev:prev, ocr:r.ocr||"",
+      conf:has? r.conf : (r.state==="unread"? 0.2 : r.conf), state:r.state, crop:r.crop||"", typed:r.typed, prev:prev, ocr:r.ocr||"", mean:r.mean||"",
       selected: has && r.conf>=0.6});
     // the job already has a different value here: never pre-check — Allen decides
     var it=list[list.length-1], nowT=msRowText({vals:it.vals, extra:it.extra, same:it.same}, MS_P[p[0]]);
@@ -1730,6 +1730,7 @@ function msReviewRowHtml(r, i){
   if(r.differs) tag+=' <span class="newtag">differs from the job</span>';
   var h='<div class="msr '+cls+(r.selected?'':' off')+'" data-msrrow="'+i+'" data-p="'+esc(r.id)+'"><input type="checkbox" data-msrchk="'+i+'"'+(r.selected?' checked':'')+' aria-label="Save '+esc(r.label)+'"><div class="b">';
   h+='<div class="k">'+esc(r.label)+' '+((r.state==="read"||r.state==="text"||r.state==="check")? '<span class="conf '+cls+'">'+Math.round(r.conf*100)+'%</span>' : '')+tag+'</div>';
+  if(r.mean) h+='<div class="faint" style="margin:2px 0 4px">'+esc(r.mean)+'</div>';   // v2.8.7: where this box is on the machine screen and what it means
   if(r.crop) h+='<img class="crop" src="'+r.crop+'" alt="'+esc(r.label)+' on the sheet">';
   h+='<div class="ins">';
   if(r.check) h+='<label class="msr-cb"><input type="checkbox" data-msrcb="'+i+'"'+(msIsCheckOn(r.vals[0])?' checked':'')+'> checked on the sheet</label>';
@@ -2537,13 +2538,14 @@ function mscrRead(src, onProg){
 var YZ_W = 2400;
 function yzG(h,d){ return [h,d]; }
 var YZ_COLS3 = [yzG(/^p?ress/i,0), yzG(/^veloc/i,0), yzG(/^to$/i,2)], YZ_COLSF = [yzG(/^force/i,0), yzG(/^veloc/i,0), yzG(/^to$/i,2)];
+var YZ_MODE=/^(no|none|pos\w*|time|continu\w*|shake)$/i;
 var YZ_DEFS = [
  {id:"yz-mold", sig:[/protect\s*time/i, /protect\s*from/i, /clamp\s*force/i, /smart\s*mold/i, /(^|\s)c?lose$/i, /(^|\s)(ld\s*|old\s*|mold\s*)?open$/i, /mold\s*adj/i, /lubrica/i], tab:/^mold$/i, title:"Yizumi Mold (clamp)", titles:[/^mold\s*close$/i, /^mold\s*open$/i],
   grids:[{k:"cl", pw:/c?lose$/i, panel:/^mold\s*close$/i, cols:YZ_COLS3, rows:["1","2","3","pr","hp"]}, {k:"op", pw:/open$/i, panel:/^mold\s*open$/i, cols:YZ_COLS3, rows:["1","2","3","E"]}],
-  kvs:[["prot",/mold\s*protect\s*time/i,2,1],["protFT",/protect\s*from/i,2,2],["force",/clamp\s*force/i,2,1]],
+  kvs:[["prot",/mold\s*protect\s*time/i,2,1],["protFT",/protect\s*from/i,2,2],["force",/clamp\s*force/i,1,1]],
   fields:{close_press:["cl1.0","cl2.0","cl3.0"], close_speed:["cl1.1","cl2.1","cl3.1"], close_int:["cl1.2","cl2.2","cl3.2"],
-    open_press:["op1.0","op2.0","op3.0","opE.0"], open_speed:["op1.1","op2.1","op3.1","opE.1"], open_int:["op1.2","op2.2","op3.2","opE.2"], clamp_tonnage:["force.1"]},
-  notes:[["Mold protect psi/%/in",["clpr.0","clpr.1","clpr.2"]],["High pressure psi/%",["clhp.0","clhp.1"]],["Mold protect time s",["prot.0","prot.1"]],["Protect from-to in",["protFT.0","protFT.1"]],["Clamp force US ton (actual/set)",["force.0","force.1"]]]},
+    open_press:["op1.0","op2.0","op3.0","opE.0"], open_speed:["op1.1","op2.1","op3.1","opE.1"], open_int:["op1.2","op2.2","op3.2","opE.2"], clamp_tonnage:["force.0"]},
+  notes:[["Mold protect psi/%/in",["clpr.0","clpr.1","clpr.2"]],["High pressure psi/%",["clhp.0","clhp.1"]],["Mold protect time s",["prot.0","prot.1"]],["Protect from-to in",["protFT.0","protFT.1"]],["Actual clamp force US ton",["force.0"]]]},
  {id:"yz-inject", sig:[/^in[jil]ect$/i, /cut\s*off/i, /plasticize\s*stroke/i, /max\.?\s*veloc/i, /inject\s*time/i, /inject\s*pressure/i, /valve\s*gat/i, /^hold$/i, /inj\.?\s*graph/i], tab:/^inject/i, title:"Yizumi Injection", titles:[/^inject$/i, /^cut\s*off$/i, /allowable/i],
   grids:[{k:"in", panel:/^inject$/i, cols:YZ_COLS3, rows:["1","2","3","E"]}],
   kvs:[["stroke",/plasticize\s*stroke/i,1,2],["allow",/allowable/i,1,0],["coPos",/screw\s*position/i,2,2],["coTime",/^inject\s*time/i,2,[2,1]],["coPress",/^inject\s*pressure/i,1,0,"last"],["coAct",/activation/i,1,2],["injP",/^inject\s*pressure/i,1,0],["maxV",/max\.?\s*veloc/i,1,1]],
@@ -2551,16 +2553,17 @@ var YZ_DEFS = [
   notes:[["Inject pressure psi",["injP.0"]],["Plasticize stroke in",["stroke.0"]],["Max. velocity mm/s",["maxV.0"]],["Allowable inject pressure psi",["allow.0"]],["Cut off: screw position in (actual / set)",["coPos.0","coPos.1"]],["Cut off: inject time s (actual / set)",["coTime.0","coTime.1"]],["Cut off: inject pressure psi",["coPress.0"]],["Cut off activation position in",["coAct.0"]]]},
  {id:"yz-plast", sig:[/backpress/i, /delay\s*plast/i, /compression/i, /green\s*plast/i, /act\s*back/i, /screw\s*revol/i, /and\s*backpressure/i], tab:/^plast/i, title:"Yizumi Plasticize", titles:[/plasticize\s*and/i, /^decompression$/i, /delay\s*plast/i],
   grids:[{k:"pl", panel:/plasticize\s*and/i, cols:[yzG(/^back/i,0), yzG(/^charge/i,0), yzG(/^to$/i,2)], rows:["E"]}],
-  kvs:[["dly",/delay\s*plast/i,2,2],["decA",/decompression\s*after/i,3,[0,0,2]]],
+  kvs:[["dly",/delay\s*plast/i,2,2],["decB",/(ression|ompression|^)\s*before\s*plast/i,4,[0,0,2,1],null,{mode:"decB.mode"}],["decA",/(ression|ompression|^)\s*after\s*plast/i,4,[0,0,2,1],null,{mode:"decA.mode"}],["plPos",/^screw\s*position/i,1,2],["plRev",/screw\s*revol/i,1,1],["plBP",/act\.?\s*back/i,1,0]],
+  texts:[["decB.mode",/before\s*plast/i,YZ_MODE],["decA.mode",/after\s*plast/i,YZ_MODE]],
   fields:{back_press:["plE.0"], screw_speed:["plE.1"], screw_int:["plE.2"], charge_delay:["dly.1"], suck_back:["decA.2"]},
-  notes:[["Delay plast s",["dly.0","dly.1"]],["Decompression after plasticize psi/%/in",["decA.0","decA.1","decA.2"]]]},
+  notes:[["Delay plast (charge delay) s actual / set",["dly.0","dly.1"]],["Suck back before charging (decompression before plasticize) mode",["decB.mode"]],["Suck back before charging psi / % / in / s",["decB.0","decB.1","decB.2","decB.3"]],["Suck back after charging (decompression after plasticize) mode",["decA.mode"]],["Suck back after charging psi / % / in / s",["decA.0","decA.1","decA.2","decA.3"]],["Screw position in (live)",["plPos.0"]],["Screw revolution rpm (live)",["plRev.0"]],["Act. back pressure psi (live)",["plBP.0"]]]},
  {id:"yz-heat", sig:[/heating\s*zones/i, /tol\.?\s*(high|low)/i, /standby/i, /^(mon|tues|wednes|thurs|fri|satur|sun)day$/i, /optimize\s*nozzle/i, /keep\s*warm/i, /cool\s*prevent/i, /auto\s*heating/i], tab:/^heat/i, title:"Yizumi Heating", titles:[/heating\s*zones/i, /auto\s*heating/i, /tol\.?\s*high/i],
-  grids:[], kvs:[["set",/^set$/i,8,1],["tolH",/tol\.?\s*high/i,8,1],["tolL",/tol\.?\s*low/i,8,1],["stby",/standby/i,1,0],["oil",/^oil$/i,1,0]],
+  grids:[], kvs:[["set",/^set$/i,8,1],["tolH",/tol\.?\s*high/i,8,1,null,{col:"set"}],["tolL",/tol\.?\s*low/i,8,1,null,{col:"set"}],["outp",/^[oq0]u?tput$/i,8,1,null,{col:"set"}],["stby",/standby/i,1,0],["oil",/^oil$/i,1,0]], above:[["act","set",1]],
   fields:{zone1:["set.0"],zone2:["set.1"],zone3:["set.2"],zone4:["set.3"],zone5:["set.4"],zone6:["set.5"],zone7:["set.6"],zone8:["set.7"],oil_temp:["oil.0"]},
-  notes:[["Tolerance high °F (zones 1-8)",["tolH.0","tolH.1","tolH.2","tolH.3","tolH.4","tolH.5","tolH.6","tolH.7"]],["Tolerance low °F (zones 1-8)",["tolL.0","tolL.1","tolL.2","tolL.3","tolL.4","tolL.5","tolL.6","tolL.7"]],["Standby temperature °F",["stby.0"]],["Oil °F",["oil.0"]]]},
+  notes:[["Zone actual °F (nozzle end at left)",["act.0","act.1","act.2","act.3","act.4","act.5","act.6","act.7"]],["Heater output % (zones 1-8)",["outp.0","outp.1","outp.2","outp.3","outp.4","outp.5","outp.6","outp.7"]],["Tolerance high °F (zones 1-8)",["tolH.0","tolH.1","tolH.2","tolH.3","tolH.4","tolH.5","tolH.6","tolH.7"]],["Tolerance low °F (zones 1-8)",["tolL.0","tolL.1","tolL.2","tolL.3","tolL.4","tolL.5","tolL.6","tolL.7"]],["Standby temperature °F",["stby.0"]],["Oil °F",["oil.0"]]]},
  {id:"yz-eject", sig:[/(ject|ctor|tor)\s*forward$/i, /(ject|ctor|tor)\s*backward$/i, /ejector\s*mode/i, /shake/i, /fwd\s*delay/i, /backword/i, /air\s*valve/i, /continuous/i], tab:/^eject/i, title:"Yizumi Ejector", titles:[/ejector\s*forward/i, /ejector\s*backward/i, /shake/i],
   grids:[{k:"ef", panel:/ejector\s*forward/i, cols:YZ_COLSF, rows:["1","2","3","E"]}, {k:"eb", panel:/ejector\s*backward/i, cols:YZ_COLSF, rows:["1","2","3","E"]}],
-  kvs:[["shake",/shake\s*counter/i,1,0]], texts:[["mode",/ejector\s*mode/i]],
+  kvs:[["shake",/shake\s*counter/i,1,0]], texts:[["mode",/ejector\s*mode/i,YZ_MODE]],
   fields:{ej_fwd_press:["ef1.0","ef2.0","ef3.0","efE.0"], ej_fwd_speed:["ef1.1","ef2.1","ef3.1","efE.1"], ej_fwd_int:["ef1.2","ef2.2","ef3.2","efE.2"], ej_strokes:["shake.0"], ej_back_press:["eb1.0","eb2.0","eb3.0","ebE.0"], ej_back_speed:["eb1.1","eb2.1","eb3.1","ebE.1"], ej_back_set:["eb1.2","eb2.2","eb3.2","ebE.2"]},
   notes:[["Ejector mode",["mode"]]]},
  {id:"yz-overview", sig:[/cycle\s*time\s*mach/i, /prod\.?\s*counter/i, /prod\.?\s*time/i, /mold\s*data/i, /cavity/i, /energy/i, /prod\s*info/i], tab:/^overvi/i, title:"Yizumi Overview", titles:[/prod\.?\s*counter/i, /cycle\s*delay/i, /plasticize\s*time/i, /decomp/i, /plast\s*end/i],
@@ -2568,9 +2571,46 @@ var YZ_DEFS = [
   fields:{cycle:["cyc.1"], cooling:["cool.1"], cycle_int:["cdly.1"], cushion:["cush.0"]},
   notes:[["Production counter actual / set",["prod.0","prod.1"]],["Cycle delay time s actual / set",["cdly.0","cdly.1"]],["Cycle time s actual / set",["cyc.0","cyc.1"]],["Cooling time s actual / set",["cool.0","cool.1"]],["Mold close time s actual / max",["mct.0","mct.1"]],["Mold open time s actual / max",["mot.0","mot.1"]],["Injection time s actual / max",["ijt.0","ijt.1"]],["Plasticize time s actual / max",["plt.0","plt.1"]],["Decomp. time s actual / max",["dct.0","dct.1"]],["Plast end position in (actual)",["pend.0"]]], barrel:true},
  {id:"yz-nozzle", sig:[/limit\s*switch/i, /contact\s*force/i, /back\s*mode/i, /^backward$/i, /(zzle|zle)\s*(forward|backward)/i, /auto\s*pur/i], tab:/^nozzle$/i, title:"Yizumi Nozzle", titles:[/nozzle\s*forward/i, /nozzle\s*backward/i, /limit\s*switch/i],
-  grids:[], kvs:[["bf",/before\s*limit/i,2,0],["af",/after\s*limit/i,4,[0,0,2,2]],["cf",/contact\s*force/i,2,0],["bu",/build\s*up/i,2,2],["bk",/^backward$/i,4,[0,0,2,2]]],
-  fields:{}, notes:[["Nozzle fwd before limit psi/%",["bf.0","bf.1"]],["Nozzle fwd after limit psi/%/s/s",["af.0","af.1","af.2","af.3"]],["Contact force psi/%",["cf.0","cf.1"]],["Force build up time s",["bu.0","bu.1"]],["Nozzle backward psi/%/s/s",["bk.0","bk.1","bk.2","bk.3"]]]}
+  grids:[], kvs:[["bf",/before\s*limit/i,2,0],["af",/after\s*limit/i,4,[0,0,1,1]],["cf",/contact\s*force/i,4,[0,0,1,1]],["bu",/build\s*up/i,2,2],["bk",/^backward$/i,4,[0,0,1,1],null,{mode:"bkMode"}]], texts:[["bkMode",/back\s*mode/i,YZ_MODE]],
+  fields:{}, notes:[["Nozzle fwd before limit switch psi / %",["bf.0","bf.1"]],["Nozzle fwd after limit switch psi / % / s actual / s set",["af.0","af.1","af.2","af.3"]],["Nozzle contact force psi / % / s actual / s set",["cf.0","cf.1","cf.2","cf.3"]],["Nozzle back mode",["bkMode"]],["Force build up time s",["bu.0","bu.1"]],["Nozzle backward psi / % / s actual / s set",["bk.0","bk.1","bk.2","bk.3"]]]}
 ];
+// v2.8.7: what each Yizumi screen box means, in setup-sheet words — shown under each row while checking a screen photo
+var YZ_STRIP_FIELDS={cooling:["bm.cool"], cycle:["bm.last"], cushion:["bm.cush"]};
+var YZ_MEAN={
+  "yz-mold:close_press":"Mold tab › Mold close › Pressure psi (rows 1–3) — how hard the clamp pushes while it closes",
+  "yz-mold:close_speed":"Mold tab › Mold close › Velocity % — closing speed of each stage",
+  "yz-mold:close_int":"Mold tab › Mold close › To in — mold position where each closing stage ends",
+  "yz-mold:open_press":"Mold tab › Mold open › Pressure psi (rows 1, 2 … End) — opening force",
+  "yz-mold:open_speed":"Mold tab › Mold open › Velocity % — opening speed of each stage",
+  "yz-mold:open_int":"Mold tab › Mold open › To in — mold position where each opening stage ends",
+  "yz-mold:clamp_tonnage":"Mold tab › Actual clamp force (US ton) — the clamp force the machine reached",
+  "yz-eject:ej_fwd_press":"Ejector tab › Ejector forward › Force psi — push force of each forward stage",
+  "yz-eject:ej_fwd_speed":"Ejector tab › Ejector forward › Velocity % — forward speed",
+  "yz-eject:ej_fwd_int":"Ejector tab › Ejector forward › To in — how far the pins go out",
+  "yz-eject:ej_strokes":"Ejector tab › Shake counter — how many times the ejector strokes",
+  "yz-eject:ej_back_press":"Ejector tab › Ejector backward › Force psi — retract force",
+  "yz-eject:ej_back_speed":"Ejector tab › Ejector backward › Velocity % — retract speed",
+  "yz-eject:ej_back_set":"Ejector tab › Ejector backward › To in — position the pins return to",
+  "yz-inject:inj_press":"Injection tab › Inject › Pressure psi — pressure limit of each injection stage",
+  "yz-inject:inj_speed":"Injection tab › Inject › Velocity % — injection speed (fill speed)",
+  "yz-inject:inj_int":"Injection tab › Inject › To in — screw position where each injection stage ends",
+  "yz-inject:switchover":"Injection tab › Cut off › Screw position, set (right box) — switchover / transfer point to hold",
+  "yz-plast:back_press":"Plastic tab › Backpress psi — back pressure while the screw charges",
+  "yz-plast:screw_speed":"Plastic tab › Charge rpm — screw speed while charging",
+  "yz-plast:screw_int":"Plastic tab › To in — charge end = shot size",
+  "yz-plast:charge_delay":"Plastic tab › Delay Plast, set (right box) s — wait before charging starts",
+  "yz-plast:suck_back":"Plastic tab › Decompression after plasticize › Position in — suck back distance",
+  "yz-heat:oil_temp":"Heat tab › Oil °F — hydraulic oil temperature",
+  "strip:cooling":"Bottom cycle monitor › Cooling time s (2nd row, 2nd box) — set cooling time",
+  "strip:cycle":"Bottom cycle monitor › Last cycle time s (1st row, 2nd box)",
+  "strip:cushion":"Bottom cycle monitor › Cushion in (2nd row, 6th box) — screw position left after hold"
+};
+function yzMeanOf(sid, id, ks){ var z=/^zone(\d)$/.exec(id);
+  if(z) return "Heat tab › Set °F, zone "+z[1]+(z[1]==="1"? " (nozzle end, at the left)" : "")+" — barrel heater setpoint";
+  if(ks && ks.some(function(k){ return /^bm\./.test(k); })) return YZ_MEAN["strip:"+id]||"";
+  return YZ_MEAN[sid+":"+id]||""; }
+var YZ_STRIP_NOTES=[["Top bar: ejector position in",["tb.ejPos"]],["Top bar: screw position in",["tb.screwPos"]],["Top bar: screw rpm",["tb.rpm"]],["Top bar: date / time",["tb.dateTime"]],["Top bar: mold position in",["tb.moldPos"]],["Top bar: nozzle position in",["tb.nozPos"]],["Top bar: injection pressure psi",["tb.injP"]],["Top bar: system pressure psi (circled F)",["tb.sysP"]],["Top bar: valve %",["tb.valve"]],
+  ["Cycle monitor: running cycle s",["bm.run"]],["Cycle monitor: last cycle time s",["bm.last"]],["Cycle monitor: mold close s / mold open s",["bm.mc","bm.mo"]],["Cycle monitor: ejector fwd s / back s",["bm.ef","bm.eb"]],["Cycle monitor: other s",["bm.eo"]],["Cycle monitor: cooling elapsed s / cooling time s",["bm.coolEl","bm.cool"]],["Cycle monitor: injection time s",["bm.inj"]],["Cycle monitor: hold time s",["bm.hold"]],["Cycle monitor: plasticize (charge) time s",["bm.plast"]],["Cycle monitor: cushion in",["bm.cush"]],["Cycle monitor: switchover pressure psi",["bm.coP"]],["Cycle monitor: shot size in",["bm.shot"]],["Cycle monitor: clamp force US ton",["bm.clamp"]],["Cycle monitor: energy Wh",["bm.energy"]],["Cycle monitor: live system pressure psi",["bm.sysP"]]];
 var YZ_BRAND = [/yizumi/i, /^mold$/i, /^heating$/i, /^core/i, /\bhpm\b/i, /administrator/i, /^overvi/i, /^ejector$/i, /^injection$/i, /^plastic/i, /^nozzle$/i, /^heating$/i, /^produ/i, /^alarm$/i, /^return$/i, /^cooling$/i];
 // cheap look: big light-grey low-colour area + a small bright green block (the highlighted tab)
 function yzLooksLikeScreen(im){
@@ -2698,6 +2738,171 @@ function yzTabIndex(P, P0){ var T=P0.tab; if(!T || T.y0<P0.H*0.7) return -1; var
   var hits=[]; P.words.forEach(function(w){ if(Math.abs(w.cy-tcy)>lh*3) return; var t=w.t.replace(/[^A-Za-z0-9\/]/g,""); YZ_TABS.forEach(function(d,k){ if(d[1].test(t)) hits.push({k:k, cx:w.cx}); }); });
   var est=[]; hits.forEach(function(a){ hits.forEach(function(b){ if(b.k<=a.k) return; var pitch=(b.cx-a.cx)/(b.k-a.k); if(pitch<T.w*0.6 || pitch>T.w*1.8) return; est.push(Math.round(a.k+(tcx-a.cx)/pitch)); }); });
   if(!est.length) return -1; est.sort(function(a,b){ return a-b; }); var m=est[est.length>>1]; return m>=0 && m<YZ_TABS.length? m : -1; }
+// v2.8.7: in a photo of the whole monitor the white value boxes barely stand out, but the dark digits do. Values are found as
+// "ink tokens" (neighbouring dark glyphs on one line), each drawn clean (only its own glyphs, black on white, enlarged) and read
+// on its own; the digit count and the decimal point come from the glyph shapes, so a lost or extra dot/digit is caught.
+function yzInk(P0, lh){
+  var W=P0.W, H=P0.H, g=P0.g.getContext("2d").getImageData(0,0,W,H).data, N=W*H, L=new Uint8Array(N), I=new Float64Array((W+1)*(H+1));
+  for(var y=0;y<H;y++){ var row=0; for(var x=0;x<W;x++){ var v=g[(y*W+x)*4]; L[y*W+x]=v; row+=v; I[(y+1)*(W+1)+x+1]=I[y*(W+1)+x+1]+row; } }
+  var R=Math.max(12, Math.round(lh*0.9)), TH=window.__yzInkT||55, TL=window.__yzInkL||30, M=new Uint8Array(N), ML=new Uint8Array(N);   // strict: thin strokes keep digits apart; lenient: faint decimal points
+  for(y=0;y<H;y++){ var b=Math.max(0,y-R), d=Math.min(H,y+R+1); for(x=0;x<W;x++){ var v2=L[y*W+x]; if(v2>=200) continue; var a=Math.max(0,x-R), c=Math.min(W,x+R+1);
+    var m=(I[d*(W+1)+c]-I[b*(W+1)+c]-I[d*(W+1)+a]+I[b*(W+1)+a])/((c-a)*(d-b)); if(v2<m-TH) M[y*W+x]=1; if(v2<m-TL) ML[y*W+x]=1; } }
+  var M0=M.slice(), LV=Math.round(lh*1.3), LH2=Math.round(lh*2.6);   // box frames: long straight runs of ink are not text — erase them (a digit touching its frame stays)
+  for(x=0;x<W;x++){ var st=-1; for(y=0;y<=H;y++){ var on=y<H && M0[y*W+x]; if(on && st<0) st=y; else if(!on && st>=0){ if(y-st>=LV) for(var e=st;e<y;e++) M[e*W+x]=0; st=-1; } } }
+  for(y=0;y<H;y++){ st=-1; for(x=0;x<=W;x++){ on=x<W && M0[y*W+x]; if(on && st<0) st=x; else if(!on && st>=0){ if(x-st>=LH2) for(e=st;e<x;e++) M[y*W+e]=0; st=-1; } } }
+  var C=mscrComponents(M, W, H), gl=[], dots=[], dash=[], yzRescN=0;
+  C.comps.forEach(function(k){ k.cx=(k.x0+k.x1)/2; k.cy=(k.y0+k.y1)/2;
+    if(k.h>=lh*0.42 && k.h<=lh*1.25 && k.w<=lh*1.5 && k.n>=k.h*0.8) gl.push(k);
+    else if(k.h<=lh*0.26 && k.w>=lh*0.15 && k.w<=lh*0.8 && k.w>k.h*1.5) dash.push(k);
+    else if(k.h>lh*0.6 && k.h<lh*3 && k.w<lh*8 && !window.__yzNoRescue) yzInkRescue(k); });
+  // a digit stuck to the edge of its value box (heat zone actuals): inside that blob, erase shorter straight runs (the box edge) and look again
+  function yzInkRescue(k){ var w=k.w, h=k.h, A=new Uint8Array(w*h), B, x, y, st, e, lv=Math.round(lh*0.8), lhz=Math.round(lh*1.2);
+    for(y=0;y<h;y++) for(x=0;x<w;x++) if(C.L[(k.y0+y)*W+k.x0+x]===k.id) A[y*w+x]=1;
+    B=A.slice();
+    for(x=0;x<w;x++){ st=-1; for(y=0;y<=h;y++){ var on=y<h && A[y*w+x]; if(on && st<0) st=y; else if(!on && st>=0){ if(y-st>=lv) for(e=st;e<y;e++) B[e*w+x]=0; st=-1; } } }
+    for(y=0;y<h;y++){ st=-1; for(x=0;x<=w;x++){ on=x<w && A[y*w+x]; if(on && st<0) st=x; else if(!on && st>=0){ if(x-st>=lhz) for(e=st;e<x;e++) B[y*w+e]=0; st=-1; } } }
+    var sub=mscrComponents(B, w, h); sub.comps.forEach(function(q){ if(q.h>=lh*0.55 && q.h<=lh*0.95 && q.w>=q.h*0.35 && q.w<=q.h*0.9 && q.n>=q.w*q.h*0.22){
+      var id=C.comps.length+(++yzRescN); // relabel its pixels so the glyph reader sees only this piece
+      for(y=q.y0;y<=q.y1;y++) for(x=q.x0;x<=q.x1;x++) if(sub.L[y*w+x]===q.id) C.L[(k.y0+y)*W+k.x0+x]=id;
+      gl.push({id:id, x0:q.x0+k.x0, x1:q.x1+k.x0, y0:q.y0+k.y0, y1:q.y1+k.y0, w:q.w, h:q.h, n:q.n, cx:(q.x0+q.x1)/2+k.x0, cy:(q.y0+q.y1)/2+k.y0, rescued:true}); if(window.__yzResc) window.__yzResc.push([q.x0+k.x0,q.y0+k.y0,q.w,q.h,k.x0,k.y0,k.w,k.h]); } }); }
+  mscrComponents(ML, W, H).comps.forEach(function(k){ k.cx=(k.x0+k.x1)/2; k.cy=(k.y0+k.y1)/2; if(k.w<=lh*0.34 && k.h<=lh*0.34 && k.n>=3 && k.w>=2 && k.h>=2) dots.push(k); });
+  gl.sort(function(a,b){ return a.x0-b.x0; }); var toks=[];
+  // a box frame (a dark line taller than the text) between two glyphs keeps them apart: value | unit
+  var sep=function(xa, xb, ya, yb){ var y0=Math.max(0,Math.round(ya)), y1=Math.min(H-1,Math.round(yb)), need=(y1-y0+1)*0.85;
+    for(var x=Math.max(0,Math.round(xa)); x<=Math.min(W-1,Math.round(xb)); x++){ var n=0; for(var y=y0;y<=y1;y++) if(M0[y*W+x]) n++; if(n>=need) return true; } return false; };
+  gl.forEach(function(k){ var t=null; for(var i=toks.length-1;i>=0;i--){ var q=toks[i]; if(Math.abs(q.cy-k.cy)<Math.max(lh*0.12, q.hm*0.16) && k.x0-q.x1<lh*0.45 && k.x0-q.x1>-lh*0.25 && (k.h>q.hm*0.82 && k.h<q.hm*1.22 || k.w<k.h*0.45 && k.h>q.hm*0.75 && k.h<q.hm*1.25) && !sep(q.x1+1, k.x0-1, Math.min(q.y0,k.y0)-q.hm*0.3, Math.max(q.y1,k.y1)+q.hm*0.3)){ t=q; break; } }
+    if(t){ t.g.push(k); t.x1=Math.max(t.x1,k.x1); t.y0=Math.min(t.y0,k.y0); t.y1=Math.max(t.y1,k.y1); t.cy=(t.y0+t.y1)/2; t.hm=Math.max(t.hm,k.h); }
+    else toks.push({g:[k], x0:k.x0, x1:k.x1, y0:k.y0, y1:k.y1, cy:k.cy, hm:k.h}); });
+  // a decimal point between two groups joins them ("22" "." "3" → 22.3)
+  toks.sort(function(a,b){ return a.x0-b.x0; });
+  for(var ti=0; ti<toks.length; ti++){ var A=toks[ti]; if(!A) continue; for(var tj=ti+1; tj<toks.length; tj++){ var B=toks[tj]; if(!B) continue; var gp=B.x0-A.x1;
+      if(Math.abs(A.cy-B.cy)>Math.max(lh*0.12, A.hm*0.16) || gp<0 || gp>lh*0.95 || B.hm<A.hm*0.82 || B.hm>A.hm*1.22 || sep(A.x1+1, B.x0-1, Math.min(A.y0,B.y0)-A.hm*0.3, Math.max(A.y1,B.y1)+A.hm*0.3)) continue;
+      if(!dots.some(function(d){ return d.cx>A.x1-2 && d.cx<B.x0+2 && d.cy>A.cy && d.y1<=Math.max(A.y1,B.y1)+A.hm*0.2 && d.h<A.hm*0.42; })) continue;
+      A.g=A.g.concat(B.g); A.x1=B.x1; A.y0=Math.min(A.y0,B.y0); A.y1=Math.max(A.y1,B.y1); A.cy=(A.y0+A.y1)/2; A.hm=Math.max(A.hm,B.hm); toks[tj]=null; } }
+  toks=toks.filter(Boolean);
+  // a decimal point sits low, between two glyphs of the token (or just after its first glyphs)
+  dots.forEach(function(d){ toks.forEach(function(t){ if(d.cx>t.x0 && d.cx<t.x1 && d.cy>t.cy+t.hm*0.12 && d.y1<=t.y1+t.hm*0.2 && d.h<t.hm*0.42) (t.d=t.d||[]).push(d); }); });
+  dash.forEach(function(d){ toks.forEach(function(t){ if(d.x1<=t.x0+2 && t.x0-d.x1<lh*0.3 && Math.abs(d.cy-t.cy)<t.hm*0.25) { t.neg=d; } }); });
+  toks.forEach(function(t){ t.cx=(t.x0+t.x1)/2; t.w=t.x1-t.x0+1; t.h=t.y1-t.y0+1;
+    var ws=0, dk=0, dn=0; t.nd=0; t.g.forEach(function(k){ k.nd=Math.max(1, Math.round(k.w/(k.h*0.62))); t.nd+=k.nd; });
+    t.dot=-1; if(t.d && t.d.length===1){ var d=t.d[0], n=0; t.g.forEach(function(k){ if(k.cx<d.cx) n+=k.nd; }); if(n>0 && n<t.nd) t.dot=n; }
+    for(var yy=t.y0; yy<=t.y1; yy++) for(var xx=t.x0; xx<=t.x1; xx++){ var p=yy*W+xx; if(M[p]){ dk+=L[p]; dn++; } } t.dark=dn? dk/dn : 255; });
+  return {toks:toks, C:C, M:M, M0:M0, ML:ML, L:L, W:W, H:H};
+}
+// one token drawn clean: only its own glyphs (and its dot), black on white, ~44 px tall
+function yzTokCanvas(ink, t, parts){
+  var keep={}; (parts||t.g.concat(t.d||[])).forEach(function(k){ keep[k.id]=1; });
+  var pad=Math.round(t.hm*0.25), x0=Math.max(0,t.x0-pad), y0=Math.max(0,t.y0-pad), x1=Math.min(ink.W-1,t.x1+pad), y1=Math.min(ink.H-1,t.y1+pad), w=x1-x0+1, h=y1-y0+1;
+  var s=document.createElement("canvas"); s.width=w; s.height=h; var sg=s.getContext("2d"), id=sg.createImageData(w,h), q=id.data;
+  var on=new Uint8Array(w*h); for(var y=0;y<h;y++) for(var x=0;x<w;x++){ if(keep[ink.C.L[(y0+y)*ink.W+x0+x]]) on[y*w+x]=1; }
+  var D=Math.max(1,Math.round(t.hm*0.08)), lo=255, hi=0;   // grey levels around the glyphs only (thin strokes stay thin: 0 vs 8)
+  for(y=0;y<h;y++) for(x=0;x<w;x++){ var near=0; for(var dy=-D;dy<=D && !near;dy++) for(var dx=-D;dx<=D;dx++){ var yy=y+dy, xx=x+dx; if(yy>=0&&yy<h&&xx>=0&&xx<w&&on[yy*w+xx]){ near=1; break; } }
+    var v=near? ink.L[(y0+y)*ink.W+x0+x] : 255; if(near){ if(v<lo) lo=v; if(v>hi) hi=v; } var o=(y*w+x)*4; q[o]=q[o+1]=q[o+2]=v; q[o+3]=255; }
+  if(hi>lo+20) for(var i2=0;i2<w*h;i2++){ var o2=i2*4; if(q[o2]<255){ var v3=Math.max(0,Math.min(255,(q[o2]-lo)*255/(hi-lo))); q[o2]=q[o2+1]=q[o2+2]=v3; } }
+  sg.putImageData(id,0,0); var S=44/Math.max(8,t.hm), c=document.createElement("canvas"); c.width=Math.round(w*S)+32; c.height=Math.round(h*S)+32;
+  var g=c.getContext("2d"); g.fillStyle="#fff"; g.fillRect(0,0,c.width,c.height); g.imageSmoothingQuality="high"; g.drawImage(s,16,16,w*S,h*S); return c;
+}
+// v2.8.7: the screen font is a plain bold sans (DejaVu Sans Bold); each digit is matched against that font's 0-9 drawn at
+// three blur levels (16×24 grey templates). Much steadier than Tesseract on small blurry box digits; letters match poorly → words.
+var YZ_TPL_B64="AAAEHFGSwNfVvY1LFwIAAAADIXvN8Pn8/Pjvx3AbAgABFnLb+f7+/v7+/vjUZREABk/K+v/87dvc7/3/+cBBBR6d8//+5Y9ESJnr///vjRZJ0v3/+awuBgc3u/v//MU8dez///J2DwAAFYj2///mZJ/2//7mVgYAAAhk7///9IvA+v/910QDAAAEUOP+//ir1/z//c06AwAABEba/v/7w+P+//zINQIAAANB1f3//M/n/v/8xjICAAADPtL9//3W5/7//MYyAgAAAz7S/f/91uP+//zINQIAAANC1f3//M/X/P/9zToDAAAER9r+//vDwPr//ddFBAAABFHk/v/4rJ/2//7nVwYAAAhm7///9It17P//83gQAAAYi/b//+ZkSdL9//muLwYHOr37//zGPB6d8//+5pBESZzr///vjRYGT8r6//zu2tvv/f/5wEEFARZy2/n+/v7+/v741GURAAADIXzN8Pn8/Pjvx3AbAgAAAAQcUpPB19a+jUsXAgAAOWmJp8PZ4OHh3ag2AwAAAI3h7/X4/P39/fm/PQQAAACb8/79/f7////6wD0EAAAAme3z7uvx/f//+sA9BAAAAHanlntpnu7+//rAPQQAAAAUHBgQFnXo/v/6wD0EAAAAAAEBAAxx5/7/+sA9BAAAAAAAAAAMcef+//rAPQQAAAAAAAAADHHn/v/6wD0EAAAAAAAAAAxx5/7/+sA9BAAAAAAAAAAMcef+//rAPQQAAAAAAAAADHHn/v/6wD0EAAAAAAAAAAxx5/7/+sA9BAAAAAAAAAAMcef+//rAPQQAAAAAAAAADHHn/v/6wD0EAAAAAAAAAAxx5/7/+sA9BAAAAAAAAAAMcef+//rAPQQAAAAAAAAADHHn/v/6wD0EAAAAAQIDBBBz5/7/+sBACAMDAiI9QkJLlu3+//zQcEVCQTp31+Xl5vD8////+evl5eTOhO78/f3+///////+/f385ITu/P39/f39/f39/f39/OR10+Dh4eHh4eHh4eHh4eDKGTdbh6vI2NzUvpRbKQkAAHG24O/1+vz9/Pjy2pk/CAC68v3+/f79/v////zsozEFw/j68OLZ1t/y/f///ueBGb/lxZBfPTVVnub9///6wkCRhkMWCQQDCi+h9P///uNbMx4IAQAAAAAMZeH+///tagQCAAAAAAAABkzV/f//7GkAAAAAAAAAAAlc3P7//d1VAAAAAAAAAAEcjfD///izMwAAAAAAAAEMUsv7//3jdRQAAAAAAAALRLP1//7wpCsEAAAAAAEOS7Lx//7ytUEHAAAAAAEOTbnz/v7yt04LAAAAAAEMSLPz/v71vVERAQAAAAEOULXx/v7yvFIOAQAAAAEQVsH0/v7vsUsOAAAAAAAVVsL2/v7xrkYMAQEBAQEAXL70/v/4xV8kGBcXFxcVDLTz/v///OG+s7KysrKyqWTM+//////9+vr6+vr6+u6Nzvv////////////////ykM35/f39/f39/f39/f398Y+23uLi4uLi4uLi4uLi4td/Bz55nbvL19zYx6h4QRYCABSP5/P4+vz9/Pr16cFpGAEWm/f+/f79/v7///73zVkLFpnz7+HY1dro+f////SnKhOFuY1cOzNBdcb5///900sKPDYTCQQDBRVm4/7//uVbAQcFAQAAAAAEPs38//7kWgAAAAAAAAABB0fT/f/8zkcAAAACCAoNFjWO7//+8JoiAAABGVpwdYWw5v3877VHBwAAAzXA7O7w9v3+6qdPDwEAAAM5zfz+/v///++rSQ8BAAADNsXz9fb6/v/977xSDgAAAh9zjpOfvuf8//70sjcAAAADDREWIkSO5f7//uVtAAAAAAAAAQIHL675///1mwAAAAAAAAAAABCK9P//+LAGBgIAAAAAAAEWlPb///itO0EbDAUDAgUPRsL7///0l37An29KNTFBb7nx///+5WuO8PPn3NbV2ub3/v/+8qwyjvL+/f7+/f7+//788rxQC4Ti8vb6/P39+/fw3aVREQE5dJi3ydTc2s61j10tDQEAAAAAAAACHJPZ4eHgyUcEAAAAAAAAC1XX+/39/ONQBAAAAAAAAiag9v////7lUQQAAAAAAQpj2v7////+5VEEAAAAAAMvsvb79/7//uVRBAAAAAATden84s36//7lUQQAAAAFQcD786Oa9v/+5VEEAAABFonr+s9ZhPX//uVRBAAABkTM++2OKH71//7lUQQAASCV8/vAPRR99f/+5VEEAAtg2v3mcBEQffX//uVRBAAurPb3sy4EEH31//7lUQQAcuL932oMABB99f/+5VEEAMH5+KktBAITfvX//uVSBwHm/u6KRTs7SJv3//7rej416/787eXk5OXy/v///e3kzuv+//79/f39/v/////+/OXq/P39/f39/f7//////vzlydra2tra2tzs/v///ObaxSwwMDAwMDA+lff//ulyNCsBAQEBAQEBEn71//7lUgYBAAAAAAAAABB99f/+5VEEAAAAAAAAAAAQfPP9/ONQBAAAAAAAAAAADm7X4eDJRwQAQ7rf4eHh4eHh4eHh4dVxC0zS+/39/f39/f39/f3wfgxN1P3/////////////8X8MTdT9///+/f39/f39/fB+DE3U/f/73tDOzs7Ozs7EZwpN1P3+6nArJiYmJSUlIxICTdT9/uhgFRERDwsGAgEBAE3U/f/wmXiBfnJWLhEDAABN1P3/++bl7evizqprIQMATdT9//79/v7+/vz23ZApBU3U+/v29PP1+v7///3mhSBMzebKq5aSocnw/v//+85UPZV9TzAcFydUqvH////uixQsFwgEAgEDDUjL/f//+LoBAgEAAAAAAAEWmfX///3WAAAAAAAAAAAADIHv///+4ggDAAAAAAAAAA+L8v///t1HIgkCAAAAAAMmsPn///vJrpdNHw8IBQohc+D+///0odXu1KR0VElfmtz7///922TY/P327ejm6vT9///96pMozfb9/v3+/f7+//7766k8CX2/5PD2+/z8+/bu1ZZBCwEcOmOSs83Z2s+3i1QnCQEAAAAABRtPibzV3NCseD0SAQAABCh5zu74/P379eq4UAYAAh2E3Pn+/v7+/f396oELAA9n3fz//fHg19bf7euFDAM6vPr//OGZWTg3VIe0dAsOfOr+/ueGJAkDAwgTNjQGJ6/4//u4OAUBAQEAAQUFAErV/f/0gSEfJykjFQcBAABq6/7+64BupsbKt4ZJFQMAhvP//vLQ5Pb8/PnuyWkXAZb2///++v39/v7//vjJWAqh9/////7z3dfk+f//9K4tpff////zrVA6bcz7//7jZJ/3///+1E4KAxh88P//9ZKV9f//+7UnAQAGUeD9//isf/P///iiHQAAA0DT/f/6uWPp/v/4ohwAAANA0/3/+bJEz/3/+7UnAQAGUeD9//adIqr4//7UTgoDGHzw//7ueQtv4v7/861POm3M+//8zkcCLKj0/v7z3dfk+f/+6ooYAApMxPT+//7+/v/87qY1BAABEVy46/b8/fr04aNBCwAAAAERPoG20tnMqGswCgEAfdbh4eHh4eHh4eHh4eHbo47y/f39/f39/f39/f3997iP8/////////////////i3jvL9/f39/f39/v/////2p3PFzs7Ozs7Oz9nz/v/+6HQUIiUlJSUlJSlc1P3/+8E8AAEBAQEBAQEObOr+//CNFwAAAAAAAAABIaT4//7ZVQcAAAAAAAAABUnS/f/7sygCAAAAAAAAARKI7v//7nUOAAAAAAAAAAM2wPv//Mw9AwAAAAAAAAAMZ+X+//SXHAEAAAAAAAAAIJ/2//7gXwkAAAAAAAAAA0XR/f/8vCwDAAAAAAAAAA+E7f//8YIOAAAAAAAAAAMxvvr//dZEAwAAAAAAAAAKY+H+//elIQEAAAAAAAAAHp31//7mbQwAAAAAAAAAA0HS/P/7wzgDAAAAAAAAAA197///8Y4SAAAAAAAAAAIpufv//dhQBQAAAAAAAAAIW97+//itJwEAAAAAAAABGZPx/fzrdhAAAAAAAAAAAi2u3uHfukEFAAAAAAAAAAMVRoCyz9zazK56QRECAAEYaMXs9/v9/fr16b1dFAEIV8n4/v/+/v7+//72wEoGIqPz///769rb7fz///CUF0bQ/P/+4IVCRY/n///7wjZZ4/7/+agpBQYzuvv//dVJW+T+//WFFAAAHZz4//3XTEvW/f/2jhcBASGk+f/8xz0qsPb//MFIFRhTz/3/854dDGbU+f/xuYOHwfT/+cpUBwEfd9b6/vfw8fj++M1pFwEACTOW6f7//v7//uKIKgYABTCM2/n++fX2+v731H4mAyGP5/3+7LyYmcLx//zgfRZT1fv/+KpGGx1QuPr/+sY/hfH//uVeDAECEHDv///qbqP3//3TQQMAAARS5P7/9Yuo+P/910cFAAAHWej+//WNmfb//+xxFgMEG4Tz///yf3Ts/v/7x204O3nT/P/+4l9AxPn///jl19jo+///9rQwEnPZ+f7//v3+/v/++M9iDAIjeM7u9/v9/fr27MVrGwEABBpOh7XQ3NvNsH9GFQMAAAEMLmukyNjUvpBSGwQAAAALR6Th9Pr8/Pnwz3wlAwAGPK3w/P/+/v7+/vnefRgBJJbt/v/759nb7v3/+9FbC1vZ/f/81XU8R5Po/v/2qy6R8///74kbBQcxtfr//t5fuPn//t5ZCAAAEYrz///yj878//7URAQAAAl17P//+bvV/f/+1EQEAAAJdez///3ayPv//t5ZCAAAEYrz///+5634///viRsFBzG1+v///up86/7//NV0PEaS6P7///7rP7v2///759nb7v3////+6xFk0Pn+//7+/f35/P///ucCHHHM7/n8/Pfryuj+//3fAAIXSYe2ysque2LS/v/6xQAAAQcVIykoIBpY2/7/9JoABgUBAAEBAQMgk/L//uJnBjk1EggDAwYZZtb8//m6Nw1/todTNjVPi9D5//7hchEPkvLt39fW3e77//7vnicCDo3x/f3+/v7+//zrrD8HAAhZwOr1+/38+fLcmT4MAAABFUN5rtDc2MGXXykIAQAAAAILJlB5mKeqootnPBYFAAAIIlmWv9fh4t3Or3o8FAMDF0mV0Onw7evu7+K4cTAKCjR+y/Dz3sW9zur146pbGxhZrur44qp5a4vI8fbTiTcqfM7288ZxNiZKnOH56q5UPZjh+uysSxYKJnnP9/THb1Gu7PzklzUJAhVhv/T52IZivvP73IkpBgEPU7Tx/OKZbsn3+taAJAQBDEus7vzopnTO+fnTfCEDAQtIqOz97Kx30vr50nkgAwAKRqXr/e6wd9L6+dJ5IAMACkal6/3usHTO+fnTfCEDAQtIqOz97Kxuyff61oAkBAEMS63u/OimYr7z+9yJKQYBD1O18fzimVGu7PzkmDUJAhZiwfX52IY9mOH67K1LFgonfNH49MdvK33O9vPHcTYoS57i+equVRhZrur44qp5a4zI8fbTiTcKNH7L8PPexb3P6vbkqlsbAxdJldDp8O3r7u/iuXEwCgAIIlmWv9fh493Or3s8FAMAAgsmUHmYp6uii2c8FgUAIzhKV2NrbW5rWjcTAwAAAE96lqezu76/up5fIQUAAAB6s9Tg5+zv8OnGdykHAAAAh8Pe4uXv+f320n8sBwAAAG2bqaWvz/D899N/LAcAAABAV11aca3l+vfTfywHAAAAFRwcIUaW3/n3038sBwAAAAIDAw05j93599N/LAcAAAAAAAELOI/d+ffTfywHAAAAAAABCziP3fn3038sBwAAAAAAAQs4j93599N/LAcAAAAAAAELOI/d+ffTfywHAAAAAAABCziP3fn3038sBwAAAAAAAQs4j93599N/LAcAAAAAAAELOI/d+ffTfywHAAAAAAABCziP3fn3038sBwAAAAAAAQs4j93599N/LAcAAAAGCQsV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", YZ_TPL=null;
+function yzTpl(){ if(YZ_TPL) return YZ_TPL; var bin=atob(YZ_TPL_B64), n=bin.length/384, T=[];
+  for(var k=0;k<n;k++){ var a=new Float32Array(384), m=0, sd=0; for(var i=0;i<384;i++){ a[i]=bin.charCodeAt(k*384+i)/255; m+=a[i]; } m/=384; for(i=0;i<384;i++){ a[i]-=m; sd+=a[i]*a[i]; } sd=Math.sqrt(sd/384)||1; for(i=0;i<384;i++) a[i]/=sd; T.push({d:String(k%10), a:a}); }
+  return (YZ_TPL=T); }
+function yzGlyphNorm(A, w, h){ // A: ink 0..1 (w×h) → 16×24, height fitted, centred, z-scored
+  var nw=Math.max(1,Math.min(16,Math.round(w*24/h))), o=new Float32Array(384), ox=Math.floor((16-nw)/2);
+  for(var y=0;y<24;y++) for(var x=0;x<nw;x++){ var sx=Math.min(w-1.001,Math.max(0,(x+0.5)*w/nw-0.5)), sy=Math.min(h-1.001,Math.max(0,(y+0.5)*h/24-0.5)), x0=Math.floor(sx), y0=Math.floor(sy), fx=sx-x0, fy=sy-y0, x1=Math.min(w-1,x0+1), y1=Math.min(h-1,y0+1);
+    o[y*16+ox+x]=(A[y0*w+x0]*(1-fx)+A[y0*w+x1]*fx)*(1-fy)+(A[y1*w+x0]*(1-fx)+A[y1*w+x1]*fx)*fy; }
+  var m=0, sd=0, i; for(i=0;i<384;i++) m+=o[i]; m/=384; for(i=0;i<384;i++){ o[i]-=m; sd+=o[i]*o[i]; } sd=Math.sqrt(sd/384)||1; for(i=0;i<384;i++) o[i]/=sd; return o; }
+function yzClassify(z){ var T=yzTpl(), best={}; T.forEach(function(t){ var s=0; for(var i=0;i<384;i++) s+=z[i]*t.a[i]; s/=384; if(best[t.d]==null || s>best[t.d]) best[t.d]=s; });
+  var r=Object.keys(best).map(function(k){ return [k,best[k]]; }).sort(function(a,b){ return b[1]-a[1]; }); return {d:r[0][0], s:r[0][1], m:r[0][1]-r[1][1]}; }
+function yzReadGlyphs(ink, t){ var W=ink.W, out=[];
+  t.g.slice().sort(function(a,b){ return a.x0-b.x0; }).forEach(function(k){
+    var w=k.x1-k.x0+1, h=k.y1-k.y0+1, A=new Float32Array(w*h), lo=1, hi=0;
+    for(var y=0;y<h;y++) for(var x=0;x<w;x++){ var near=0; for(var dy=-1;dy<=1 && !near;dy++) for(var dx=-1;dx<=1;dx++){ var yy=k.y0+y+dy, xx=k.x0+x+dx; if(yy>=0 && xx>=0 && xx<W && yy<ink.H && ink.C.L[yy*W+xx]===k.id){ near=1; break; } }
+      var v=near? (255-ink.L[(k.y0+y)*W+k.x0+x])/255 : 0; A[y*w+x]=v; if(near){ if(v<lo) lo=v; if(v>hi) hi=v; } }
+    for(var i=0;i<w*h;i++) A[i]=A[i]>0? Math.max(0,(A[i]-lo)/Math.max(0.05,hi-lo)) : 0;
+    // a decimal point stuck to a digit: columns at the left/right edge whose ink is only near the baseline
+    var top=new Int32Array(w); for(x=0;x<w;x++){ top[x]=h; for(y=0;y<h;y++) if(A[y*w+x]>0.35){ top[x]=y; break; } }
+    var L0=0, R0=w, dotL=false, dotR=false; if(window.__yzDotEdge) while(R0>0 && top[R0-1]>h*0.6) R0--; if(w-R0>=2 && R0>h*0.3){ dotR=true; } else R0=w;
+    if(window.__yzDotEdge) while(L0<w && top[L0]>h*0.6) L0++; if(L0>=2 && w-L0>h*0.3){ dotL=true; } else L0=0;
+    if(dotL) out.push({dot:true});
+    var pr=new Float32Array(w); for(x=L0;x<R0;x++){ for(y=0;y<h;y++) pr[x]+=A[y*w+x]; }
+    var part=function(a0,a1){ var X0=1e9, X1=-1, Y0=1e9, Y1=-1;
+      for(var y=0;y<h;y++) for(var x=a0;x<a1;x++) if(A[y*w+x]>0.35){ if(x<X0) X0=x; if(x>X1) X1=x; if(y<Y0) Y0=y; if(y>Y1) Y1=y; }
+      if(X1<0 || Y1-Y0+1<h*0.55){ if(window.__yzResc && k.rescued) window.__yzResc.push(['Q',k.x0,k.y0,w,h,X0,X1,Y0,Y1,a0,a1]); return {d:"?", s:0, m:0}; }
+      var sw=X1-X0+1, sh=Y1-Y0+1, S=new Float32Array(sw*sh); for(y=0;y<sh;y++) for(x=0;x<sw;x++) S[y*sw+x]=A[(Y0+y)*w+X0+x];
+      var z=yzGlyphNorm(S, sw, sh), cr=yzClassify(z); cr.z=z; cr.ar=sw/h; if(sw<h*0.33){ cr.s-=0.2; } return cr; };
+    // touching digits: try 1-3 pieces, cut anywhere near the expected places, keep the reading that matches the font best
+    var ww=R0-L0, bestR=null, maxN=Math.max(1,Math.min(3,Math.round(ww/(h*0.45))));
+    var tryCuts=function(cuts){ var rr=[]; for(var j=0;j<cuts.length-1;j++){ if(cuts[j+1]-cuts[j]<h*0.3) return; rr.push(part(cuts[j],cuts[j+1])); }
+      var sc=rr.reduce(function(a,q){ return a+q.s; },0)/rr.length-(rr.length-1)*0.03; if(rr.some(function(q){ return q.d==="?"; })) sc-=1; if(!bestR || sc>bestR.sc) bestR={sc:sc, r:rr}; };
+    tryCuts([L0,R0]);
+    if(maxN>=2){ var st=Math.max(1,Math.round(ww/40)); for(var c1=L0+Math.round(ww*0.28); c1<=L0+Math.round(ww*0.72); c1+=st) tryCuts([L0,c1,R0]); }
+    if(maxN>=3){ st=Math.max(1,Math.round(ww/24)); for(c1=L0+Math.round(ww*0.22); c1<=L0+Math.round(ww*0.45); c1+=st) for(var c2=L0+Math.round(ww*0.55); c2<=L0+Math.round(ww*0.78); c2+=st) tryCuts([L0,c1,c2,R0]); }
+    (bestR? bestR.r : [{d:"?", s:0, m:0}]).forEach(function(q){ out.push(q); }); if(dotR) out.push({dot:true}); });
+  return out; }
+function yzReadToks(wk, ink, toks, onProg){
+  toks.forEach(function(t){ var r0=yzReadGlyphs(ink, t), di=-1, r=[]; r0.forEach(function(q){ if(q.dot){ if(di<0 && r.length) di=r.length; } else r.push(q); }); var trim=0; while(r.length>1 && r[r.length-1].d==="?" && !r[r.length-1].z){ r.pop(); trim++; } while(r.length>1 && r[0].d==="?" && !r[0].z){ r.shift(); if(di>0) di--; trim++; }   // v2.8.7: a sliver of the box edge stuck to the value if(di>0 && di<r.length) t.dot=di;
+    if(window.__yzGlyphs) window.__yzGlyphs.push({x0:t.x0, x1:t.x1, cy:Math.round(t.cy), z:r.map(function(q){ return q.z? Array.from(q.z).map(function(v){ return Math.round(v*100)/100; }) : null; })});
+    var ds=r.map(function(q){ return q.d; }).join(""), mn=Math.min.apply(null, r.map(function(q){ return q.s; })), av=r.reduce(function(a,q){ return a+q.s; },0)/Math.max(1,r.length), mm=Math.min.apply(null, r.map(function(q){ return q.m; }));
+    t.td=ds; t.sc=+mn.toFixed(2); t.mg=+mm.toFixed(2);
+    if(ds.indexOf("?")>=0 || av<0.68 || mn<0.5){ t.word=true; return; }
+    var v=ds; if(t.dot>0 && t.dot<ds.length) v=ds.slice(0,t.dot)+"."+ds.slice(t.dot);
+    v=v.replace(/^0+(?=\d)/,""); if(t.neg) v="-"+v;
+    var c=mn>=0.8 && mm>=0.1? 0.92 : mn>=0.72 && mm>=0.05? 0.75 : 0.45; if(trim) c=Math.min(c,0.6); t.v=v; t.c=c; t.mn=mn; });
+  // a faint decimal point leaves "0" and "60" as two tokens: join neighbours on one line with a dot-wide gap and some ink low in it
+  var W=ink.W, nt=toks.filter(function(t){ return !t.word && t.v && t.v.indexOf(".")<0; }).sort(function(a,b){ return a.x0-b.x0; });
+  nt.forEach(function(L){ if(L.word || L.joined) return; var h=L.y1-L.y0+1;
+    var R=nt.filter(function(r){ return r!==L && !r.word && !r.joined && r.x0>L.x1 && r.x0-L.x1>=h*0.12 && r.x0-L.x1<h*0.75 && Math.abs(r.cy-L.cy)<h*0.15 && Math.abs((r.y1-r.y0+1)-h)<h*0.18; }).sort(function(a,b){ return a.x0-b.x0; })[0];
+    if(!R || L.td.length>3 || R.td.length>3) return;
+    var low=0, wall=false; for(var x=L.x1+1;x<R.x0;x++){ var n=0; for(var y=Math.round(L.y0-h*0.3);y<=Math.round(L.y1+h*0.3);y++) if(y>=0 && y<ink.H && ink.M0[y*W+x]) n++; if(n>=h*1.2) wall=true;
+      for(y=Math.round(L.y1-h*0.3);y<=L.y1+2;y++) if(y>=0 && y<ink.H && ink.ML[y*W+x]) low++; }
+    if(wall || low<3) return;
+    L.v=L.td.replace(/^0+(?=\d)/,"")+"."+R.td; if(L.neg) L.v="-"+L.v; L.td=L.td+R.td; L.c=Math.min(L.c, R.c); L.x1=R.x1; L.w=L.x1-L.x0+1; L.cx=(L.x0+L.x1)/2; L.y0=Math.min(L.y0,R.y0); L.y1=Math.max(L.y1,R.y1);
+    L.joinedDot=true; R.joined=true; R.word=true; R.v=""; });
+  return Promise.resolve();
+}
+// v2.8.7: fixed strips on every Yizumi screen (top status bar, bottom cycle monitor). Their value boxes sit on a fixed grid, so the
+// grid is fitted to the digit tokens (scale + offset from any two values) and each box takes the token whose right edge lands on it.
+var YZ_STRIPS={
+  top:{rows:[{dy:0, cols:[0,434,804], keys:["tb.ejPos","tb.screwPos","tb.rpm"], dec:[2,2,0]},
+             {dy:76, cols:[0,434,804,1157,1506], keys:["tb.moldPos","tb.nozPos","tb.injP","tb.sysP","tb.valve"], dec:[2,2,0,0,0]}], pitch:380},
+  mon:{rows:[{dy:0, cols:[0,338,677,1017,1358,1694,2038], keys:["bm.run","bm.last","bm.mc","bm.mo","bm.ef","bm.eb","bm.eo"], dec:[1,1,1,1,1,1,1]},
+             {dy:103, cols:[0,338,677,1017,1358,1694,2038], keys:["bm.coolEl","bm.cool","bm.inj","bm.hold","bm.plast","bm.cush","bm.coP"], dec:[1,1,2,1,2,2,0]},
+             {dy:208, cols:[0,339,663,1019], keys:["bm.shot","bm.clamp","bm.energy","bm.sysP"], dec:[2,0,2,0]}], pitch:340}
+};
+function yzDec(v, d, c){ var neg=/^-/.test(v), ds=String(v).replace(/[^0-9]/g,""), had=String(v).indexOf("."), out;
+  if(!ds) return {v:"", c:0};
+  if(d>0){ if(ds.length<=d) ds=new Array(d-ds.length+2).join("0")+ds; out=ds.slice(0,ds.length-d).replace(/^0+(?=\d)/,"")+"."+ds.slice(ds.length-d);
+    if(had>=0 && String(v).length-1-had!==d) c=Math.min(c,0.45); }
+  else { out=ds.replace(/^0+(?=\d)/,""); if(had>=0) c=Math.min(c,0.45); }
+  return {v:(neg?"-":"")+out, c:c}; }
+function yzTplFit(NT, T, sl, W, y0, y1){
+  var tk=NT.filter(function(t){ return t.cy>=y0 && t.cy<=y1; }); if(tk.length<2) return null;
+  var cyc=function(t){ return t.cy-sl*(t.cx-W/2); }, an=tk.filter(function(t){ return String(t.v).replace(/\D/g,"").length>=2 && t.c>0.6; }), best=null;
+  var score=function(s, ox, oy){ var n=0, cs=0, used={}, got={}; T.rows.forEach(function(r){ r.cols.forEach(function(cx, ci){ var px=ox+s*cx, py=oy+s*r.dy, tol=0.065*s*T.pitch, b=null;
+      tk.forEach(function(t, ti){ if(used[ti]) return; var dx=Math.abs(t.x1-px), dy=Math.abs(cyc(t)-py); if(dx<tol && dy<t.h*0.5 && (!b || t.w>b.t.w)) b={t:t, ti:ti}; });
+      if(b){ used[b.ti]=1; n++; cs+=b.t.c; got[r.keys[ci]]={t:b.t, d:r.dec[ci]}; } }); }); return {n:n, cs:cs, got:got, s:s, ox:ox, oy:oy}; };
+  an.forEach(function(A){ an.forEach(function(B){ if(B.x1<=A.x1+20 || Math.abs(cyc(A)-cyc(B))>A.h*0.5) return;
+    T.rows.forEach(function(r){ for(var a=0;a<r.cols.length;a++) for(var b=a+1;b<r.cols.length;b++){ var s=(B.x1-A.x1)/(r.cols[b]-r.cols[a]); if(s<0.7 || s>1.5) continue;
+      var ox=A.x1-s*r.cols[a], oy=cyc(A)-s*r.dy, q=score(s, ox, oy); if(!best || q.n>best.n || (q.n===best.n && q.cs>best.cs)) best=q; } }); }); });
+  return best; }
+function yzStrips(P, P0, vals, sl, out){
+  var NT=P.nums.filter(function(t){ return t.tok; }), H=P0.H, W=P0.W;
+  [["top",0,H*0.16],["mon",H*0.55,H]].forEach(function(z){ var T=YZ_STRIPS[z[0]], f=yzTplFit(NT, T, sl, W, z[1], z[2]); if(!f || f.n<3) return;
+    Object.keys(f.got).forEach(function(k){ var g=f.got[k], t=g.t, tv=t.v, tc=t.c;
+      // "1.89" sometimes splits at its decimal point: the whole part sits just left of the box's token
+      if(g.d>0 && String(tv).indexOf(".")<0 && P.tok){ var L=P.tok.filter(function(u){ return u!==t && u.td && !/\?/.test(u.td) && u.td.length<=2 && u.x1<t.x0 && t.x0-u.x1<t.h*0.7 && t.x0-u.x1>=t.h*0.12 && Math.abs(u.cy-t.cy)<t.h*0.35 && Math.abs(u.h-t.h)<t.h*0.25; }).sort(function(a,b){ return b.x1-a.x1; })[0];
+        if(L){ tv=L.td.replace(/^0+(?=\d)/,"")+"."+String(tv).replace(/\D/g,""); tc=Math.min(tc, L.c||0.45, 0.75); } }
+      if(f.n<5) tc=Math.min(tc,0.55);   // few boxes matched the strip layout (photo cropped there) → Allen checks it
+      var r=yzDec(tv, g.d, tc); if(!r.v) return;
+      vals[k]={v:r.v, c:+r.c.toFixed(2), x0:t.x0, x1:t.x1, y0:t.y0, y1:t.y1, state:"read", strip:z[0]}; });
+    if(z[0]==="top"){ // date + time sit right of the rpm box on the first row
+      var r0=f.oy, px=f.ox+f.s*804; var dt=NT.filter(function(t){ return Math.abs(t.cy-sl*(t.cx-W/2)-r0)<t.h*0.6 && t.x0>px+f.s*60 && t.x1<f.ox+f.s*1506; }).sort(function(a,b){ return a.x0-b.x0; });
+      var d6=dt.filter(function(t){ return String(t.v).replace(/\D/g,"").length===6; })[0], tm=dt.filter(function(t){ return d6 && t.x0>d6.x1 && String(t.v).replace(/\D/g,"").length===4; })[0];
+      if(d6){ var a=String(d6.v).replace(/\D/g,""), txt=a.slice(0,2)+"-"+a.slice(2,4)+"-"+a.slice(4); if(tm){ var b=String(tm.v).replace(/\D/g,""); txt+=" "+b.slice(0,2)+":"+b.slice(2); }
+        vals["tb.dateTime"]={v:txt, c:Math.min(d6.c, tm? tm.c : 0.4), x0:d6.x0, x1:(tm||d6).x1, y0:d6.y0, y1:d6.y1, state:"read", strip:"top"}; } } });
+}
 // read one Yizumi photo → same result shape as mscrRead
 function yzRead(im, onProg, pre){
   if(!pre && !(im instanceof HTMLCanvasElement && im._rect)){ var rc=null; try{ rc=yzRectify(im); }catch(e){ console.warn('yz rectify',e); } if(rc) im=rc; }
@@ -2708,7 +2913,11 @@ function yzRead(im, onProg, pre){
     return (pre? Promise.resolve(pre) : wk.setParameters({tessedit_pageseg_mode:"11", tessedit_char_whitelist:""}).then(function(){ return wk.recognize(P0.g); }).then(function(r){ return r.data.words||[]; })).then(function(raw){ return yzTabName(wk, P0).then(function(tn){ return {raw:raw, tn:tn}; }); }).then(function(o){
       if(!P0.rect) return o;   // v2.8.5: photo of the whole monitor — a digits-only pass finds the values whose white box the picture lost
       if(onProg) onProg("Reading the screen numbers…", 25);
-      return wk.setParameters({tessedit_pageseg_mode:"11", tessedit_char_whitelist:"0123456789.-"}).then(function(){ return wk.recognize(P0.g); }).then(function(r){ o.dig=r.data.words||[]; return wk.setParameters({tessedit_char_whitelist:""}); }).then(function(){ return o; }); }).then(function(o){ var raw=o.raw;
+      return wk.setParameters({tessedit_pageseg_mode:"11", tessedit_char_whitelist:"0123456789.-"}).then(function(){ return wk.recognize(P0.g); }).then(function(r){ o.dig=r.data.words||[]; return wk.setParameters({tessedit_char_whitelist:""}); }).then(function(){ return o; }); }).then(function(o){
+      if(!P0.rect || window.__yzNoTok) return o;   // v2.8.7: photo — find the values as dark digit tokens and read each one clean
+      var Pw=yzWords(o.raw), ink=yzInk(P0, Pw.lh), lw=Pw.words.filter(function(w){ return !yzIsNum(w.t) && /[a-z]{3,}/i.test(w.t) && w.c>=0.55; });
+      var cand=ink.toks.filter(function(t){ if(t.nd>9 || t.w>Pw.lh*9) return false; return !lw.some(function(w){ var ox=Math.min(w.x1,t.x1)-Math.max(w.x0,t.x0), oy=Math.min(w.y1,t.y1)-Math.max(w.y0,t.y0); return ox>t.w*0.5 && oy>t.h*0.4; }); });
+      o.ink=ink; o.tok=cand; return yzReadToks(wk, ink, cand, onProg).then(function(){ return o; }); }).then(function(o){ var raw=o.raw;
       P=yzWords(raw); var lh=P.lh; if(window.__yzDbg) window.__yzDbgP=P.words.map(function(w){ return [w.t,Math.round(w.cx),Math.round(w.cy)]; }).concat([['LH',lh,0]]); P.nums=yzBoxes(P0, lh).filter(function(b){ var inW=P.words.filter(function(w){ return w.cx>b.x0 && w.cx<b.x1 && w.cy>b.y0 && w.cy<b.y1; });
         if(window.__yzDbg) (window.__yzRej=window.__yzRej||[]).push([Math.round(b.cx),Math.round(b.cy),inW.map(function(w){ return w.t; }).join('~')]);
         b.words=inW; b.v=yzNum(inW.map(function(w){ return w.t; }).join("")); b.c=0; return !inW.some(function(w){ return /^[a-z]{4,}$/i.test(w.t.replace(/[^A-Za-z]/g,'')) && !/\d/.test(w.t) && w.t.replace(/[^A-Za-z]/g,'').length>=4 && /[aeiou]/i.test(w.t) && w.t.length>=4; }); });   // v2.8.4: photo glare turns digits into letter junk ("aso", "HED") — drop only real words
@@ -2717,6 +2926,8 @@ function yzRead(im, onProg, pre){
           if(P.words.some(function(t){ return !yzIsNum(t.t) && /[a-z]{2,}/i.test(t.t) && cx>t.x0 && cx<t.x1 && cy>t.y0 && cy<t.y1; })) return;   // a word, not a value
           var x0=b.x0-lh*0.45, x1=b.x1+lh*0.45, y0=b.y0-lh*0.3, y1=b.y1+lh*0.3; P.nums.push({x0:x0, y0:y0, x1:x1, y1:y1, cx:(x0+x1)/2, cy:(y0+y1)/2, w:x1-x0, h:y1-y0, v:v, c:0, words:[], dig:true}); });
         out.digAdded=P.nums.length-nd0; }
+      if(o.tok){ var tn=o.tok.filter(function(t){ return !t.word && t.v; }); if(tn.length>=8){ P.tok=o.tok; P.ink=o.ink; P.nums=tn.map(function(t){ return {x0:t.x0, y0:t.y0, x1:t.x1, y1:t.y1, cx:t.cx, cy:t.cy, w:t.w, h:t.h, v:t.v, c:t.c, words:[], tok:true, dark:t.dark, td:t.td, nd:t.nd}; }); out.tokens=tn.length; } }
+      if(window.__yzDbg && P.tok) window.__yzTok=P.tok.map(function(t){ return [t.word?'W':'N', t.v||'', t.td||'', t.ta||'', Math.round(t.x0), Math.round(t.cy), Math.round(t.x1), t.c||0, Math.round(t.dark), t.nd, t.dot, t.hm]; });
       if(window.__yzDbg) window.__yzDbg=P.nums.map(function(w){return [w.v,Math.round(w.cx),Math.round(w.cy),w.w,w.h];}).concat([P.segs.map(function(s){return s.t;}).join("|")]); var  all=P.segs.map(function(s){ return s.t; });
       var brand=YZ_BRAND.filter(function(re){ return all.some(function(t){ return re.test(t) || t.split(" ").some(function(x){ return re.test(x); }); }); }).length;
       // highlighted tab: the label inside the green block
@@ -2754,6 +2965,9 @@ function yzRead(im, onProg, pre){
         var got=hd.map(function(h,i){ return h? i : -1; }).filter(function(i){ return i>=0; }); if(got.length<2) return;
         var sp=(hd[got[got.length-1]].cx-hd[got[0]].cx)/(got[got.length-1]-got[0]), hy=hd[got[0]].cy; P.words.forEach(function(w){ if(gd.cols[0][0].test(w.t) && w.cy>hy+lh*2.5 && w.cy-lh*1.5<y1) y1=w.cy-lh*1.5; });   // v2.8.5: stop at the next panel's header row (Mold open under Mold close)
         var xs=gd.cols.map(function(c,i){ return hd[i]? hd[i].cx : hd[got[0]].cx+(i-got[0])*sp; });
+        if(P.tok){ // v2.8.7: photo — the units line (psi  %  in) sits under the headers; its "%" and "in" are not values
+          var pu=P.words.filter(function(w){ return /^(psi|%|in|s)$/i.test(w.t) && w.cy>hy+lh*0.3 && w.cy<hy+lh*2.4 && w.cx>xs[0]-sp*0.8 && w.cx<xs[xs.length-1]+sp*0.8; })[0];
+          hy=pu? Math.max(hy, pu.cy-lh*0.2) : hy+lh*0.9; }
         var ns=P.nums.filter(function(w){ return w.cy>hy+lh*0.8 && w.cy<y1-lh*0.5 && w.cx>xs[0]-sp*0.6 && w.cx<xs[xs.length-1]+sp*0.6; }).sort(function(a,b){ return a.cy-b.cy; });
         var mhs=ns.map(function(w){ return w.h; }).sort(function(a,b){ return a-b; }), mh=mhs[mhs.length>>1]||0; ns=ns.filter(function(w){ return w.h>mh*0.8 && w.h<mh*1.22 && w.w<sp*1.3; });
         var rows=[]; ns.forEach(function(w){ var r=rows.find(function(r){ return Math.abs(r.cy-w.cy)<lh*0.6; }); if(r){ r.ws.push(w); r.cy=(r.cy*(r.ws.length-1)+w.cy)/r.ws.length; } else rows.push({cy:w.cy, ws:[w]}); });
@@ -2769,7 +2983,7 @@ function yzRead(im, onProg, pre){
             cells.push({key:gd.k+rk+"."+ci, w:w||null, ghost:!w && !!P0.rect, v:w? w.v : "", c:w? w.c : 0, x0:xs[ci]-bw, x1:xs[ci]+bw, y0:r.cy-lh*0.8, y1:r.cy+lh*0.8, d:cdef[1], rows:rows.length, want:rows.length}); }); }); return; }
         gd.rows.forEach(function(rk, ri){ var r=rows[ri], cy=r? r.cy : (rows.length? rows[0].cy+ri*pitch : hy+lh*2.5+ri*lh*1.9);
           gd.cols.forEach(function(cdef, ci){ var w=r && r.ws.filter(function(w){ return Math.abs(w.cx-xs[ci])<sp*0.5; })[0];
-            var bw=sp*0.42; cells.push({key:gd.k+rk+"."+ci, w:w||null, v:w? w.v : "", c:w? w.c : 0, x0:xs[ci]-bw, x1:xs[ci]+bw, y0:cy-lh*0.85, y1:cy+lh*0.85, d:cdef[1], rows:rows.length, want:gd.rows.length}); }); });
+            var bw=sp*0.42; cells.push({key:gd.k+rk+"."+ci, w:w||null, ghost:!!(P.tok && r && !w), v:w? w.v : "", c:w? w.c : 0, x0:xs[ci]-bw, x1:xs[ci]+bw, y0:cy-lh*0.85, y1:cy+lh*0.85, d:cdef[1], rows:rows.length, want:gd.rows.length}); }); });
       });
       var yzSl=(function(){ var sl=[]; P.nums.forEach(function(a){ P.nums.forEach(function(b){ var dx=b.cx-a.cx; if(dx>lh*2 && dx<lh*14 && Math.abs(b.cy-a.cy)<lh*0.9) sl.push((b.cy-a.cy)/dx); }); });
         sl.sort(function(a,b){ return a-b; }); var m=sl.length>=4? sl[sl.length>>1] : 0; return Math.max(-0.12, Math.min(0.12, m)); })();  // v2.8.4: angled photo → rows slope
@@ -2777,15 +2991,40 @@ function yzRead(im, onProg, pre){
       def.kvs.forEach(function(kd){
         var ls=yzFind(P, kd[1]); if(kd[4]==="last") ls.sort(function(a,b){ return b.cy-a.cy; }); var l=ls[0]; if(!l) return;
         var ns=P.nums.filter(function(w){ return Math.abs(w.cy-l.cy-yzSl*(w.cx-l.cx))<lh*0.6 && w.x0>l.x1-lh*0.2; }).sort(function(a,b){ return a.x0-b.x0; });
+        if(P.tok && !ns.length){ // v2.8.7: photo — the value boxes can sit a little above/below the label's text line
+          var nr=P.nums.filter(function(w){ return Math.abs(w.cy-l.cy-yzSl*(w.cx-l.cx))<lh*1.0 && w.x0>l.x1-lh*0.2 && w.x0<l.x1+lh*22; }).sort(function(a,b){ return a.x0-b.x0; })[0];
+          if(nr){ var ry=nr.cy-yzSl*(nr.cx-l.cx); ns=P.nums.filter(function(w){ return Math.abs(w.cy-yzSl*(w.cx-l.cx)-ry)<lh*0.4 && w.x0>l.x1-lh*0.2; }).sort(function(a,b){ return a.x0-b.x0; }); } }
+        if(P.tok){ // v2.8.7: "0" + "50" with a lost decimal point, where this box shows decimals → one value
+          var dOf=function(i){ return Array.isArray(kd[3])? kd[3][i] : kd[3]; }, mg=[]; ns.forEach(function(w){ var L=mg[mg.length-1], hh=w.h||lh*0.7;
+            if(L && !L.mergedDot && dOf(mg.length-1)>0 && String(L.v).indexOf(".")<0 && String(w.v).indexOf(".")<0 && String(L.v).replace(/\D/g,"").length<=2 && w.x0-L.x1>=0 && w.x0-L.x1<hh*0.95 && Math.abs(w.cy-L.cy)<hh*0.3){
+              mg[mg.length-1]={x0:L.x0, x1:w.x1, y0:Math.min(L.y0,w.y0), y1:Math.max(L.y1,w.y1), cx:(L.x0+w.x1)/2, cy:(L.cy+w.cy)/2, w:w.x1-L.x0, h:Math.max(L.h,w.h), v:String(L.v)+"."+String(w.v).replace(/\D/g,""), c:Math.min(L.c,w.c,0.75), tok:true, mergedDot:true, words:[]}; }
+            else mg.push(w); }); ns=mg;
+          if(kd[5] && kd[5].col){ // a row of zone columns (Heat): each box sits under the Set box of its zone
+            var colC=cells.filter(function(q){ return q.key.indexOf(kd[5].col+".")===0 && q.w; });
+            if(colC.length>=2){ colC.forEach(function(q){ var i=+q.key.split(".")[1], cx=(q.w.x0+q.w.x1)/2, w=ns.filter(function(n){ return Math.abs(n.cx-cx)<lh*1.6; }).sort(function(a,b){ return Math.abs(a.cx-cx)-Math.abs(b.cx-cx); })[0];
+                var ly=l.cy+yzSl*(cx-l.cx); cells.push({key:kd[0]+"."+i, w:w||null, ghost:!w, v:w? w.v : "", c:w? w.c : 0, x0:cx-lh*1.5, x1:cx+lh*1.5, y0:ly-lh*0.6, y1:ly+lh*0.6, d:dOf(i)}); }); return; } } }
         var step=ns.length>1? ns[1].cx-ns[0].cx : lh*4;
         for(var i=0;i<kd[2];i++){ var w=ns[i], d=Array.isArray(kd[3])? kd[3][i] : kd[3];
           var cx=w? w.cx : (ns.length? ns[ns.length-1].cx+(i-ns.length+1)*step : l.x1+lh*3+i*step), bw=w? (w.x1-w.x0)/2+lh*0.5 : lh*1.8;
           var ky=l.cy+yzSl*(cx-l.cx); cells.push({key:kd[0]+"."+i, w:w||null, v:w? w.v : "", c:w? w.c : 0, x0:cx-bw, x1:cx+bw, y0:ky-lh*0.85, y1:ky+lh*0.85, d:d}); }
       });
-      (def.texts||[]).forEach(function(td){ var l=yzFind(P, td[1])[0]; if(!l) return; var r=P.segs.filter(function(s){ return Math.abs(s.cy-l.cy)<lh*0.6 && s.x0>l.x1+lh; }).sort(function(a,b){ return a.x0-b.x0; })[0];
+      (def.texts||[]).forEach(function(td){ var l=yzFind(P, td[1])[0]; if(!l) return; var r;
+        if(td[2]){ // v2.8.7: a mode box (No / Position / Time / Continuous / Shake) — take the first mode word right of the label
+          r=P.words.filter(function(w){ return Math.abs(w.cy-l.cy-yzSl*(w.cx-l.cx))<lh*0.8 && w.x0>l.x1+lh*0.3 && w.x0<l.x1+lh*14 && td[2].test(w.t.replace(/[^A-Za-z]/g,"")); }).sort(function(a,b){ return a.x0-b.x0; })[0];
+          if(r){ var mw=r.t.replace(/[^A-Za-z]/g,""); mw=/^no(ne)?$/i.test(mw)? "No" : /^pos/i.test(mw)? "Position" : /^time$/i.test(mw)? "Time" : /^continu/i.test(mw)? "Continuous" : /^shake$/i.test(mw)? "Shake" : mw;
+            vals[td[0]]={v:mw, c:0.75, x0:r.x0, x1:r.x1, y0:r.y0, y1:r.y1, text:true}; } return; }
+        r=P.segs.filter(function(s){ return Math.abs(s.cy-l.cy)<lh*0.6 && s.x0>l.x1+lh; }).sort(function(a,b){ return a.x0-b.x0; })[0];
         if(r) vals[td[0]]={v:r.t, c:0.8, x0:r.x0, x1:r.x1, y0:r.y0, y1:r.y1}; });
+      // v2.8.7: a row with no label of its own, right above a labelled row (Heat: zone actual temperatures sit above Set)
+      (def.above||[]).forEach(function(ad){ if(!P.tok) return; cells.filter(function(q){ return q.key.indexOf(ad[1]+".")===0 && q.w; }).forEach(function(q){
+          var i=q.key.split(".")[1], cx=(q.w.x0+q.w.x1)/2, bh=q.w.y1-q.w.y0, n=P.nums.filter(function(w){ return Math.abs(w.cx-cx)<lh*1.6 && w.cy<q.w.cy-lh*0.8 && w.cy>q.w.cy-lh*4; }).sort(function(a,b){ return b.cy-a.cy; })[0];
+          if(!n) return; var c=n.c, a=parseFloat(n.v), sv=parseFloat(q.w.v);
+          if(String(n.v).replace(/\D/g,"").length<String(q.w.v).replace(/\D/g,"").length || !(a>=0) || (sv>0 && Math.abs(a-sv)>sv*0.5)) c=Math.min(c,0.4);   // a digit lost at the box edge, or far from its set point → Allen checks it
+          cells.push({key:ad[0]+"."+i, w:n, v:n.v, c:c, x0:n.x0, x1:n.x1, y0:n.y0, y1:n.y1, d:ad[2]}); }); });
       // second look at every box that is missing, unsure or has the wrong number of decimals: OCR that box alone
-      var redo=cells.filter(function(q){ return q.w || q.ghost; });   // v2.8.5: ghost = a grid cell whose box was not found in a photo: read the spot anyway, always checked by Allen  // no box at that spot (e.g. High pressure has no To) → left blank
+      cells.forEach(function(q){ var w=q.w; if(!P.tok || !w || !w.tok || !(q.d>0) || !w.td || String(w.v).indexOf(".")>=0 || w.td.length<=q.d || /\D/.test(w.td)) return;   // v2.8.7: "04" in a box that shows one decimal is 0.4 (the dot was too faint to see)
+        q.v=(w.td.slice(0,w.td.length-q.d).replace(/^0+(?=\d)/,"")||"0")+"."+w.td.slice(w.td.length-q.d); if(w.td.charAt(0)!=="0") q.c=Math.min(q.c,0.55); });
+      var redo=cells.filter(function(q){ return (q.w && !q.w.tok) || q.ghost; });   // v2.8.7: a box with no clean token (photo) still gets a Tesseract look, capped as check   // v2.8.7: tokens were already read clean, one by one   // v2.8.5: ghost = a grid cell whose box was not found in a photo: read the spot anyway, always checked by Allen  // no box at that spot (e.g. High pressure has no To) → left blank
       return wk.setParameters({tessedit_pageseg_mode:"7", tessedit_char_whitelist:"0123456789.-"}).then(function(){
         return redo.reduce(function(p, q, i){ return p.then(function(){
           if(onProg) onProg("Checking screen values — "+(i+1)+" of "+redo.length, Math.round(40+i/Math.max(1,redo.length)*55));
@@ -2814,17 +3053,26 @@ function yzRead(im, onProg, pre){
           var bb=q.w||q; vals[q.key]={nr:q.rows, v:q.v, c:+Math.max(0,Math.min(1,q.c)).toFixed(2), x0:bb.x0, x1:bb.x1, y0:bb.y0, y1:bb.y1, state:q.v? "read" : "unread"}; });
         if(def.id==="yz-overview") ["cyc","mct","mot","ijt","plt","dct","cool"].forEach(function(k){ var A=vals[k+".0"], B=vals[k+".1"];  // v2.8.4: set/max is never below the actual; tilt can swap the pair
           if(A && B && A.v && B.v && +A.v > +B.v){ vals[k+".0"]=B; vals[k+".1"]=A; } });
-        out.found=cells.filter(function(q){ return q.w; }).length; out.total=cells.length; out.slots={}; Object.keys(vals).forEach(function(k){ out.slots[k]={v:vals[k].v, c:vals[k].c, nr:vals[k].nr}; });
+        if(P.tok) yzStrips(P, P0, vals, yzSl, out);   // v2.8.7: top status bar + bottom cycle monitor (every screen)
+        // v2.8.7: a mode of "No" turns its row off (greyed on the screen) — those numbers are not the job's settings
+        def.kvs.forEach(function(kd){ var mk=kd[5] && kd[5].mode, m=mk && vals[mk] && vals[mk].v; if(!m) return;
+          for(var i=0;i<kd[2];i++){ var q=vals[kd[0]+"."+i]; if(!q) continue; if(m==="No" || (m==="Position" && i===3) || (m==="Time" && i===2)) q.inactive=true; } });
+
+        out.found=cells.filter(function(q){ return q.w; }).length; out.total=cells.length; out.slots={}; Object.keys(vals).forEach(function(k){ out.slots[k]={v:vals[k].v, c:vals[k].c, nr:vals[k].nr}; if(vals[k].inactive) out.slots[k].inactive=true; if(window.__yzGlyphs) out.slots[k].pos=[vals[k].x0, vals[k].x1]; });
         function cropOf(ks){ var qs=ks.map(function(k){ return vals[k]; }).filter(Boolean); if(!qs.length) return ""; var pad=10, gap=16, H=Math.max.apply(null, qs.map(function(q){ return q.y1-q.y0; }))+pad*2;
           var Wt=qs.reduce(function(a,q){ return a+(q.x1-q.x0)+pad*2; },0)+gap*(qs.length-1), c=document.createElement("canvas"); c.width=Math.round(Wt); c.height=Math.round(H);
           var g=c.getContext("2d"); g.fillStyle="#fff"; g.fillRect(0,0,c.width,c.height); var x=0;
           qs.forEach(function(q){ var w=q.x1-q.x0+pad*2, h=q.y1-q.y0+pad*2; g.drawImage(P0.c, Math.max(0,q.x0-pad), Math.max(0,q.y0-pad), w, h, x, (H-h)/2, w, h); x+=w+gap; });
           if(c.width>380){ var sc=380/c.width, d=document.createElement("canvas"); d.width=380; d.height=Math.round(c.height*sc); d.getContext("2d").drawImage(c,0,0,d.width,d.height); c=d; }
           return c.toDataURL("image/jpeg", 0.85); }
-        Object.keys(def.fields).forEach(function(id){ var ks=def.fields[id], Pm=MS_P[id]; if(!Pm) return;
-          if(ks.length>3) ks=ks.filter(function(k){ return vals[k]; });   // v2.8.4: stage list longer than 3 (1/2/3/End): only the stages on this screen
+        var fds={}; Object.keys(def.fields).forEach(function(id){ fds[id]=def.fields[id]; }); Object.keys(YZ_STRIP_FIELDS).forEach(function(id){ if(!fds[id]) fds[id]=YZ_STRIP_FIELDS[id]; });
+        Object.keys(fds).forEach(function(id){ var ks=fds[id], Pm=MS_P[id]; if(!Pm) return;
+          if(YZ_STRIP_FIELDS[id] && ks!==YZ_STRIP_FIELDS[id] && !ks.some(function(k){ return vals[k] && vals[k].v; })) ks=YZ_STRIP_FIELDS[id];   // v2.8.7: the cycle monitor at the bottom of every screen
+          if(ks.length>3) ks=ks.filter(function(k){ return vals[k]; });
+          ks=ks.filter(function(k){ return !(vals[k] && vals[k].inactive); });   // v2.8.7: greyed (mode No) values are not the job's settings
+          if(!ks.length) return;   // v2.8.4: stage list longer than 3 (1/2/3/End): only the stages on this screen
           var ss=ks.map(function(k){ return vals[k]; }), vs=ss.map(function(s){ return s && s.v? s.v : ""; }), any=vs.some(Boolean);
-          var row={id:id, vals:Pm.staged? vs.concat(["","",""]).slice(0,3) : [vs[0]], extra:Pm.staged? vs.slice(3).filter(Boolean).join(" ") : "", same:false, crop:cropOf(ks), typed:true, screen:true,
+          var row={id:id, mean:yzMeanOf(def.id, id, ks), vals:Pm.staged? vs.concat(["","",""]).slice(0,3) : [vs[0]], extra:Pm.staged? vs.slice(3).filter(Boolean).join(" ") : "", same:false, crop:cropOf(ks), typed:true, screen:true,
             ocr:vs.join(" | "), state:any? "read" : "unread", conf:ss.filter(Boolean).length? +Math.min.apply(null, ss.filter(Boolean).map(function(s){ return s.v? s.c : 0.2; })).toFixed(2) : 0.2};   // v2.8.5: a stage that is not on the screen is not a doubt
           if(Pm.staged && vs.length>1 && vs.every(function(v){ return v===vs[0]; }) && vs.length===3) row.same=false;
           if(/^zone[6-8]$/.test(id) && !any && out.rows.some(function(r){ return r.id==="zone5" && r.state==="read"; })) return;   // v2.8.5: a 5-zone barrel has no zones 6-8 — leave them out instead of red blanks
@@ -2832,7 +3080,7 @@ function yzRead(im, onProg, pre){
         if(def.barrel){ var bx=P.nums.filter(function(b){ return /^\d{3}\.\d$/.test(b.v) && b.cy<P0.H*0.45; }), grp=[];   // v2.8.4: Overview barrel strip (actual temps, nozzle → hopper)
           bx.forEach(function(b){ var g=grp.find(function(g){ return Math.abs(g.cy-b.cy)<lh*0.7; }); if(g){ g.b.push(b); } else grp.push({cy:b.cy, b:[b]}); });
           grp.sort(function(a,b){ return b.b.length-a.b.length; }); if(grp[0] && grp[0].b.length>=4) out.notesList.push({label:"Barrel actual °F (left → right)", text:grp[0].b.sort(function(a,b){ return a.cx-b.cx; }).map(function(b){ return b.v; }).join(" / ")+" (check)", conf:0.5}); }
-        (def.notes||[]).forEach(function(n){ var vs=n[1].map(function(k){ var s=vals[k]; return s && s.v? s.v+(s.c<0.6? " (check)" : "") : "?"; }); if(vs.every(function(v){ return v==="?"; })) return;
+        (def.notes||[]).concat(P.tok? YZ_STRIP_NOTES : []).forEach(function(n){ var vs=n[1].map(function(k){ var s=vals[k]; return s && s.v? s.v+(s.inactive? " (off)" : "")+(s.c<0.6? " (check)" : "") : "?"; }); if(vs.every(function(v){ return v==="?"; })) return;
           out.notesList.push({label:n[0], text:vs.join(" / "), conf:Math.min.apply(null, n[1].map(function(k){ return vals[k]? vals[k].c : 0.3; }))}); });
         // date on the top status bar (setup date) — always let Allen check it
         var dw=P.words.filter(function(w){ return /^\d{1,2}\/\d{1,2}\/\d{2}$/.test(w.t) && w.cy<P0.H*0.5; })[0];
@@ -8101,7 +8349,7 @@ function init(){
   }, 8000);
 }
 window.__tessW=function(){ return tessWorker(); }; window.__yzPrep=function(i){ return yzPrep(i); };
-window.__tjl = {state:state, pfield:function(j,k){ return pfield(j,k); }, secByRole:function(j,r){ return secByRole(j,r); }, saveJobs:function(){ saveJobs(); }, render:function(){ render(); }, googleClientId:GOOGLE_CLIENT_ID, ms:{screenRead:function(i,p){return mscrRead(i,p);}, screenLooks:function(i){return mscrLooksLikeScreen(i);}, boxes:function(i){ var m=mscrMask(mscrLocate(i),MSCR_W); return {img:m.c.toDataURL('image/jpeg',0.85),W:m.W,H:m.H,yellow:m.yellow,dark:m.dark,boxes:mscrBoxes(m).map(function(b){return [Math.round(b.cx),Math.round(b.cy),Math.round(b.w),Math.round(b.h)];})}; }, yzRead:function(i,p){return yzRead(i,p);}, yzLooks:function(i){return yzLooksLikeScreen(i);}, yzRectify:function(i){return yzRectify(i);}, yzPrep:function(i){return yzPrep(i);}, tess:function(){return tessWorker();}, yzDefs:YZ_DEFS, scan:msScanImage, extract:msExtract, orient:orientForOcr, normalize:msNormalize, defs:MS_DEFS, rowText:msRowText, isForm:msIsForm}, phone:{storeAlbumHandle:storeAlbumHandle, albumName:albumName, readPhoneSaved:readPhoneSaved},
+window.__tjl = {state:state, pfield:function(j,k){ return pfield(j,k); }, secByRole:function(j,r){ return secByRole(j,r); }, saveJobs:function(){ saveJobs(); }, render:function(){ render(); }, googleClientId:GOOGLE_CLIENT_ID, ms:{screenRead:function(i,p){return mscrRead(i,p);}, reviewModel:function(r,j){ return msReviewModel(r,j); }, reviewHtml:function(M){ return msReviewHtml(M); }, screenLooks:function(i){return mscrLooksLikeScreen(i);}, boxes:function(i){ var m=mscrMask(mscrLocate(i),MSCR_W); return {img:m.c.toDataURL('image/jpeg',0.85),W:m.W,H:m.H,yellow:m.yellow,dark:m.dark,boxes:mscrBoxes(m).map(function(b){return [Math.round(b.cx),Math.round(b.cy),Math.round(b.w),Math.round(b.h)];})}; }, yzRead:function(i,p){return yzRead(i,p);}, yzLooks:function(i){return yzLooksLikeScreen(i);}, yzRectify:function(i){return yzRectify(i);}, yzPrep:function(i){return yzPrep(i);}, tess:function(){return tessWorker();}, yzDefs:YZ_DEFS, scan:msScanImage, extract:msExtract, orient:orientForOcr, normalize:msNormalize, defs:MS_DEFS, rowText:msRowText, isForm:msIsForm}, phone:{storeAlbumHandle:storeAlbumHandle, albumName:albumName, readPhoneSaved:readPhoneSaved},
   doc:{url:DOC_SCRIPT_URL, readQueue:readDocQueue, readUploaded:readDocUploaded, readSent:readDocSent, baseName:docBaseName, renameable:function(){ return renameableDocs().map(function(d){ return {sent:d.sentName, name:d.docName}; }); }, flush:flushDocQueue, docsForCtx:docsForCtx, buildDocPdf:buildDocPdf, buildDocParts:buildDocParts, exists:docExists, uploadAll:uploadAllDocs, limits:function(){ return {page:DOC_PAGE_MAX, part:DOC_PART_BYTES, asis:DOC_PDF_ASIS, side:DOC_MAX_SIDE}; }}, parseLines:parseLines, buildReview:buildReview, render:render, scan:{buildSynIndex:buildSynIndex, labelUnitHint:labelUnitHint, parseNumber:parseNumber, defForLabel:defForLabel, reconcileFields:reconcileFields},
   photo:{readQueue:readPhotoQueue, readUploaded:readPhotoUploaded, readOk:readPhotoOk, flush:flushPhotoQueue, name:photoDriveName, prep:photoUploadBlob, info:docServerInfo, items:function(){ return photoItemsFor(state.jobs, false).map(function(it){ return {job:it.job.id, id:it.photo.id, name:it.photo.driveName||""}; }); }, terms:jobSearchTerms, find:findDocs, missing:jobMissing},
   restore:{need:restoreNeed, run:runRestore, pick:restorePickFiles, stem:restoreStem, partOf:restorePartOf, fileId:driveFileId, getFile:getDriveFile, pages:restorePagesOf, last:function(){ return state.restoreLast||null; }},
