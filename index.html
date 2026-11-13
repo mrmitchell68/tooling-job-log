@@ -654,7 +654,7 @@ pre.raw{white-space:pre-wrap;font-size:12px;background:var(--surface-2);padding:
 <script>
 (function(){
 "use strict";
-var APP_VERSION = "2.8.8";
+var APP_VERSION = "2.8.9";
 // Public OAuth client id (not a secret). Web client, authorized JavaScript origins:
 //   https://mrmitchell68.github.io   and   http://localhost:8766
 // Leave empty until that client exists — Save-to-Drive is hidden and the button uses the Android share sheet.
@@ -2245,13 +2245,16 @@ function mscrCursor(src, s, x0, y0, x1, y1, digits){
 // (colour is stored at half size) and too faint, so the 0/8 holes close up. The green channel keeps full detail: read the box
 // in both pictures at a few thresholds and keep the read that best matches the screen font.
 function mscrInkBest(src, m, x0, y0, x1, y1, digits, TH, K0){
-  TH=TH||64; var C=[[null, K0!=null? K0 : window.__boxK]], nz=0;
+  TH=TH||64; var C=[[null, K0!=null? K0 : window.__boxK]], nz=0, all=[];
   if(m.dim || window.__dimAll) (TH<64? [0.45,0.55,0.65,0.75] : [0.4,0.45,0.5,0.55]).forEach(function(k){ C.push(["g",k]); C.push(["gp",k]); });   // small text glows more → higher thresholds
   var best=null; C.forEach(function(c, ci){ mscrInk.mode=c[0]; var cv=mscrInk(src, m.s, x0, y0, x1, y1, TH, c[1]); mscrInk.mode=null;
     var rg=mscrReadGlyphs(cv._glyphs||[]), t=rg.t.replace(/[<>]/g,""), D=(rg.g||[]).filter(function(r){ return /[0-9]/.test(r.ch); });
     var md=D.length? Math.max.apply(null, D.map(function(r){ return r.d; })) : 1, ok=digits? t.length===digits : t.length>0; if(ci && !(cv._glyphs||[]).length) nz++;
     var sc=(ok? 0 : 1)+md+(ci? 0 : -0.02);
+    all.push({t:t, sc:sc});
     if(!best || sc<best.sc) best={cv:cv, rg:rg, sc:sc, md:md, ok:ok, tag:(c[0]||"y")+(c[1]!=null? c[1] : "")}; });
+  // Ø vs 8: when another good reading has the other one at the same place, the digit is not certain → let Allen check it
+  var bt=best.rg.t.replace(/[<>]/g,""); if(all.some(function(a){ if(a.sc>best.sc+0.08 || a.t.length!==bt.length) return false; for(var i=0;i<bt.length;i++){ var x=bt[i], y=a.t[i]; if(x!==y && /[08]/.test(x) && /[08]/.test(y)) return true; } return false; })){ best.rg.amb=true; best.rg.c=Math.min(best.rg.c, 0.5); }
   best.empty= C.length>1 && nz===C.length-1; best.clean= C.length>1 && best.ok && best.md<0.2; return best; }   // clean: no need to look for a cursor block
 // v2.8.9: second picture for Tesseract — the green channel, stretched (dim amber CRT photos: the yellowness picture is too
 // faint and blurry for the label words, so the Machine monitor / Temp. setting screens were not recognised)
@@ -2328,9 +2331,11 @@ function mscrMonitor(src, m, words, out){
   if(window.__mscrDbg) out.monHw=JSON.stringify(W0.filter(function(w){ return /status|setup|cycle/i.test(w.t); }).map(function(w){ return [w.t,Math.round(w.x0),Math.round(w.y0),Math.round(w.x1),Math.round(w.y1)]; }))+' W'+m.W+' cols '+JSON.stringify(cols);
   function band(x0, y0, x1, y1){ if(m.dim && !band.one){ // v2.8.9: several pictures / thresholds, keep the one whose numbers best match the screen font
       var C=[[null,0.3]]; [0.4,0.45,0.5,0.55].forEach(function(k){ C.push(["g",k]); C.push(["gp",k]); }); var best=null;
-      C.forEach(function(c, ci){ band.one=c; var r=band(x0, y0, x1, y1); band.one=null;
+      var all=[]; C.forEach(function(c, ci){ band.one=c; var r=band(x0, y0, x1, y1); band.one=null;
         var sc=r.length? r.reduce(function(a,q){ return a+q.md; },0)/r.length + (r.some(function(q){ return [3,4,6].indexOf(q.v.length)<0; })? 0.3 : 0) + (r.length>2? 0.2 : 0) + (ci? 0 : -0.02) : 2;
-        if(!best || sc<best.sc) best={r:r, sc:sc}; });
+        all.push({r:r, sc:sc}); if(!best || sc<best.sc) best={r:r, sc:sc}; });
+      best.r.forEach(function(q, qi){ all.forEach(function(a){ if(a.sc>best.sc+0.08 || a.r.length!==best.r.length) return; var t=a.r[qi].v; if(t.length!==q.v.length) return;   // Ø vs 8 disagreement → check
+        for(var i=0;i<t.length;i++) if(t[i]!==q.v[i] && /[08]/.test(t[i]) && /[08]/.test(q.v[i])){ q.c=Math.min(q.c, 0.5); q.amb=true; } }); });
       return best.r; }
     if(band.one) mscrInk.mode=band.one[0]; var cv=mscrInk(src, m.s, x0, y0, x1, y1, window.__monTH||64, band.one? band.one[1] : window.__monK!=null? window.__monK : 0.3), G=cv._glyphs||[]; mscrInk.mode=null; if(window.__mscrDbg) window.__mscrDbg.push(['band', cv.toDataURL(), mscrCropUrl(m.c,x0,y0,x1,y1,0)]); if(window.__mscrDbg) window.__mscrGl=(window.__mscrGl||[]).concat([['band', G.map(function(x){ return Array.from(x.bm).join(''); }), G.map(function(x){return +x.ar.toFixed(2);})]]); if(!G.length) return [];
     var R=G.map(function(q){ return mscrZero8(q, mscrGlyph(q)); }), aw=G.reduce(function(a,q){ return a+(q.x1-q.x0); },0)/G.length, grp=[[0]];
@@ -2367,7 +2372,7 @@ function mscrMonitor(src, m, words, out){
         if(tk.length && tk.length===vals.length) vals=vals.map(function(r,i){ var t=tk[i]; if(r.md!=null && r.md<0.19 && r.c>=0.72) return r;   // v2.8.9: a clean screen-font read beats Tesseract (it reads Ø as 6 or 8)
           if(t.length!==r.v.length){ if(r.c<0.3 && t.length>=2 && t.length<=4){ return {v:t.replace(/8/g,"0"), c:0.3, n:t.length}; } return r; }
           var v="", agree=true; for(var k=0;k<t.length;k++){ var a=t[k], g=r.v[k]; if(a===g || a==="8") v+=g; else { v+=a; if(!(g==="0"&&a==="0")) agree=false; } }
-          return {v:v, c:agree? Math.max(r.c, 0.75) : Math.max(0.5, Math.min(0.7, r.c+0.3)), n:r.n}; });
+          return {v:v, c:r.amb? Math.min(r.c, 0.5) : agree? Math.max(r.c, 0.75) : Math.max(0.5, Math.min(0.7, r.c+0.3)), n:r.n}; });
         items.push({label:lab.map(function(w){ return w.t; }).join(" ").replace(/[:;.]+$/,"").trim(), vals:vals, cy:vcy, box:[bx0, vcy-h*0.8, bx1, vcy+h*0.8], ci:ci, h:h, bx:[bx0,bx1]}); }); });
   // v2.8.9: lines Tesseract missed — each column is 11 evenly spaced lines in a fixed order (MSCR_MON 0-10 left, 11-21 right):
   // fit line number → height on the lines that were found and read the missing ones there
@@ -2480,7 +2485,7 @@ function mscrTemp(src, m, words, out){
     var D=(rg.g||[]).filter(function(r){ return /[0-9]/.test(r.ch); });
     if(D.length>n){ var bi=0, bs=1e9; for(var a=0;a+n<=D.length;a++){ var sd=0; for(var b=a;b<a+n;b++) sd+=D[b].d; if(sd<bs){ bs=sd; bi=a; } } D=D.slice(bi,bi+n); }
     var v=D.map(function(r){ return r.ch; }).join(""), c=D.length? Math.min.apply(null, D.map(function(r){ return r.c; })) : 0, md=D.length? Math.max.apply(null, D.map(function(r){ return r.d; })) : 1;
-    if(!cur && D.length===n && md<0.19) c=Math.max(c, md<0.14? 0.85 : 0.72);
+    if(!cur && !rg.amb && D.length===n && md<0.19) c=Math.max(c, md<0.14? 0.85 : 0.72);
     if(D.length!==n) c=Math.min(c, 0.4); if(cur) c=Math.min(c, 0.55);
     if(window.__mscrDbg) window.__mscrDbg.push(["tp", cv.toDataURL(), v+" "+c]);
     return {v:v, c:+c.toFixed(2), crop:mscrCropUrl(m.c, x0, y0, x1, y1, 6), cursor:cur}; }
@@ -2495,7 +2500,9 @@ function mscrTemp(src, m, words, out){
   var found=0;
   pre.forEach(function(r, i){ if(!r.v || !MS_P[ids[i]]) return; found++;
     out.rows.push({id:ids[i], vals:[r.v], extra:"", same:false, crop:r.crop, typed:true, ocr:"preset temp "+names[i]+" "+r.v+(st[i].v? " (actual "+st[i].v+")" : ""), state:"read", conf:Math.min(0.9, r.c), screen:true}); });
-  var pw=X.map(function(x){ var y=slP!=null? rr(rows.power)+slP*x : yAt(rows.power, x), t=W.filter(function(w){ return Math.abs(cx(w)-x)<sp*0.45 && Math.abs(cy(w)-y)<rs*0.4; })[0]; return t? (/^[yv]/i.test(t.t)? "YES" : /^[nw]/i.test(t.t)? "NO" : "?") : "?"; });   // v2.8.9: dim photos read YES as VB, NO as WO
+  var pw=X.map(function(x){ var y=slP!=null? rr(rows.power)+slP*x : yAt(rows.power, x), t=W.filter(function(w){ return Math.abs(cx(w)-x)<sp*0.45 && Math.abs(cy(w)-y)<rs*0.4; })[0]; var r=t? (/^[yv]/i.test(t.t)? "YES" : /^[nw]/i.test(t.t)? "NO" : "?") : "?";   // v2.8.9: dim photos read YES as VB, NO as WO
+    if(r==="?" && m.dim){ mscrInk.mode="g"; var cv=mscrInk(src, m.s, x-sp*0.4, y-rs*0.3, x+sp*0.4, y+rs*0.3, 48, 0.5); mscrInk.mode=null; var n=(cv._glyphs||[]).length; r= n===3? "YES" : n===2? "NO" : "?"; }   // word missed: YES is three letters, NO two
+    return r; });
   function nl(label, arr){ if(arr.some(function(r){ return r && r.v; })) out.notesList.push({label:label, text:names.map(function(n,i){ return n+" "+((arr[i]&&arr[i].v)||"?"); }).join(", "), conf:Math.min.apply(null, arr.map(function(r){ return r? r.c : 0; }))}); }
   nl("Preset temp", pre); nl("Status temp (actual)", st);
   if(pw.some(function(v){ return v!=="?"; })) out.notesList.push({label:"Power switch", text:names.map(function(n,i){ return n+" "+pw[i]; }).join(", "), conf:0.6});
@@ -2597,7 +2604,7 @@ function mscrRead(src, onProg){
           if(!t){ state= (inkF<0.04 || (bi0.empty && !rg.cursor))? "blank" : "unread"; c= state==="blank"? 0.7 : 0.2; }
           else if(q.digits && t.length!==q.digits){ c=Math.min(c, 0.45); }
           // v2.8.3: every glyph a close match to the screen font and the digit count right → trust it even if the 2nd-best margin is thin
-          var md=(rg.g||[]).length? Math.max.apply(null, rg.g.map(function(r){ return r.d; })) : 1, clean=!rg.cursor && q.digits && t.length===q.digits && md<0.19;
+          var md=(rg.g||[]).length? Math.max.apply(null, rg.g.map(function(r){ return r.d; })) : 1, clean=!rg.cursor && !rg.amb && q.digits && t.length===q.digits && md<0.19;
           if(clean) c=Math.max(c, md<0.14? 0.85 : 0.72);
           if(!q.found) c=Math.min(c, clean? 0.8 : 0.55);   // box edge broken by the ◆ marker / glare: placed from the layout
           if(rg.cursorWeak) c=Math.min(c,0.3);
@@ -2639,7 +2646,7 @@ function mscrRead(src, onProg){
             var bi=0, bs=1e9; for(var w0=0; w0+q.digits<=rg.g.length; w0++){ var sd=0; for(var w1=w0; w1<w0+q.digits; w1++) sd+=rg.g[w1].d+(/[0-9]/.test(rg.g[w1].ch)? 0 : 1); if(sd<bs){ bs=sd; bi=w0; } }
             var gg=rg.g.slice(bi, bi+q.digits); rg={t:gg.map(function(r){ return r.ch; }).join(""), c:Math.min.apply(null, gg.map(function(r){ return r.c; })), g:gg}; }
           var tmd=(rg.g||[]).filter(function(r){ return /[0-9]/.test(r.ch); }), tdd=tmd.length? Math.max.apply(null, tmd.map(function(r){ return r.d; })) : 1, tc=rg.c;
-          if(!rg.cursor && q.digits && tmd.length===q.digits && tdd<0.19) tc=Math.max(tc, tdd<0.14? 0.85 : 0.72);   // v2.8.3 (see boxes)
+          if(!rg.cursor && !rg.amb && q.digits && tmd.length===q.digits && tdd<0.19) tc=Math.max(tc, tdd<0.14? 0.85 : 0.72);   // v2.8.3 (see boxes)
           txt[q.key]={v:rg.t, c:rg.cursor? Math.min(rg.c,0.55) : tc, q:q}; if(window.__mscrDbg) window.__mscrGl=(window.__mscrGl||[]).concat([[q.key, (cv._glyphs||[]).map(function(x){ return Array.from(x.bm).join(''); }), (cv._glyphs||[]).map(function(x){return +x.ar.toFixed(2);})]]); });
         var dt=txt.date, dm=dt && dt.v.match(/^(\d{1,2})\/(\d{1,2})\/(\d{2})$/);
         if(dm) out.header.date={value:dm[1]+"/"+dm[2]+"/"+dm[3], conf:Math.min(0.5, dt.c),  // small blurry status font: always let Allen check it
