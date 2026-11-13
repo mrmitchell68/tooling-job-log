@@ -2122,7 +2122,7 @@ function mscrInk(src, s, x0, y0, x1, y1, TH, K){
   var c=document.createElement("canvas"), sc=Math.min(3, (TH*1.5)/h); c.width=Math.round(w*sc); c.height=Math.round(h*sc);
   var g=c.getContext("2d"); g.imageSmoothingQuality="high"; g.drawImage(src, X0, Y0, w, h, 0, 0, c.width, c.height);
   var id=g.getImageData(0,0,c.width,c.height), d=id.data, N=c.width*c.height, Y=new Uint8Array(N), hist=new Array(256).fill(0);
-  for(var i=0;i<N;i++){ var v=Math.min(d[i*4],d[i*4+1])-d[i*4+2]; v=v<0?0:v>255?255:v; Y[i]=v; hist[v]++; }
+  var LM=mscrInk.mode||window.__inkMode; for(var i=0;i<N;i++){ var v=(LM==="g"||LM==="gp")? d[i*4+1] : LM==="rg"? (d[i*4]+d[i*4+1])>>1 : LM==="mix"? Math.round((Math.min(d[i*4],d[i*4+1])-d[i*4+2])*0.5+d[i*4+1]*0.5) : Math.min(d[i*4],d[i*4+1])-d[i*4+2]; v=v<0?0:v>255?255:v; Y[i]=v; hist[v]++; }
   var sum=0, sB=0, wB=0, best=0, T=128; for(var t=0;t<256;t++) sum+=t*hist[t];
   for(t=0;t<256;t++){ wB+=hist[t]; if(!wB) continue; var wF=N-wB; if(!wF) break; sB+=t*hist[t]; var mB=sB/wB, mF=(sum-sB)/wF, bt=wB*wF*(mB-mF)*(mB-mF); if(bt>best){ best=bt; T=t; } }
   var mx=0; for(t=255;t>0;t--) if(hist[t]){ mx=t; break; }
@@ -2141,13 +2141,16 @@ function mscrInk(src, s, x0, y0, x1, y1, TH, K){
   var G=[]; gl.forEach(function(k){ var l=G[G.length-1]; if(l && k.x0<l.x1-(l.x1-l.x0)*0.4){ l.x0=Math.min(l.x0,k.x0); l.x1=Math.max(l.x1,k.x1); l.y0=Math.min(l.y0,k.y0); l.y1=Math.max(l.y1,k.y1); l.ids.push(k.id); } else G.push({x0:k.x0,x1:k.x1,y0:k.y0,y1:k.y1,ids:[k.id]}); });
   // the LCD glow joins neighbouring digits: the font is fixed-pitch, so a wide blob is cut at the thinnest column near each
   // expected boundary
+  var PW=0; if(mscrInk.mode==="gp"){ var ws=G.map(function(q){ return q.x1-q.x0+1; }).filter(function(w,i){ var r=w/(G[i].y1-G[i].y0+1); return r>0.6 && r<1.05; }).sort(function(a,b){ return a-b; }); if(ws.length) PW=ws[ws.length>>1]; }
   var G2=[]; G.forEach(function(q){ var gw=q.x1-q.x0+1, gh=q.y1-q.y0+1, n=Math.round(gw/gh/0.8);
     if(gw/gh<0.35) return;
     var rr=gw/gh/0.8, dia=(rr>1.3 && rr<1.75);   // v2.8.1: one digit glued to the ◆ marker: cut one digit-width from the left, not in half
     if(dia) n=2;
+    var pw1=PW || (mscrInk.mode==="gp"? gh*0.88 : 0), pit=pw1 && gw>pw1*1.45;   // v2.8.9 (dim photos): fixed pitch from the single digits in this box — a digit glued to the ◆ is cut one digit from the left
+    if(pit){ n=Math.max(2, Math.round(gw/pw1)); }
     if(n<=1){ G2.push(q); return; }
     var col=function(x){ var v=0; for(var yy=q.y0; yy<=q.y1; yy++) if(q.ids.indexOf(C.L[yy*c.width+x])>=0) v++; return v; }, cuts=[q.x0];
-    for(var j=1;j<n;j++){ var e=dia? q.x0+gh*0.8 : q.x0+gw*j/n, bx=Math.round(e), bv=1e9; for(var x=Math.round(e-gw/n*0.2); x<=Math.round(e+gw/n*0.2); x++){ var v=col(x); if(v<bv){ bv=v; bx=x; } } cuts.push(bx); }
+    for(var j=1;j<n;j++){ var e=pit? q.x0+pw1*j : dia? q.x0+gh*0.8 : q.x0+gw*j/n, bx=Math.round(e), bv=1e9; for(var x=Math.round(e-gw/n*0.2); x<=Math.round(e+gw/n*0.2); x++){ var v=col(x); if(v<bv){ bv=v; bx=x; } } cuts.push(bx); }
     cuts.push(q.x1+1);
     for(j=0;j<n;j++){ var a=cuts[j], b2=cuts[j+1]-1, yt=q.y1, yb=q.y0;
       for(var xx=a; xx<=b2; xx++) for(var yy=q.y0; yy<=q.y1; yy++) if(q.ids.indexOf(C.L[yy*c.width+xx])>=0){ if(yy<yt) yt=yy; if(yy>yb) yb=yy; }
@@ -2238,6 +2241,40 @@ function mscrCursor(src, s, x0, y0, x1, y1, digits){
   if(!rg.t || (digits && rg.t.replace(/[<>]/g,"").length!==digits)) return null;
   return {cv:cv, rg:rg};
 }
+// v2.8.9: dim photos (dark amber CRT, low light) — the yellowness picture (min(R,G)−B) is only half resolution in a JPEG
+// (colour is stored at half size) and too faint, so the 0/8 holes close up. The green channel keeps full detail: read the box
+// in both pictures at a few thresholds and keep the read that best matches the screen font.
+function mscrInkBest(src, m, x0, y0, x1, y1, digits, TH, K0){
+  TH=TH||64; var C=[[null, K0!=null? K0 : window.__boxK]], nz=0;
+  if(m.dim || window.__dimAll) (TH<64? [0.45,0.55,0.65,0.75] : [0.4,0.45,0.5,0.55]).forEach(function(k){ C.push(["g",k]); C.push(["gp",k]); });   // small text glows more → higher thresholds
+  var best=null; C.forEach(function(c, ci){ mscrInk.mode=c[0]; var cv=mscrInk(src, m.s, x0, y0, x1, y1, TH, c[1]); mscrInk.mode=null;
+    var rg=mscrReadGlyphs(cv._glyphs||[]), t=rg.t.replace(/[<>]/g,""), D=(rg.g||[]).filter(function(r){ return /[0-9]/.test(r.ch); });
+    var md=D.length? Math.max.apply(null, D.map(function(r){ return r.d; })) : 1, ok=digits? t.length===digits : t.length>0; if(ci && !(cv._glyphs||[]).length) nz++;
+    var sc=(ok? 0 : 1)+md+(ci? 0 : -0.02);
+    if(!best || sc<best.sc) best={cv:cv, rg:rg, sc:sc, md:md, ok:ok, tag:(c[0]||"y")+(c[1]!=null? c[1] : "")}; });
+  best.empty= C.length>1 && nz===C.length-1; best.clean= C.length>1 && best.ok && best.md<0.2; return best; }   // clean: no need to look for a cursor block
+// v2.8.9: second picture for Tesseract — the green channel, stretched (dim amber CRT photos: the yellowness picture is too
+// faint and blurry for the label words, so the Machine monitor / Temp. setting screens were not recognised)
+function mscrGreenInk(m){
+  var g=m.c.getContext("2d"), d=g.getImageData(0,0,m.W,m.H).data, N=m.W*m.H, h=new Array(256).fill(0);
+  for(var i=0;i<N;i++) h[d[i*4+1]]++;
+  function pc(f){ var t=0; for(var v=0;v<256;v++){ t+=h[v]; if(t>=N*f) return v; } return 255; }
+  var lo=pc(0.55), hi=pc(0.995); if(hi-lo<20) hi=lo+20;
+  var c=document.createElement("canvas"); c.width=m.W; c.height=m.H; var cg=c.getContext("2d"), o=cg.createImageData(m.W,m.H), od=o.data;
+  for(i=0;i<N;i++){ var v=255-Math.max(0,Math.min(255,(d[i*4+1]-lo)*255/(hi-lo)*1.3)); od[i*4]=od[i*4+1]=od[i*4+2]=v; od[i*4+3]=255; }
+  cg.putImageData(o,0,0); return c; }
+function mscrIsDim(m, src){ return true; }   // v2.8.9: measured better on every TMC photo (old and new), so always on
+// v2.8.9 (dim photos): a plain-text value placed from the box layout can sit half a line off (the layout is fitted on the
+// boxes) → move it onto the text line nearest to where it was placed (brightest band of rows in the green channel)
+function mscrSnapY(src, m, x0, y0, x1, y1){
+  var s=m.s, h=y1-y0, X0=Math.max(0,Math.round(x0/s)), Y0=Math.max(0,Math.round((y0-h)/s)), w=Math.max(4,Math.round((x1-x0)/s)), hh=Math.max(4,Math.round(3*h/s));
+  var c=document.createElement("canvas"); c.width=w; c.height=hh; var g=c.getContext("2d"); g.drawImage(src, X0, Y0, w, hh, 0, 0, w, hh);
+  var d=g.getImageData(0,0,w,hh).data, P=[]; for(var y=0;y<hh;y++){ var a=[]; for(var x=0;x<w;x++) a.push(d[(y*w+x)*4+1]); a.sort(function(p,q){ return q-p; }); var k=Math.max(1,Math.round(w*0.15)), t=0; for(var i=0;i<k;i++) t+=a[i]; P.push(t/k); }
+  var mn=Math.min.apply(null,P), mx=Math.max.apply(null,P); if(mx-mn<25) return null; var T=mn+(mx-mn)*0.5, bands=[], st=-1;
+  for(y=0;y<=hh;y++){ if(y<hh && P[y]>T){ if(st<0) st=y; } else if(st>=0){ bands.push([st,y]); st=-1; } }
+  var cy=hh/2, best=null; bands.forEach(function(b){ var bh=b[1]-b[0]; if(bh<hh*0.08) return; var dc=Math.abs((b[0]+b[1])/2-cy); if(!best || dc<best.dc) best={b:b, dc:dc}; });
+  if(!best || best.dc>hh*0.3) return null; var bc=(best.b[0]+best.b[1])/2*s+Y0*s, bh2=Math.max((best.b[1]-best.b[0])*s, h*0.6);
+  return [bc-bh2*0.75, bc+bh2*0.75]; }
 function mscrLocate(src){
   var w0=src.naturalWidth||src.width, h0=src.naturalHeight||src.height, m=mscrMask(src, 400), xs=[], ys=[];
   for(var y=0;y<m.H;y++) for(var x=0;x<m.W;x++) if(m.M[y*m.W+x]){ xs.push(x); ys.push(y); }
@@ -2289,10 +2326,18 @@ function mscrMonitor(src, m, words, out){
     cl=cl.filter(function(c){ return c.n>=4; }).sort(function(a,b){ return b.n-a.n; }).slice(0,2).sort(function(a,b){ return a.x0-b.x0; });
     if(cl.length===2) cols=cl.map(function(c){ c.ys.sort(function(a,b){ return a-b; }); c.xs.sort(function(a,b){ return a-b; }); c.x0s.sort(function(a,b){ return a-b; }); return {x0:c.x0s[Math.floor(c.x0s.length*0.15)], x1:c.xs[Math.floor(c.xs.length*0.8)], y1:c.ys[0]-ch*0.6, nums:true}; }); }   // percentiles: one stray token (menu, range note) must not stretch the column
   if(window.__mscrDbg) out.monHw=JSON.stringify(W0.filter(function(w){ return /status|setup|cycle/i.test(w.t); }).map(function(w){ return [w.t,Math.round(w.x0),Math.round(w.y0),Math.round(w.x1),Math.round(w.y1)]; }))+' W'+m.W+' cols '+JSON.stringify(cols);
-  function band(x0, y0, x1, y1){ var cv=mscrInk(src, m.s, x0, y0, x1, y1, window.__monTH||64, window.__monK!=null? window.__monK : 0.3), G=cv._glyphs||[]; if(window.__mscrDbg) window.__mscrDbg.push(['band', cv.toDataURL(), mscrCropUrl(m.c,x0,y0,x1,y1,0)]); if(window.__mscrDbg) window.__mscrGl=(window.__mscrGl||[]).concat([['band', G.map(function(x){ return Array.from(x.bm).join(''); }), G.map(function(x){return +x.ar.toFixed(2);})]]); if(!G.length) return [];
+  function band(x0, y0, x1, y1){ if(m.dim && !band.one){ // v2.8.9: several pictures / thresholds, keep the one whose numbers best match the screen font
+      var C=[[null,0.3]]; [0.4,0.45,0.5,0.55].forEach(function(k){ C.push(["g",k]); C.push(["gp",k]); }); var best=null;
+      C.forEach(function(c, ci){ band.one=c; var r=band(x0, y0, x1, y1); band.one=null;
+        var sc=r.length? r.reduce(function(a,q){ return a+q.md; },0)/r.length + (r.some(function(q){ return [3,4,6].indexOf(q.v.length)<0; })? 0.3 : 0) + (r.length>2? 0.2 : 0) + (ci? 0 : -0.02) : 2;
+        if(!best || sc<best.sc) best={r:r, sc:sc}; });
+      return best.r; }
+    if(band.one) mscrInk.mode=band.one[0]; var cv=mscrInk(src, m.s, x0, y0, x1, y1, window.__monTH||64, band.one? band.one[1] : window.__monK!=null? window.__monK : 0.3), G=cv._glyphs||[]; mscrInk.mode=null; if(window.__mscrDbg) window.__mscrDbg.push(['band', cv.toDataURL(), mscrCropUrl(m.c,x0,y0,x1,y1,0)]); if(window.__mscrDbg) window.__mscrGl=(window.__mscrGl||[]).concat([['band', G.map(function(x){ return Array.from(x.bm).join(''); }), G.map(function(x){return +x.ar.toFixed(2);})]]); if(!G.length) return [];
     var R=G.map(function(q){ return mscrZero8(q, mscrGlyph(q)); }), aw=G.reduce(function(a,q){ return a+(q.x1-q.x0); },0)/G.length, grp=[[0]];
     for(var i=1;i<G.length;i++){ if(G[i].x0-G[i-1].x1>aw*0.8) grp.push([]); grp[grp.length-1].push(i); }
-    return grp.map(function(g){ var t=g.map(function(i){ return R[i].ch; }).join("").replace(/[^0-9]/g,""); return {v:t, c:Math.min.apply(null, g.map(function(i){ return R[i].c; })), n:g.length, x0:x0+(G[g[0]].x0-20)/cv.width*(x1-x0)}; }).filter(function(r){ return r.v; }); }
+    return grp.map(function(g){ var t=g.map(function(i){ return R[i].ch; }).join("").replace(/[^0-9]/g,""), md=Math.max.apply(null, g.map(function(i){ return R[i].d; })), c=Math.min.apply(null, g.map(function(i){ return R[i].c; }));
+      if(band.one && md<0.19 && g.every(function(i){ return /[0-9]/.test(R[i].ch); })) c=Math.max(c, md<0.14? 0.85 : 0.72);   // v2.8.9: every glyph a close font match (as for boxes)
+      return {v:t, c:c, md:md, n:g.length, x0:x0+(G[g[0]].x0-20)/cv.width*(x1-x0)}; }).filter(function(r){ return r.v; }); }
   // v2.8.3: skew of the photo from neighbouring words on one text line (median dy/dx); lines are grouped on de-skewed centres
   var sl=[]; W.forEach(function(a){ var h=a.y1-a.y0, ac=(a.y0+a.y1)/2, best=null; W.forEach(function(b){ if(b===a || b.x0<a.x1 || b.x0-a.x1>h*3) return; var bc=(b.y0+b.y1)/2; if(Math.abs(bc-ac)>h*0.5 || Math.abs((b.y1-b.y0)-h)>h*0.3) return; if(!best || b.x0<best.x0) best=b; });
     if(best){ var dx=(best.x0+best.x1-a.x0-a.x1)/2; if(dx>h) sl.push(((best.y0+best.y1)/2-ac)/dx); } });
@@ -2319,10 +2364,32 @@ function mscrMonitor(src, m, words, out){
             vals=st0.concat([{v:cr.rg.t.replace(/[^0-9]/g,""), c:Math.min(0.55, cr.rg.c), n:cr.rg.t.length, cursor:true}]); tk=[]; } }
         // fuse with Tesseract: it reads the slashed zero as 8 but gets 1/2/5/6/7 right where the small glyphs blur
         if(vals.length>2) vals=vals.slice(-2);
-        if(tk.length && tk.length===vals.length) vals=vals.map(function(r,i){ var t=tk[i]; if(t.length!==r.v.length){ if(r.c<0.3 && t.length>=2 && t.length<=4){ return {v:t.replace(/8/g,"0"), c:0.3, n:t.length}; } return r; }
+        if(tk.length && tk.length===vals.length) vals=vals.map(function(r,i){ var t=tk[i]; if(r.md!=null && r.md<0.19 && r.c>=0.72) return r;   // v2.8.9: a clean screen-font read beats Tesseract (it reads Ø as 6 or 8)
+          if(t.length!==r.v.length){ if(r.c<0.3 && t.length>=2 && t.length<=4){ return {v:t.replace(/8/g,"0"), c:0.3, n:t.length}; } return r; }
           var v="", agree=true; for(var k=0;k<t.length;k++){ var a=t[k], g=r.v[k]; if(a===g || a==="8") v+=g; else { v+=a; if(!(g==="0"&&a==="0")) agree=false; } }
           return {v:v, c:agree? Math.max(r.c, 0.75) : Math.max(0.5, Math.min(0.7, r.c+0.3)), n:r.n}; });
-        items.push({label:lab.map(function(w){ return w.t; }).join(" ").replace(/[:;.]+$/,"").trim(), vals:vals, cy:vcy, box:[bx0, vcy-h*0.8, bx1, vcy+h*0.8]}); }); });
+        items.push({label:lab.map(function(w){ return w.t; }).join(" ").replace(/[:;.]+$/,"").trim(), vals:vals, cy:vcy, box:[bx0, vcy-h*0.8, bx1, vcy+h*0.8], ci:ci, h:h, bx:[bx0,bx1]}); }); });
+  // v2.8.9: lines Tesseract missed — each column is 11 evenly spaced lines in a fixed order (MSCR_MON 0-10 left, 11-21 right):
+  // fit line number → height on the lines that were found and read the missing ones there
+  if(sideL && m.dim) [0,1].forEach(function(ci){
+    var P=[]; items.forEach(function(it){ if(it.ci!==ci) return; var lab=it.label.replace(/\s+/g," "), k=-1, at=-1; MSCR_MON.forEach(function(d,j){ if(j<ci*11 || j>=ci*11+11) return; var mm=lab.match(d[0]); if(mm && mm.index>at){ k=j; at=mm.index; } }); if(k>=0) P.push({k:k-ci*11, cy:it.cy, it:it}); });
+    if(P.length<3) return;
+    function fit(Q){ var n=Q.length, mx=0, my=0, sxy=0, sxx=0; Q.forEach(function(p){ mx+=p.k/n; my+=p.cy/n; }); Q.forEach(function(p){ sxy+=(p.k-mx)*(p.cy-my); sxx+=(p.k-mx)*(p.k-mx); }); var b=sxx? sxy/sxx : 0; return {a:my-b*mx, b:b}; }
+    var F=fit(P); P=P.filter(function(p){ return Math.abs(F.a+F.b*p.k-p.cy)<F.b*0.35; }); if(P.length<3) return; F=fit(P);
+    if(F.b<=0) return; var hh=P.map(function(p){ return p.it.h; }).sort(function(a,b){ return a-b; })[P.length>>1], bxx=P[0].it.bx, have={};
+    P.forEach(function(p){ have[p.k]=1; });
+    // a line read under the wrong label (two labels on one line) is dropped when the fit says it belongs elsewhere
+    items=items.filter(function(it){ if(it.ci!==ci) return true; return P.some(function(p){ return p.it===it; }) || !MSCR_MON.slice(ci*11, ci*11+11).some(function(d){ return d[0].test(it.label.replace(/\s+/g," ")); }); });
+    var hb=Math.min(hh*0.8, F.b*0.48);   // half the band height: never more than half the line pitch (Tesseract boxes on a dim photo are tall)
+    function cmean(v){ return v.length? v.reduce(function(a,r){ return a+r.c; },0)/v.length : 0; }
+    for(var k=0;k<11;k++){ var y=F.a+F.b*k, sn=mscrSnapY(src, m, bxx[0], y-hb*0.9, bxx[1], y+hb*0.9); if(sn && Math.abs((sn[0]+sn[1])/2-y)<F.b*0.4) y=(sn[0]+sn[1])/2;   // onto the text line itself
+      if(have[k]){ var p=P.filter(function(q){ return q.k===k; })[0], it=p.it; if(it.box[3]-it.box[1]<=F.b*1.1) continue;
+        var v2=band(bxx[0], y-hb, bxx[1], y+hb); if(v2.length>2) v2=v2.slice(-2);
+        if(v2.length>=it.vals.length && cmean(v2)>cmean(it.vals)+0.1){ it.vals=v2.map(function(r){ return {v:r.v, c:Math.min(r.c, 0.85), n:r.n}; }); it.box=[bxx[0], y-hb, bxx[1], y+hb]; }
+        continue; }
+      var v=band(bxx[0], y-hb, bxx[1], y+hb);
+      if(v.length>2) v=v.slice(-2); if(!v.length) continue;
+      items.push({label:MSCR_MON[ci*11+k][2], vals:v.map(function(r){ return {v:r.v, c:Math.min(r.c, 0.85), n:r.n}; }), cy:y, box:[bxx[0], y-hb, bxx[1], y+hb], ci:ci, h:hh, fill:true}); } });
 
   // older path when the headings were not found: Tesseract tokens re-read one by one
   if(cols.length<2) lines.forEach(function(L){
@@ -2344,11 +2411,12 @@ function mscrMonitor(src, m, words, out){
       out.rows.push({id:def[1], vals:P.staged? [set.v,"",""] : [set.v], extra:"", same:false, crop:mscrCropUrl(m.c, bb[0], bb[1], bb[2], bb[3], 6), typed:true, ocr:"setup "+set.v+(st? " (status "+st.v+")" : ""), state:"read", conf:+Math.min(0.9,c).toFixed(2), screen:true}); }
     out.notesList.push({label:def[2], text:(st? st.v+" / " : "")+set.v, conf:c}); });
   // barrel temperatures: the numbers in the heater strip above "SCREW R.P.M." (nozzle at the left, collar box at the right) — actual readings
-  var rpm=words.filter(function(w){ return /r\.?p\.?m/i.test(w.t); })[0], tit=words.filter(function(w){ return /machine/i.test(w.t); })[0];
+  var rpm=words.filter(function(w){ return /r\.?p\.?[mn]/i.test(w.t); })[0], tit=words.filter(function(w){ return /machine/i.test(w.t); })[0];
   var tz=temps.filter(function(w){ var cy=(w.y0+w.y1)/2; return (!rpm || cy<rpm.y0) && (!tit || cy>tit.y0-(tit.y1-tit.y0)*2) && w.t.replace(/[^0-9OoDQ]/g,"").length===3; }).sort(function(a,b){ return a.x0-b.x0; });
   if(rpm){ var rw=words.filter(function(w){ return num.test(w.t) && Math.abs((w.y0+w.y1)/2-(rpm.y0+rpm.y1)/2)<(rpm.y1-rpm.y0) && w.x0>rpm.x0; })[0]; if(rw){ var rv=readNum(rw,3); out.notesList.push({label:"Screw R.P.M.", text:rv.v, conf:rv.c}); } }
   if(rpm && tz.length<4){ // v2.8.3: Tesseract found (almost) none of the heater temps → read the strip above SCREW R.P.M. in the screen font
-    var rh=rpm.y1-rpm.y0, rcy=(rpm.y0+rpm.y1)/2-slope*0, ty0=rcy-rh*2.9, bx0h=rpm.x0-rh*24, bx1h=rpm.x0+rh*21;
+    var rh=rpm.y1-rpm.y0, rsn=m.dim? mscrSnapY(src, m, rpm.x0, rpm.y0, rpm.x1, rpm.y1) : null; if(rsn && (rsn[1]-rsn[0])/1.5<rh) rh=(rsn[1]-rsn[0])/1.5;   // v2.8.9: Tesseract boxes on a dim photo are taller than the letters
+    var rcy=(rpm.y0+rpm.y1)/2-slope*0, ty0=rcy-rh*2.9, bx0h=rpm.x0-rh*24, bx1h=rpm.x0+rh*21;
     var cand=[]; [-0.3,0,0.3].forEach(function(o){ var bb=[], NS=6, sw=(bx1h-bx0h)/NS;   // short overlapping pieces, each at its own height (the strip is slanted)
       for(var si=0; si<NS; si++){ var xa=bx0h+si*sw-sw*0.25, xb=xa+sw*1.5, yy=ty0+o*rh+slope*((xa+xb)/2-rpm.x0);
         band(xa, yy-rh*0.55, xb, yy+rh*0.55).forEach(function(r){ if(r.v.length!==3) return; var dup=bb.filter(function(q){ return Math.abs(q.x0-r.x0)<rh*1.2; })[0]; if(dup){ if(r.c>dup.c){ dup.v=r.v; dup.c=r.c; } } else bb.push(r); }); }
@@ -2369,17 +2437,18 @@ function mscrMonitor(src, m, words, out){
     if(col) out.notesList.push({label:"Collar actual", text:col.v, conf:col.c}); }
   // position status
   words.forEach(function(w,i){ var nx=words[i+1]; if(!nx) return;
-    if(/^unit:?$/i.test(w.t) && num.test(nx.t)){ var r=readNum(nx,4); out.notesList.push({label:"Clamp unit position", text:r.v, conf:r.c}); }
-    if(/^screw:?$/i.test(w.t) && num.test(nx.t)){ var r2=readNum(nx,4); out.notesList.push({label:"Screw position", text:r2.v, conf:r2.c}); } });
+    if(/^unit:?$/i.test(w.t) && (num.test(nx.t) || (m.dim && /^[0-9a-z]{3,5}$/i.test(nx.t)))){ var r=readNum(nx,4); out.notesList.push({label:"Clamp unit position", text:r.v, conf:r.c}); }
+    if(/^screw:?$/i.test(w.t) && (num.test(nx.t) || (m.dim && /^[0-9a-z]{3,5}$/i.test(nx.t) && /:$/.test(w.t)))){ var r2=readNum(nx,4); out.notesList.push({label:"Screw position", text:r2.v, conf:r2.c}); } });
   out.screen.found=found; out.found=found; out.total=MSCR_MON.length;
   if(window.__mscrDbg) out.monTemps=temps.map(function(w){ return w.t+'@'+Math.round(w.x0)+','+Math.round(w.y0); })+' rpm '+(rpm&&rpm.y0)+' tit '+(tit&&tit.y0)+' bnd '+window.__monBnd;
   if(window.__mscrDbg) out.monItems=items.map(function(it){ return [it.label, it.vals.map(function(w){ return w.v+"("+w.c+")"; })]; });
+  if(window.__mscrDbg){ out.monBoxes=items.map(function(it){ return [it.label, it.box.map(Math.round), it.vals.map(function(w){ return w.v; }).join("/")]; }); window.__mscrDbg.push(["monimg", m.c.toDataURL("image/jpeg",0.9)]); }
 }
 // v2.8.3: TMC 250E TEMPERATURE SETTING screen — a table (zones H1-H6, COLLAR, OIL × alarm / status temp / preset temp) with
 // POWER SWITCH / HIGH ALARM / LOW ALARM lines under it. No boxes: columns come from the zone headings, rows from the labels.
 function mscrIsTemp(text){ var t=String(text||""), n=0;
   if(/temperature/i.test(t) && /setting/i.test(t)) n++;
-  [/zone/i, /collar/i, /\boil\b/i, /power/i, /alarm/i, /preset|status\s*temp/i, /switch/i, /keep/i].forEach(function(re){ if(re.test(t)) n++; });
+  [/zone/i, /collar/i, /\boil\b/i, /p[o0][wnm]er/i, /alar[mn]/i, /preset|status\s*temp/i, /switch/i, /keep/i, /high\s*alar/i, /low\s*alar/i, /\bh[1il]\s+h2\b/i].forEach(function(re){ if(re.test(t)) n++; });   // v2.8.9: + misread spellings, H1 H2 headings
   return n>=6 && !/cushion\s*limit|suck\s*back|corepull/i.test(t); }
 function mscrTemp(src, m, words, out){
   out.screen={id:"tmc-temp", title:"TMC 250E · Temperature setting screen", kw:1, found:0, total:8};
@@ -2398,13 +2467,16 @@ function mscrTemp(src, m, words, out){
   var hy=hs.map(cy), slope=hs.length>=2? (hy[hy.length-1]-hy[0])/(hx[hx.length-1]-hx[0]) : 0; if(Math.abs(slope)>0.08) slope=0;
   var y0h=hy[0]-slope*hx[0];
   function yAt(yref, x){ return yref+slope*x; }   // yref: y at x=0 on the de-skewed grid
-  var al=W.filter(function(w){ return /^alarm$/i.test(w.t) && w.x0<X[0]-sp && w.y0>zw.y1; }).sort(function(a,b){ return a.y0-b.y0; })[0];
-  var ps=W.filter(function(w){ return /^(power|pomer|powek|pover)$/i.test(w.t) && w.y0>zw.y1+zh; }).sort(function(a,b){ return a.y0-b.y0; })[0];
-  var r0=(al? cy(al)-slope*cx(al) : y0h+th*3), r3=ps? cy(ps)-slope*cx(ps) : r0+(r0-y0h)*2.2, rs=(r3-r0)/3;
+  var ps=W.filter(function(w){ return /^(power|pomer|powek|pover|poner|ponek)$/i.test(w.t) && w.y0>zw.y1+zh; }).sort(function(a,b){ return a.y0-b.y0; })[0];
+  var al=W.filter(function(w){ return /^alarm$/i.test(w.t) && w.x0<X[0]-sp && w.y0>zw.y1 && (!ps || w.y1<ps.y0); }).sort(function(a,b){ return a.y0-b.y0; })[0];   // v2.8.9: not the HIGH/LOW ALARM lines under POWER SWITCH
+  var r0=(al? cy(al)-slope*cx(al) : ps? y0h+(cy(ps)-slope*cx(ps)-y0h)*0.22 : y0h+th*3), r3=ps? cy(ps)-slope*cx(ps) : r0+(r0-y0h)*2.2, rs=(r3-r0)/3;
   var rows={alarm:r0, status:r0+rs, preset:r0+rs*2, power:r3, high:r3+rs*0.55, low:r3+rs*1.1};
-  function rd(x, yr, n){ var y=yAt(yr, x), hw=sp*0.42, hh=Math.min(rs*0.36, th*1.05), x0=x-hw, x1=x+hw, y0=y-hh, y1=y+hh;
-    var cv=mscrInk(src, m.s, x0, y0, x1, y1, 48, 0.4), rg=mscrReadGlyphs(cv._glyphs||[]), cur=false;
-    if(cv._inkF>0.25){ var cr=mscrCursor(src, m.s, x0, y0, x1, y1, 0); if(cr){ rg=cr.rg; cur=true; } }
+  // v2.8.9: HIGH ALARM / LOW ALARM lines from their own label words when they were read (the gap under POWER SWITCH varies)
+  var hl=[]; W.filter(function(w){ var y=cy(w)-slope*cx(w); return w.x1<X[0]-sp*0.4 && y>r3+rs*0.2 && y<r3+rs*1.7 && /alar|^hi[gq]h|^l[o0]w$|\([+-]\)/i.test(w.t); }).forEach(function(w){ var y=cy(w)-slope*cx(w), L=hl.filter(function(l){ return Math.abs(l-y)<rs*0.25; })[0]; if(L==null) hl.push(y); });
+  hl.sort(function(a,b){ return a-b; }); if(hl.length===2 && hl[1]-hl[0]>rs*0.3){ rows.high=hl[0]; rows.low=hl[1]; }
+  function rd(x, yr, n, sl){ var y=sl!=null? yr+sl*x : yAt(yr, x), hw=sp*0.42, hh=Math.min(rs*0.36, th*1.05), x0=x-hw, x1=x+hw, y0=y-hh, y1=y+hh;
+    var tb=mscrInkBest(src, m, x0, y0, x1, y1, n, 48, 0.4), cv=tb.cv, rg=tb.rg, cur=false;   // v2.8.9: best of several pictures / thresholds
+    if(cv._inkF>0.25 && !tb.clean){ var cr=mscrCursor(src, m.s, x0, y0, x1, y1, 0); if(cr){ rg=cr.rg; cur=true; } }
     var D=(rg.g||[]).filter(function(r){ return /[0-9]/.test(r.ch); });
     if(D.length>n){ var bi=0, bs=1e9; for(var a=0;a+n<=D.length;a++){ var sd=0; for(var b=a;b<a+n;b++) sd+=D[b].d; if(sd<bs){ bs=sd; bi=a; } } D=D.slice(bi,bi+n); }
     var v=D.map(function(r){ return r.ch; }).join(""), c=D.length? Math.min.apply(null, D.map(function(r){ return r.c; })) : 0, md=D.length? Math.max.apply(null, D.map(function(r){ return r.d; })) : 1;
@@ -2414,11 +2486,16 @@ function mscrTemp(src, m, words, out){
     return {v:v, c:+c.toFixed(2), crop:mscrCropUrl(m.c, x0, y0, x1, y1, 6), cursor:cur}; }
   var names=["H1","H2","H3","H4","H5","H6","Collar","Oil"], ids=["nozzle","zone1","zone2","zone3","zone4","zone5","collar","oil_temp"];
   var pre=X.map(function(x){ return rd(x, rows.preset, 3); }), st=X.map(function(x){ return rd(x, rows.status, 3); });
-  var hi=X.map(function(x){ return rd(x, rows.high, 3); }), lo=X.map(function(x){ return rd(x, rows.low, 3); });
+  // v2.8.9: the lines under the table can tilt more than the headings (lens / CRT curve): their slope from the YES / NO words
+  var xL=X[0]-sp*1.5, pwW=W.filter(function(w){ return Math.abs(cy(w)-yAt(rows.power, cx(w)))<rs*0.45 && cx(w)>X[0]-sp*0.5 && /^[yvnw]/i.test(w.t); }), slP=null;
+  if(pwW.length>=4){ var mx=pwW.reduce(function(a,w){ return a+cx(w); },0)/pwW.length, my=pwW.reduce(function(a,w){ return a+cy(w); },0)/pwW.length, sxy=0, sxx=0;
+    pwW.forEach(function(w){ sxy+=(cx(w)-mx)*(cy(w)-my); sxx+=(cx(w)-mx)*(cx(w)-mx); }); if(sxx>0){ slP=sxy/sxx; if(Math.abs(slP)>0.12) slP=null; } }
+  function rr(r){ return slP==null? r : yAt(r, xL)-slP*xL; }
+  var hi=X.map(function(x){ return rd(x, rr(rows.high), 3, slP); }), lo=X.map(function(x){ return rd(x, rr(rows.low), 3, slP); });
   var found=0;
   pre.forEach(function(r, i){ if(!r.v || !MS_P[ids[i]]) return; found++;
     out.rows.push({id:ids[i], vals:[r.v], extra:"", same:false, crop:r.crop, typed:true, ocr:"preset temp "+names[i]+" "+r.v+(st[i].v? " (actual "+st[i].v+")" : ""), state:"read", conf:Math.min(0.9, r.c), screen:true}); });
-  var pw=X.map(function(x){ var y=yAt(rows.power, x), t=W.filter(function(w){ return Math.abs(cx(w)-x)<sp*0.45 && Math.abs(cy(w)-y)<rs*0.4; })[0]; return t? (/^y/i.test(t.t)? "YES" : /^n/i.test(t.t)? "NO" : "?") : "?"; });
+  var pw=X.map(function(x){ var y=slP!=null? rr(rows.power)+slP*x : yAt(rows.power, x), t=W.filter(function(w){ return Math.abs(cx(w)-x)<sp*0.45 && Math.abs(cy(w)-y)<rs*0.4; })[0]; return t? (/^[yv]/i.test(t.t)? "YES" : /^[nw]/i.test(t.t)? "NO" : "?") : "?"; });   // v2.8.9: dim photos read YES as VB, NO as WO
   function nl(label, arr){ if(arr.some(function(r){ return r && r.v; })) out.notesList.push({label:label, text:names.map(function(n,i){ return n+" "+((arr[i]&&arr[i].v)||"?"); }).join(", "), conf:Math.min.apply(null, arr.map(function(r){ return r? r.c : 0; }))}); }
   nl("Preset temp", pre); nl("Status temp (actual)", st);
   if(pw.some(function(v){ return v!=="?"; })) out.notesList.push({label:"Power switch", text:names.map(function(n,i){ return n+" "+pw[i]; }).join(", "), conf:0.6});
@@ -2426,15 +2503,68 @@ function mscrTemp(src, m, words, out){
   out.screen.found=found; out.found=found; out.total=8;
   if(window.__mscrDbg) out.tempDbg={X:X.map(Math.round), rows:rows, slope:slope, sp:sp};
 }
+// v2.8.9: one plain-English line per Machine Settings field: where the value is on the TMC screen and what it does
+var MSCR_MEAN={
+  "tmc-ejclamp:ej_fwd_press":"Clamp & Ejector screen › Ejector › PRESS. (stages 1–3) — how hard the ejector pins push",
+  "tmc-ejclamp:ej_fwd_speed":"Clamp & Ejector screen › Ejector › SPEED (stages 1–3) — how fast the pins move forward",
+  "tmc-ejclamp:ej_fwd_int":"Clamp & Ejector screen › Ejector › PT1 (stages 1–3) — ejector position where each stage ends",
+  "tmc-ejclamp:ej_strokes":"Clamp & Ejector screen › Ejector › COUNTER — how many times the ejector strokes each cycle",
+  "tmc-ejclamp:open_press":"Clamp & Ejector screen › Clamp open › PRESS. (stages 1–3, the screen shows them 3 2 1) — mold opening force",
+  "tmc-ejclamp:open_speed":"Clamp & Ejector screen › Clamp open › SPEED — mold opening speed of each stage",
+  "tmc-ejclamp:open_int":"Clamp & Ejector screen › Clamp open › POSIT. — clamp position where each opening stage ends",
+  "tmc-ejclamp:close_press":"Clamp & Ejector screen › Clamp close › PRESS. (stages 1–3) — mold closing force",
+  "tmc-ejclamp:close_speed":"Clamp & Ejector screen › Clamp close › SPEED — mold closing speed of each stage",
+  "tmc-ejclamp:close_int":"Clamp & Ejector screen › Clamp close › POSIT. — clamp position where each closing stage ends",
+  "tmc-inject:inj_speed":"Injection & Cushion screen › SPEED boxes, stages 1–3 (right end of the top row) — fill speed",
+  "tmc-inject:inj_int":"Injection & Cushion screen › position boxes under the speeds — screw position where each injection stage ends",
+  "tmc-inject:hold_press":"Injection & Cushion screen › Hold pressure stage, top row of boxes (stages 1–3, right to left) — pack / hold pressure",
+  "tmc-inject:hold_time":"Injection & Cushion screen › Hold pressure stage, bottom row of boxes — how long each hold stage lasts",
+  "tmc-inject:hold_speed":"Injection & Cushion screen › HOLD PRESSURE SPEED <  > — screw speed during hold",
+  "tmc-inject:switchover":"Injection & Cushion screen › Transfer mode › POSIT. SET (x.1) — screw position where injection switches to hold",
+  "tmc-inject:cushion":"Injection & Cushion screen › Cushion limit › ACTUAL [ ] — screw position left after hold (cushion)",
+  "tmc-charge:back_press":"Screw & Carriage screen › Screw rotate / charge › PRESS. (stages 1–3) — back pressure while the screw charges",
+  "tmc-charge:screw_speed":"Screw & Carriage screen › Screw rotate / charge › SPEED — screw speed while charging",
+  "tmc-charge:screw_int":"Screw & Carriage screen › Screw rotate / charge › PT 1–3 — screw position where each charge stage ends (last = shot size)",
+  "tmc-charge:suck_back":"Screw & Carriage screen › Suck back › position — how far the screw pulls back after charging (decompression)",
+  "tmc-charge:charge_delay":"Screw & Carriage screen › DELAY TIME < > — wait before the screw starts charging",
+  "tmc-monitor:cycle":"Machine monitor screen › CYCLE TIME, SETUP column — cycle time limit (status column = last cycle)",
+  "tmc-monitor:cycle_int":"Machine monitor screen › CYCLE INTERVAL TIME, SETUP — pause between cycles",
+  "tmc-monitor:cooling":"Machine monitor screen › COOLING TIME, SETUP — how long the part cools in the closed mold",
+  "tmc-monitor:cavities":"Machine monitor screen › CAVITIES NO. ON MOLD — parts made each shot",
+  "tmc-monitor:charge_delay":"Machine monitor screen › CHARGE DELAY TIME, SETUP — wait before the screw starts charging",
+  "tmc-monitor:temp":"Machine monitor screen › heater strip (actual reading, nozzle at the left) — the set point is on TEMP. SETTING",
+  "tmc-temp:temp":"Temp. setting screen › PRESET TEMP. row — barrel heater set point (status row = actual)",
+  "tmc-temp:nozzle":"Temp. setting screen › PRESET TEMP., column H1 — nozzle heater set point",
+  "tmc-temp:collar":"Temp. setting screen › PRESET TEMP., COLLAR column — feed throat (collar) set point",
+  "tmc-temp:oil_temp":"Temp. setting screen › PRESET TEMP., OIL column — hydraulic oil temperature set point"
+};
+function mscrMeanOf(sid, id){ if(!sid) return ""; var z=/^zone(\d)$/.exec(id);
+  if(sid==="tmc-temp" && z) return "Temp. setting screen › PRESET TEMP., column H"+(+z[1]+1)+" — barrel heater set point (zone "+z[1]+" counting from the nozzle)";
+  if(sid==="tmc-monitor" && (z || id==="nozzle")) return MSCR_MEAN["tmc-monitor:temp"];
+  return MSCR_MEAN[sid+":"+id]||""; }
 function mscrRead(src, onProg){
   src=mscrLocate(src);
-  var m=mscrMask(src, MSCR_W), boxes=mscrBoxes(m), wkP=tessWorker(), out={kind:"screen", rows:[], header:{}, notesList:[], boxes:boxes.length};
+  var m=mscrMask(src, MSCR_W), boxes=mscrBoxes(m); m.dim=mscrIsDim(m, src) || !!window.__dimAll; var wkP=tessWorker(), out={kind:"screen", rows:[], header:{}, notesList:[], boxes:boxes.length};
   var words=[], text="";
   return wkP.then(function(wk){
     if(onProg) onProg("Reading the screen headings…", 5);
     return wk.setParameters({tessedit_pageseg_mode:"11", tessedit_char_whitelist:""}).then(function(){ return wk.recognize(m.ink); }).then(function(r){
       words=(r.data.words||[]).map(function(w){ return {t:String(w.text||"").trim(), x0:w.bbox.x0, y0:w.bbox.y0, x1:w.bbox.x1, y1:w.bbox.y1, c:(w.confidence||0)/100}; }).filter(function(w){ return w.t; });
       text=words.map(function(w){ return w.t; }).join(" "); if(window.__mscrDbg) out.words=words.map(function(w){ return [w.t,Math.round(w.x0),Math.round(w.y0),Math.round(w.x1),Math.round(w.y1)]; });
+      var kwB=function(t){ return Math.max.apply(null, MSCR_DEFS.map(function(d){ return d.keys.filter(function(re){ return re.test(t); }).length/d.keys.length; })); };
+      if(window.__mscrDbg) out.kwb=[kwB(text), boxes.length];
+      var monN=function(t){ return MSCR_MON.filter(function(d){ return t.split(/\s{0,}(?=\b)/).length && new RegExp(d[0].source.replace(/^\^|\$$/g,""), "i").test(t); }).length; };
+      if(mscrIsMonitor(text) && monN(text)<MSCR_MON.length*0.8){ // v2.8.9: monitor screen with labels missing → the green-channel words may be cleaner
+        return wk.recognize(mscrGreenInk(m)).then(function(r2){ var w2=(r2.data.words||[]).map(function(w){ return {t:String(w.text||"").trim(), x0:w.bbox.x0, y0:w.bbox.y0, x1:w.bbox.x1, y1:w.bbox.y1, c:(w.confidence||0)/100}; }).filter(function(w){ return w.t; }), t2=w2.map(function(w){ return w.t; }).join(" ");
+          if(window.__mscrDbg){ out.words2=t2; out.monN=[monN(text), monN(t2)]; }
+          if(mscrIsMonitor(t2) && monN(t2)>monN(text)){ words=w2; text=t2; out.greenOCR=true; } }); }
+      var tempOk=function(W){ var zw=W.filter(function(w){ return /^zone$/i.test(w.t); })[0]; if(!zw) return false; var zh=zw.y1-zw.y0;   // the checks mscrTemp starts with
+        return W.filter(function(w){ return w.x0>zw.x1+zh*2 && Math.abs((w.y0+w.y1)/2-(zw.y0+zw.y1)/2)<zh*1.2 && /^h\s*\w/i.test(w.t) && w.t.length<=3; }).length>=3; };
+      if((!mscrIsMonitor(text) && !mscrIsTemp(text) && (window.__greenOCR || boxes.length<14 || kwB(text)<0.6)) || (mscrIsTemp(text) && !tempOk(words))){ // v2.8.9: few value boxes and no screen recognised → read the words again from the green channel
+        return wk.recognize(mscrGreenInk(m)).then(function(r2){ var w2=(r2.data.words||[]).map(function(w){ return {t:String(w.text||"").trim(), x0:w.bbox.x0, y0:w.bbox.y0, x1:w.bbox.x1, y1:w.bbox.y1, c:(w.confidence||0)/100}; }).filter(function(w){ return w.t; }), t2=w2.map(function(w){ return w.t; }).join(" ");
+          if(window.__mscrDbg) out.words2=t2;
+          if(((mscrIsMonitor(t2) || mscrIsTemp(t2)) && !(mscrIsTemp(text) && !tempOk(w2))) || kwB(t2)>kwB(text)+0.15){ words=w2; text=t2; out.greenOCR=true; if(window.__mscrDbg) out.words=w2.map(function(w){ return [w.t,Math.round(w.x0),Math.round(w.y0),Math.round(w.x1),Math.round(w.y1)]; }); } }); }
+    }).then(function(){
       if(mscrIsMonitor(text)) return mscrMonitor(src, m, words, out);
       if(mscrIsTemp(text)){ mscrTemp(src, m, words, out); if(!out.unknown) return; out.unknown=false; }   // v2.8.3   // v2.8.1: Machine Monitor (no boxes: label : status setup)
       // pick the screen: header keywords + how well its box layout fits
@@ -2451,11 +2581,11 @@ function mscrRead(src, onProg){
       return keys.reduce(function(p, q, i){ return p.then(function(){
         if(onProg) onProg("Reading screen values — box "+(i+1)+" of "+keys.length, Math.round(10+i/keys.length*85));
         var bw=q.x1-q.x0, bh=q.y1-q.y0, ix=bw*0.07, iy=bh*0.13;
-        var cv=mscrInk(src, m.s, q.x0+ix, q.y0+iy, q.x1-ix, q.y1-iy, 64);
-        if(window.__mscrDbg) window.__mscrDbg.push([q.key, cv.toDataURL()]);
+        var bi0=mscrInkBest(src, m, q.x0+ix, q.y0+iy, q.x1-ix, q.y1-iy, q.digits), cv=bi0.cv;
+        if(window.__mscrDbg) window.__mscrDbg.push([q.key, cv.toDataURL(), bi0.tag+" "+JSON.stringify((cv._glyphs||[]).map(function(g,i){ var r=bi0.rg.g; return [g.x0,g.x1,g.y0,g.y1,+g.ar.toFixed(2),+(g.bm.reduce(function(a,b){return a+b;},0)/576).toFixed(2)]; }))+" "+JSON.stringify(bi0.rg.g)]);
         // digits are matched against the screen font (Tesseract reads the slashed zero as 8)
-        var rg0=mscrReadGlyphs(cv._glyphs||[]);
-        if(cv._inkF>0.3){ // v2.8.1/2.8.3: cursor box = dark digits on a yellow block → find the block, invert it, read it the same way
+        var rg0=bi0.rg;
+        if(cv._inkF>0.3 && !bi0.clean){ // v2.8.1/2.8.3: cursor box = dark digits on a yellow block → find the block, invert it, read it the same way
           var cr=mscrCursor(src, m.s, q.x0, q.y0, q.x1, q.y1, q.digits);
           if(cr){ if(window.__mscrDbg) window.__mscrDbg.push([q.key+"-inv", cr.cv.toDataURL()]); rg0=cr.rg; rg0.cursor=true; cv=cr.cv; }
           else if(cv._inkF>0.3 && mscrCursor.lastBlock){ if(String(rg0.t||"").replace(/[<>]/g,"").length!==q.digits) rg0={t:"", c:0, g:[], cursorFail:true}; else rg0.cursorWeak=true; } }   // v2.8.3: block found but not readable → keep a full-length plain read, unchecked
@@ -2464,7 +2594,7 @@ function mscrRead(src, onProg){
           if(q.digits && t.length>q.digits){ t=t.slice(0,q.digits); c=Math.min(c,0.7); } // marker (◆) after the number
           var ink=0, g=cv.getContext("2d").getImageData(0,0,cv.width,cv.height).data; for(var k=0;k<g.length;k+=4) if(g[k]<128) ink++;
           var inkF=cv._inkF, state="read";
-          if(!t){ state= inkF<0.04? "blank" : "unread"; c= state==="blank"? 0.7 : 0.2; }
+          if(!t){ state= (inkF<0.04 || (bi0.empty && !rg.cursor))? "blank" : "unread"; c= state==="blank"? 0.7 : 0.2; }
           else if(q.digits && t.length!==q.digits){ c=Math.min(c, 0.45); }
           // v2.8.3: every glyph a close match to the screen font and the digit count right → trust it even if the 2nd-best margin is thin
           var md=(rg.g||[]).length? Math.max.apply(null, rg.g.map(function(r){ return r.d; })) : 1, clean=!rg.cursor && q.digits && t.length===q.digits && md<0.19;
@@ -2501,8 +2631,10 @@ function mscrRead(src, onProg){
         if(!def.status) return;
         // status strip at the bottom: date, cycle time, shot count (same font, no boxes)
         var txt={}; fit.placed.filter(function(q){ return q.text; }).forEach(function(q){
-          var cv=mscrInk(src, m.s, q.x0, q.y0, q.x1, q.y1, 48, window.__mscrK2!=null? window.__mscrK2 : 0.4); if(window.__mscrDbg) window.__mscrDbg.push([q.key, cv.toDataURL(), mscrCropUrl(m.c,q.x0,q.y0,q.x1,q.y1,0)]); var rg=mscrReadGlyphs(cv._glyphs||[], q.key==="date"? "/" : "");
-          if(q.key!=="date" && cv._inkF>0.25){ var cr=mscrCursor(src, m.s, q.x0, q.y0, q.x1, q.y1, q.digits); if(cr){ rg=cr.rg; rg.cursor=true; } }   // v2.8.3: cursor on a <value>
+          var cv, rg, tb=null; if(q.key!=="date" && m.dim){ var sy=mscrSnapY(src, m, q.x0, q.y0, q.x1, q.y1); if(sy){ q.y0=sy[0]; q.y1=sy[1]; } tb=mscrInkBest(src, m, q.x0, q.y0, q.x1, q.y1, q.digits, 48, 0.4); cv=tb.cv; rg=tb.rg; }
+          else { cv=mscrInk(src, m.s, q.x0, q.y0, q.x1, q.y1, 48, window.__mscrK2!=null? window.__mscrK2 : 0.4); rg=mscrReadGlyphs(cv._glyphs||[], q.key==="date"? "/" : ""); }
+          if(window.__mscrDbg) window.__mscrDbg.push([q.key, cv.toDataURL(), mscrCropUrl(m.c,q.x0,q.y0,q.x1,q.y1,0)]);
+          if(q.key!=="date" && cv._inkF>0.25 && !(tb && tb.clean)){ var cr=mscrCursor(src, m.s, q.x0, q.y0, q.x1, q.y1, q.digits); if(cr){ rg=cr.rg; rg.cursor=true; } }   // v2.8.3: cursor on a <value>
           if(q.key!=="date" && q.digits && rg.g.length>q.digits){ // v2.8.1: <0010> / [2478]: keep the best-matching run of digits (brackets can pass for a 1)
             var bi=0, bs=1e9; for(var w0=0; w0+q.digits<=rg.g.length; w0++){ var sd=0; for(var w1=w0; w1<w0+q.digits; w1++) sd+=rg.g[w1].d+(/[0-9]/.test(rg.g[w1].ch)? 0 : 1); if(sd<bs){ bs=sd; bi=w0; } }
             var gg=rg.g.slice(bi, bi+q.digits); rg={t:gg.map(function(r){ return r.ch; }).join(""), c:Math.min.apply(null, gg.map(function(r){ return r.c; })), g:gg}; }
@@ -2526,6 +2658,7 @@ function mscrRead(src, onProg){
     }).then(function(){ return wk.setParameters({tessedit_char_whitelist:"", tessedit_pageseg_mode:"6"}); }, function(e){ return wk.setParameters({tessedit_char_whitelist:"", tessedit_pageseg_mode:"6"}).then(function(){ throw e; }); });
   }).then(function(){
     out.lines=words.length? [{text:text, conf:0.6}] : [];
+    out.rows.forEach(function(r){ if(!r.mean) r.mean=mscrMeanOf(out.screen && out.screen.id, r.id); });   // v2.8.9
     out.notes = out.notesList.length? (out.screen? out.screen.title : "Machine screen")+": "+out.notesList.map(function(n){ return n.label+" "+n.text; }).join("; ") : "";
     out.noteConf = out.notesList.length? Math.min.apply(null, out.notesList.map(function(n){ return n.c||n.conf; })) : 0;
     return out;
