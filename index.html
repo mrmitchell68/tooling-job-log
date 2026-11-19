@@ -654,7 +654,7 @@ pre.raw{white-space:pre-wrap;font-size:12px;background:var(--surface-2);padding:
 <script>
 (function(){
 "use strict";
-var APP_VERSION = "2.8.9";
+var APP_VERSION = "2.9.0";
 // Public OAuth client id (not a secret). Web client, authorized JavaScript origins:
 //   https://mrmitchell68.github.io   and   http://localhost:8766
 // Leave empty until that client exists — Save-to-Drive is hidden and the button uses the Android share sheet.
@@ -1664,6 +1664,7 @@ function msReviewModel(results, job){
     rot=res.rot||rot; if(res.kind==='screen'){ found+=res.found||0; total+=res.total||0; } else { found=Math.max(found,res.found||0); total=res.total||total; }
     if(res.kind==='screen'){ screens.push(res.screen); if(res.notes) notes.push({text:res.notes, conf:res.noteConf||0}); }
     (res.rows||[]).forEach(function(r){
+      if(res.kind==='screen' && res.screen){ r.sid=res.screen.id; r.stitle=res.screen.title; }   // v2.9.0: which screen the value came from (Temperatures / Pressures & speeds fill)
       var ex=rows[r.id], val=r.state==="read"||r.state==="text"||r.state==="check";
       if(!ex){ rows[r.id]=r; order.push(r.id); return; }
       var exVal=ex.state==="read"||ex.state==="text"||ex.state==="check";
@@ -1681,7 +1682,7 @@ function msReviewModel(results, job){
     var has = r.state==="read"||r.state==="text"||r.state==="check";
     var prev = msRowText(cur.rows[p[0]], MS_P[p[0]]);
     list.push({id:p[0], label:MS_P[p[0]].label, sec:sec.title, staged:sec.staged, check:MS_P[p[0]].check, vals:r.vals.slice(), extra:r.extra||"", same:!!r.same, arrow:!!r.arrow,
-      conf:has? r.conf : (r.state==="unread"? 0.2 : r.conf), state:r.state, crop:r.crop||"", typed:r.typed, prev:prev, ocr:r.ocr||"", mean:r.mean||"",
+      conf:has? r.conf : (r.state==="unread"? 0.2 : r.conf), state:r.state, crop:r.crop||"", typed:r.typed, prev:prev, ocr:r.ocr||"", mean:r.mean||"", sid:r.sid||"", stitle:r.stitle||"",
       selected: has && r.conf>=0.6});
     // the job already has a different value here: never pre-check — Allen decides
     var it=list[list.length-1], nowT=msRowText({vals:it.vals, extra:it.extra, same:it.same}, MS_P[p[0]]);
@@ -1786,6 +1787,39 @@ function msApplyReview(job, M, items){
   Object.keys(M.headerSame||{}).forEach(function(k){ if(!String(ms.header[k]||"").trim()) ms.header[k]=M.headerSame[k]; });
   ms.updatedAt=nowIso();
   return n;
+}
+// v2.9.0: values read from a machine SCREEN photo also fill the job's Temperatures and Pressures & speeds fields (normal review
+// rows, same check / conflict rules as the other scanned values). [job field, Machine Settings row, screens it may come from, how]
+var MS_SEC_MAP = [
+  ["nozzle","nozzle",/^tmc-temp$/], ["zone1","zone1",/^(tmc-temp|yz-heat)$/], ["zone2","zone2",/^(tmc-temp|yz-heat)$/], ["zone3","zone3",/^(tmc-temp|yz-heat)$/], ["zone4","zone4",/^(tmc-temp|yz-heat)$/],
+  ["inj_press","inj_press",/^yz-inject$/], ["hold_press","hold_press",/^tmc-inject$/], ["hold_time","hold_time",/^tmc-inject$/,"tenths"],
+  ["back_press","back_press",/^(tmc-charge|yz-plast)$/], ["rpm","screw_speed",/^yz-plast$/], ["cool_time","cooling",/^(tmc-monitor|yz-)/,"tmcTenths"],
+  ["transfer","switchover",/^yz-inject$/,"ifField"], ["cushion","cushion",/^yz-/,"ifField"]];
+function msSecNum(v){ v=String(v||"").trim(); if(/^0+\d/.test(v) && !/^0\./.test(v)) v=v.replace(/^0+(?=\d)/,""); return v; }   // "050" → "50" (TMC pads with zeros)
+function msSectionItems(job, M, items){
+  var out=[], have={}; (items||[]).forEach(function(it){ if(it.key) have[it.key]=1; });
+  MS_SEC_MAP.forEach(function(mp){
+    var d=DEF_BY_KEY[mp[0]], r=(M.rows||[]).filter(function(x){ return x.id===mp[1]; })[0];
+    if(!d || !r || !r.sid || !mp[2].test(r.sid) || have[mp[0]]) return;
+    if(!(r.state==="read"||r.state==="text")) return;
+    if(/^actual temperature/.test(r.ocr||"")) return;   // a monitor ACTUAL reading is not the set point
+    if(mp[3]==="ifField" && !existingFor(job, d)) return;
+    var P=MS_P[mp[1]], vs=(P && P.staged? (r.vals||[]).slice(0,3).concat(r.extra? [r.extra] : []) : [(r.vals||[])[0]]).map(function(v){ return String(v||"").trim(); }).filter(Boolean);
+    if(!vs.length || !(r.conf>=0.2)) return;   // nothing (or only a guess) read → never blank or overwrite a value the job has; it stays in Machine settings as "check"
+    var conf=r.conf, note="";
+    var tenths = mp[3]==="tenths" || (mp[3]==="tmcTenths" && /^tmc-/.test(r.sid));
+    vs=vs.map(function(v){ if(tenths && /^\d{3,4}$/.test(v)) return String(+(parseInt(v,10)/10).toFixed(1)); return /^tmc-/.test(r.sid)? msSecNum(v) : v; });
+    if(tenths){ conf=Math.min(conf, 0.59); note=" (the TMC shows tenths of a second: "+r.vals.filter(Boolean)[0]+" = "+vs[0]+" s — check)"; }
+    var uniq=vs.filter(function(v,i){ return vs.indexOf(v)===i; }), val=(uniq.length>1? vs : uniq).join(" / ");   // all stages the same → one value
+    var src=(r.stitle||"Screen")+" · "+(r.label||"")+(P && P.staged && uniq.length>1? " (stages "+vs.map(function(v,i){ return i+1; }).join(" / ")+")" : "")+note;
+    var it=reviewItem(job, d, val, "", conf, src); it.crop=r.crop; it.doc="Machine screen"; it.msSec=true;
+    if(conf<0.6) it.selected=false;   // same as the Machine settings row: hard to read → left for Allen to check
+    var prev=String(it.prev||"").trim();
+    var num=function(x){ var m=String(x).match(/^\s*(-?\d+(?:\.\d+)?)\s*(?:°\s*[fc]|psi|bar|s|sec|rpm)?\s*$/i); return m? parseFloat(m[1]) : null; };
+    if(prev && (simKey(prev)===simKey(val) || (num(prev)!=null && num(prev)===num(val)))) return;   // job already has this value
+    if(prev){ it.conflict=true; it.options=[{value:prev, unit:it.unit||"", doc:"Job now"},{value:val, unit:num(val)!=null? (it.unit||"") : "", doc:"This screen photo"}]; it.value=prev; it.selected=true; }
+    out.push(it); });
+  return out;
 }
 // header (part number, machine, date) → normal review rows for the job's fields, with the cell picture
 function msHeaderItems(job, M){
@@ -6021,7 +6055,7 @@ function finishScan(pages, summary, scanFiles){
   docs.forEach(function(d, di){ if(cnt[d.label]>1){ seen[d.label]=(seen[d.label]||0)+1; d.label += " "+seen[d.label]; } });
   var parsed = mergeDocs(docs);
   var items = buildReview(job, parsed);
-  if(msM) items = msHeaderItems(job, msM).concat(items.filter(function(it){ return !(it.key && ["part_no","machine","date"].indexOf(it.key)>=0 && msM.header[{part_no:"partNumber",machine:"machine",date:"date"}[it.key]]); }));
+  if(msM) items = msHeaderItems(job, msM).concat(msSectionItems(job, msM, items), items.filter(function(it){ return !(it.key && ["part_no","machine","date"].indexOf(it.key)>=0 && msM.header[{part_no:"partNumber",machine:"machine",date:"date"}[it.key]]); }));
   var nConf = items.filter(function(i){ return i.conflict; }).length;
   var raw = docs.length>1 ? docs.map(function(d){ return "— "+d.label+" —\n"+d.raw; }).join("\n\n") : (docs[0]? docs[0].raw : "");
   window.__lastScan = {docs:docs.map(function(d){ return {label:d.label, kind:d.kind, raw:d.raw}; }), pages:pages.concat(msPages).map(function(p){ return {label:p.label||"", kind:p.kind, conf:p.conf, prep:p.prep||null, rot:p.rot||0, ms:!!p.ms}; }), ms:msPages.map(function(p){ return p.ms; })};
@@ -8589,7 +8623,7 @@ function init(){
   }, 8000);
 }
 window.__tessW=function(){ return tessWorker(); }; window.__yzPrep=function(i){ return yzPrep(i); };
-window.__tjl = {state:state, pfield:function(j,k){ return pfield(j,k); }, secByRole:function(j,r){ return secByRole(j,r); }, saveJobs:function(){ saveJobs(); }, render:function(){ render(); }, googleClientId:GOOGLE_CLIENT_ID, ms:{screenRead:function(i,p){return mscrRead(i,p);}, reviewModel:function(r,j){ return msReviewModel(r,j); }, reviewHtml:function(M){ return msReviewHtml(M); }, screenLooks:function(i){return mscrLooksLikeScreen(i);}, boxes:function(i){ var m=mscrMask(mscrLocate(i),MSCR_W); return {img:m.c.toDataURL('image/jpeg',0.85),W:m.W,H:m.H,yellow:m.yellow,dark:m.dark,boxes:mscrBoxes(m).map(function(b){return [Math.round(b.cx),Math.round(b.cy),Math.round(b.w),Math.round(b.h)];})}; }, yzRead:function(i,p){return yzRead(i,p);}, yzLooks:function(i){return yzLooksLikeScreen(i);}, yzRectify:function(i){return yzRectify(i);}, yzPrep:function(i){return yzPrep(i);}, tess:function(){return tessWorker();}, yzDefs:YZ_DEFS, scan:msScanImage, extract:msExtract, orient:orientForOcr, normalize:msNormalize, defs:MS_DEFS, rowText:msRowText, isForm:msIsForm}, phone:{storeAlbumHandle:storeAlbumHandle, albumName:albumName, readPhoneSaved:readPhoneSaved},
+window.__tjl = {state:state, pfield:function(j,k){ return pfield(j,k); }, secByRole:function(j,r){ return secByRole(j,r); }, saveJobs:function(){ saveJobs(); }, render:function(){ render(); }, googleClientId:GOOGLE_CLIENT_ID, ms:{screenRead:function(i,p){return mscrRead(i,p);}, reviewModel:function(r,j){ return msReviewModel(r,j); }, sectionItems:function(j,M,it){ return msSectionItems(j,M,it); }, newJob:function(o){ return newJob(o); }, bestField:function(j,k){ return bestField(j,k); }, reviewHtml:function(M){ return msReviewHtml(M); }, screenLooks:function(i){return mscrLooksLikeScreen(i);}, boxes:function(i){ var m=mscrMask(mscrLocate(i),MSCR_W); return {img:m.c.toDataURL('image/jpeg',0.85),W:m.W,H:m.H,yellow:m.yellow,dark:m.dark,boxes:mscrBoxes(m).map(function(b){return [Math.round(b.cx),Math.round(b.cy),Math.round(b.w),Math.round(b.h)];})}; }, yzRead:function(i,p){return yzRead(i,p);}, yzLooks:function(i){return yzLooksLikeScreen(i);}, yzRectify:function(i){return yzRectify(i);}, yzPrep:function(i){return yzPrep(i);}, tess:function(){return tessWorker();}, yzDefs:YZ_DEFS, scan:msScanImage, extract:msExtract, orient:orientForOcr, normalize:msNormalize, defs:MS_DEFS, rowText:msRowText, isForm:msIsForm}, phone:{storeAlbumHandle:storeAlbumHandle, albumName:albumName, readPhoneSaved:readPhoneSaved},
   doc:{url:DOC_SCRIPT_URL, readQueue:readDocQueue, readUploaded:readDocUploaded, readSent:readDocSent, baseName:docBaseName, renameable:function(){ return renameableDocs().map(function(d){ return {sent:d.sentName, name:d.docName}; }); }, flush:flushDocQueue, docsForCtx:docsForCtx, buildDocPdf:buildDocPdf, buildDocParts:buildDocParts, exists:docExists, uploadAll:uploadAllDocs, limits:function(){ return {page:DOC_PAGE_MAX, part:DOC_PART_BYTES, asis:DOC_PDF_ASIS, side:DOC_MAX_SIDE}; }}, parseLines:parseLines, buildReview:buildReview, render:render, scan:{buildSynIndex:buildSynIndex, labelUnitHint:labelUnitHint, parseNumber:parseNumber, defForLabel:defForLabel, reconcileFields:reconcileFields},
   photo:{readQueue:readPhotoQueue, readUploaded:readPhotoUploaded, readOk:readPhotoOk, flush:flushPhotoQueue, name:photoDriveName, prep:photoUploadBlob, info:docServerInfo, items:function(){ return photoItemsFor(state.jobs, false).map(function(it){ return {job:it.job.id, id:it.photo.id, name:it.photo.driveName||""}; }); }, terms:jobSearchTerms, find:findDocs, missing:jobMissing},
   restore:{need:restoreNeed, run:runRestore, pick:restorePickFiles, stem:restoreStem, partOf:restorePartOf, fileId:driveFileId, getFile:getDriveFile, pages:restorePagesOf, last:function(){ return state.restoreLast||null; }},
