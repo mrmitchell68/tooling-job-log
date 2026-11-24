@@ -654,7 +654,7 @@ pre.raw{white-space:pre-wrap;font-size:12px;background:var(--surface-2);padding:
 <script>
 (function(){
 "use strict";
-var APP_VERSION = "2.9.0";
+var APP_VERSION = "2.9.1";
 // Public OAuth client id (not a secret). Web client, authorized JavaScript origins:
 //   https://mrmitchell68.github.io   and   http://localhost:8766
 // Leave empty until that client exists — Save-to-Drive is hidden and the button uses the Android share sheet.
@@ -1792,9 +1792,9 @@ function msApplyReview(job, M, items){
 // rows, same check / conflict rules as the other scanned values). [job field, Machine Settings row, screens it may come from, how]
 var MS_SEC_MAP = [
   ["nozzle","nozzle",/^tmc-temp$/], ["zone1","zone1",/^(tmc-temp|yz-heat)$/], ["zone2","zone2",/^(tmc-temp|yz-heat)$/], ["zone3","zone3",/^(tmc-temp|yz-heat)$/], ["zone4","zone4",/^(tmc-temp|yz-heat)$/],
-  ["inj_press","inj_press",/^yz-inject$/], ["hold_press","hold_press",/^tmc-inject$/], ["hold_time","hold_time",/^tmc-inject$/,"tenths"],
+  ["inj_press","inj_press",/^yz-inject$/], ["hold_press","hold_press",/^(tmc-inject|yz-hold)$/], ["hold_time","hold_time",/^(tmc-inject|yz-hold)$/,"tmcTenths"],
   ["back_press","back_press",/^(tmc-charge|yz-plast)$/], ["rpm","screw_speed",/^yz-plast$/], ["cool_time","cooling",/^(tmc-monitor|yz-)/,"tmcTenths"],
-  ["transfer","switchover",/^yz-inject$/,"ifField"], ["cushion","cushion",/^yz-/,"ifField"]];
+  ["transfer","switchover",/^yz-inject$/,"ifField"], ["cushion","cushion",/^yz-/,"ifField"], ["cavities","cavities",/^yz-prod$/,"ifField"]];
 function msSecNum(v){ v=String(v||"").trim(); if(/^0+\d/.test(v) && !/^0\./.test(v)) v=v.replace(/^0+(?=\d)/,""); return v; }   // "050" → "50" (TMC pads with zeros)
 function msSectionItems(job, M, items){
   var out=[], have={}; (items||[]).forEach(function(it){ if(it.key) have[it.key]=1; });
@@ -1834,6 +1834,13 @@ function msHeaderItems(job, M){
     else if(prev && simKey(prev)===simKey(h.value)){ M.headerSame=M.headerSame||{}; M.headerSame[k]=prev; return; }
     out.push(it);
   });
+  // v2.9.1: Yizumi Production screen "Mold data" (e.g. "093162 Filler Bar") → job Tool # / Part name, always left for Allen to check
+  var md=M.header.mold; if(md && md.value) [["toolNumber",md.toolNumber],["partName",md.partName]].forEach(function(p){
+    var v=String(p[1]||"").trim(), d=DEF_BY_KEY[p[0]]; if(!v || !d) return;
+    var it=reviewItem(job, d, v, "", Math.min(md.conf||0.5, 0.55), "Yizumi Production settings · Mold data"); it.crop=md.crop; it.doc="Machine screen"; it.selected=false;
+    var prev=String(it.prev||"").trim(); if(prev && simKey(prev)===simKey(v)) return;
+    if(prev){ it.conflict=true; it.options=[{value:prev, unit:"", doc:"Job now"},{value:v, unit:"", doc:"This screen photo"}]; it.value=prev; it.selected=true; }
+    out.push(it); });
   return out;
 }
 
@@ -2776,6 +2783,14 @@ var YZ_MEAN={
   "yz-plast:charge_delay":"Plastic tab › Delay Plast, set (right box) s — wait before charging starts",
   "yz-plast:suck_back":"Plastic tab › Decompression after plasticize › Position in — suck back distance",
   "yz-heat:oil_temp":"Heat tab › Oil °F — hydraulic oil temperature",
+  "yz-hold:hold_press":"Injection tab › Hold › Pressure psi (rows 1, 2 … End) — hold / pack pressure of each stage",
+  "yz-hold:hold_speed":"Injection tab › Hold › Velocity % — hold speed of each stage",
+  "yz-hold:hold_time":"Injection tab › Hold › Time s — how long each hold stage lasts",
+  "yz-hold:cooling":"Injection tab › Hold › Cooling time, set (right box) s",
+  "yz-hold:cushion":"Injection tab › Hold › Cushion in — screw position left after hold",
+  "yz-prod:cavities":"Production tab › Number of cavities — parts made each shot",
+  "yz-prod:cycle_int":"Production tab › Cycle delay time, set (right box) s — wait between cycles",
+  "yz-prod:cycle":"Production tab › Max. cycle time s — the alarm limit, not the real cycle (check)",
   "strip:cooling":"Bottom cycle monitor › Cooling time s (2nd row, 2nd box) — set cooling time",
   "strip:cycle":"Bottom cycle monitor › Last cycle time s (1st row, 2nd box)",
   "strip:cushion":"Bottom cycle monitor › Cushion in (2nd row, 6th box) — screw position left after hold"
@@ -3370,6 +3385,288 @@ function yzRead(im, onProg, pre){
   });
 }
 /*MSCR-END*/
+/*PP-START*/
+// v2.9.1: a much stronger reader for photos of the Yizumi screen. PaddleOCR (PP-OCRv4) text models run on the phone with
+// ONNX Runtime (WebAssembly): every word and number on the screen is found with its position, then each value is matched to
+// its LABEL ("Cooling time", "Before limit switch", the Pressure / Velocity / To columns …), so a tilted, glary or cropped
+// photo (no header, half a panel) still reads. Downloaded once from the CDN (~27 MB), then kept for offline use; the photo
+// never leaves the phone. The older reader still runs; where both read a value they are compared (agree → trusted,
+// disagree → marked check).
+var PP_CDN={ort:"https://cdn.jsdelivr.net/npm/onnxruntime-web@1.20.1/dist/ort.wasm.min.js", wasm:"https://cdn.jsdelivr.net/npm/onnxruntime-web@1.20.1/dist/",
+  det:"https://cdn.jsdelivr.net/npm/@gutenye/ocr-models@1.4.2/assets/ch_PP-OCRv4_det_infer.onnx", rec:"https://cdn.jsdelivr.net/npm/@gutenye/ocr-models@1.4.2/assets/ch_PP-OCRv4_rec_infer.onnx",
+  keys:"https://cdn.jsdelivr.net/npm/@gutenye/ocr-models@1.4.2/assets/ppocr_keys_v1.txt"};
+var ppEngineP=null;
+function ppEngine(){
+  if(window.__ppOff) return Promise.reject(new Error("reader off"));
+  if(ppEngineP) return ppEngineP;
+  ppEngineP=loadScript(PP_CDN.ort, "ort").then(function(ort){
+    ort.env.wasm.wasmPaths=PP_CDN.wasm; ort.env.wasm.numThreads=1; try{ ort.env.logLevel="error"; }catch(e){}
+    var get=function(u, txt){ return fetch(u).then(function(r){ if(!r.ok) throw new Error("reader download failed"); return txt? r.text() : r.arrayBuffer(); }); };
+    return Promise.all([get(PP_CDN.det), get(PP_CDN.rec), get(PP_CDN.keys, true)]).then(function(a){
+      var o={executionProviders:["wasm"], graphOptimizationLevel:"all"};
+      return ort.InferenceSession.create(a[0], o).then(function(det){ return ort.InferenceSession.create(a[1], o).then(function(rec){
+        var keys=a[2].split(/\r?\n/); while(keys.length && keys[keys.length-1]==="") keys.pop();
+        return {ort:ort, det:det, rec:rec, keys:keys}; }); }); }); });
+  ppEngineP.catch(function(){ ppEngineP=null; });
+  return ppEngineP;
+}
+// picture → [{t, c, x0,y0,x1,y1,cx,cy,w,h}] (text lines/boxes with their confidence)
+function ppOcr(src, onProg){ return ppEngine().then(function(E){
+  var W0=src.width, H0=src.height, mx=window.__ppDetMax||1600, s=Math.min(1, mx/Math.max(W0,H0)), w=Math.max(32,Math.round(W0*s/32)*32), h=Math.max(32,Math.round(H0*s/32)*32), sx=w/W0, sy=h/H0;
+  var c=document.createElement("canvas"); c.width=w; c.height=h; var g=c.getContext("2d"); g.imageSmoothingQuality="high"; g.drawImage(src,0,0,w,h);
+  var d=g.getImageData(0,0,w,h).data, N=w*h, f=new Float32Array(3*N), mean=[0.406,0.456,0.485], sd=[0.225,0.224,0.229];
+  for(var i=0;i<N;i++){ f[i]=(d[i*4+2]/255-mean[0])/sd[0]; f[N+i]=(d[i*4+1]/255-mean[1])/sd[1]; f[2*N+i]=(d[i*4]/255-mean[2])/sd[2]; }   // BGR, as the models were trained
+  var feeds={}; feeds[E.det.inputNames[0]]=new E.ort.Tensor("float32", f, [1,3,h,w]);
+  return E.det.run(feeds).then(function(res){ var P=res[E.det.outputNames[0]].data, M=new Uint8Array(N), y, x, p;
+    for(y=0;y<h;y++) for(x=0;x<w;x++){ p=y*w+x; if(P[p]>0.3 || (x>0 && P[p-1]>0.3) || (y>0 && P[p-w]>0.3) || (x>0 && y>0 && P[p-w-1]>0.3)) M[p]=1; }
+    var C=mscrComponents(M,w,h), boxes=[];
+    C.comps.forEach(function(k){ if(Math.min(k.w,k.h)<3) return; var sum=0, n=0; for(var yy=k.y0;yy<=k.y1;yy++) for(var xx=k.x0;xx<=k.x1;xx++){ var q=yy*w+xx; if(C.L[q]===k.id){ sum+=P[q]; n++; } }
+      if(!n || sum/n<0.5) return; var dd=k.w*k.h*1.6/(2*(k.w+k.h));
+      boxes.push({x0:Math.max(0,(k.x0-dd)/sx), y0:Math.max(0,(k.y0-dd)/sy), x1:Math.min(W0,(k.x1+1+dd)/sx), y1:Math.min(H0,(k.y1+1+dd)/sy)}); });
+    var out=[];
+    return boxes.reduce(function(pr, b, bi){ return pr.then(function(){ if(onProg && bi%8===0) onProg(bi, boxes.length); return ppRec(E, src, b).then(function(r){ if(r && r.t) out.push(r); }); }); }, Promise.resolve()).then(function(){ return out; });
+  }); }); }
+function ppRec(E, src, b){
+  var bw=b.x1-b.x0, bh=b.y1-b.y0; if(bw<4 || bh<4 || bh>bw*3) return Promise.resolve(null);
+  var H=48, W=Math.max(16, Math.min(1600, Math.round(H*bw/bh))), c=document.createElement("canvas"); c.width=W; c.height=H;
+  var g=c.getContext("2d"); g.imageSmoothingQuality="high"; g.drawImage(src, b.x0, b.y0, bw, bh, 0, 0, W, H);
+  var d=g.getImageData(0,0,W,H).data, N=W*H, f=new Float32Array(3*N);
+  for(var i=0;i<N;i++){ f[i]=(d[i*4+2]/255-0.5)/0.5; f[N+i]=(d[i*4+1]/255-0.5)/0.5; f[2*N+i]=(d[i*4]/255-0.5)/0.5; }
+  var feeds={}; feeds[E.rec.inputNames[0]]=new E.ort.Tensor("float32", f, [1,3,H,W]);
+  return E.rec.run(feeds).then(function(res){ var o=res[E.rec.outputNames[0]], T=o.dims[1], K=o.dims[2], a=o.data, txt="", ps=[], last=0;
+    for(var t=0;t<T;t++){ var bi=0, bv=-1; for(var k=0;k<K;k++){ var v=a[t*K+k]; if(v>bv){ bv=v; bi=k; } }
+      if(bi!==0 && bi!==last){ txt+= bi-1<E.keys.length? E.keys[bi-1] : " "; ps.push(bv); } last=bi; }
+    txt=txt.replace(/\s+/g," ").trim(); if(!txt) return null;
+    var cf=ps.reduce(function(s,v){ return s+v; },0)/Math.max(1,ps.length);
+    return {t:txt, c:cf, x0:b.x0, y0:b.y0, x1:b.x1, y1:b.y1, cx:(b.x0+b.x1)/2, cy:(b.y0+b.y1)/2, w:bw, h:bh}; }); }
+
+// a white value box the text finder missed (a lone "1" or "0" is too small for it) is read on its own
+function ppProbeBoxes(src, T){ return ppEngine().then(function(E){
+  if(!T.length) return T; var hs=T.map(function(t){ return t.h; }).sort(function(a,b){ return a-b; }), lhT=hs[hs.length>>1]/2.4; if(!(lhT>6)) return T;
+  var P0=yzPrep(src), k=1/P0.s, bx=yzBoxes(P0, lhT).map(function(b){ return {x0:b.x0*k, y0:b.y0*k, x1:b.x1*k, y1:b.y1*k}; });
+  var miss=bx.filter(function(b){ return !T.some(function(t){ var ox=Math.min(t.x1,b.x1)-Math.max(t.x0,b.x0), oy=Math.min(t.y1,b.y1)-Math.max(t.y0,b.y0); return ox>0 && oy>(b.y1-b.y0)*0.3; }); }).slice(0,40);
+  if(window.__ppDbg) window.__ppMiss=miss.map(function(b){ return [b.x0,b.y0,b.x1,b.y1].map(Math.round); });
+  return miss.reduce(function(pr, b){ return pr.then(function(){ var ins=(b.y1-b.y0)*0.1, q={x0:b.x0+ins, y0:b.y0+ins, x1:b.x1-ins, y1:b.y1-ins};
+    return ppRec(E, src, q).then(function(r){ if(!r || !ppNumOf(r.t)) return; r.c=Math.min(r.c, 0.85); r.probe=true; T.push(r); }); }); }, Promise.resolve()).then(function(){ return T; }); }); }
+// the value box right of a label whose number was not found (a lone "1" or "0"): find the brighter box on that line, read it alone
+// a lone digit the text model will not read: Tesseract on the cleaned-up box (digits only), always left for Allen to check
+function ppTessBox(src, b){ return tessWorker().then(function(wk){ var w=Math.max(8,b.x1-b.x0), h=Math.max(8,b.y1-b.y0), S=Math.max(1,Math.min(4,60/h)), c=document.createElement("canvas");
+  c.width=Math.round(w*S)+40; c.height=Math.round(h*S)+40; var g=c.getContext("2d"); g.fillStyle="#fff"; g.fillRect(0,0,c.width,c.height); g.imageSmoothingQuality="high"; g.filter="grayscale(1)"; g.drawImage(src, b.x0, b.y0, w, h, 20, 20, w*S, h*S); g.filter="none"; if(window.__ppDbg){ var c0=document.createElement("canvas"); c0.width=c.width; c0.height=c.height; c0.getContext("2d").drawImage(c,0,0); (window.__ppCrops=window.__ppCrops||[]).push(c0.toDataURL()); } yzBin(c); if(window.__ppDbg) window.__ppCrops.push(c.toDataURL());
+  return wk.setParameters({tessedit_pageseg_mode:"7", tessedit_char_whitelist:"0123456789.-"}).then(function(){ return wk.recognize(c); }).then(function(r){ var t=yzNum((r.data.text||"").replace(/\s+/g,"")), cf=(r.data.confidence||0)/100;
+    return wk.setParameters({tessedit_pageseg_mode:"6", tessedit_char_whitelist:""}).then(function(){ return t && cf>=0.5 && c._nd>=1 && c._nd<=2? {t:t, c:0.55} : null; }); }); }); }
+function ppProbeRight(src, Ls, T){ if(!Ls.length) return Promise.resolve(T); return ppEngine().then(function(E){
+  var W=src.width, H=src.height, g=src.getContext("2d", {willReadFrequently:true}), seen={};
+  // greyed boxes are no brighter than the panel: read the whole stretch between the label and the next word on its line instead
+  var strip=function(L){ var th=L.h/2.4, Ly=L.ocy!=null? L.ocy : L.cy, nx=T.filter(function(t){ return t!==L && Math.abs(t.cy-L.cy)<L.h*0.5 && t.x0>L.x1+th*0.5; }).sort(function(a,b){ return a.x0-b.x0; })[0];
+    var x0=L.x1+th*0.2, x1=Math.min(W, nx? nx.x0+th*0.3 : L.x1+W*0.4); if(x1-x0<th*1.5) return Promise.resolve();
+    var b={x0:x0, y0:Math.max(0,Ly-th*0.85), x1:x1, y1:Math.min(H,Ly+th*0.85)};
+    return ppRec(E, src, b).then(function(r){ if(window.__ppDbg) (window.__ppStrip=window.__ppStrip||[]).push(["strip", L.t, r && r.t, [b.x0,b.y0,b.x1,b.y1].map(Math.round)]); var tb=function(){ return ppTessBox(src, b).then(function(tr){ if(window.__ppDbg) (window.__ppStrip=window.__ppStrip||[]).push(["tess-strip", L.t, tr && tr.t]); if(tr) T.push({t:tr.t, c:0.5, x0:b.x0, x1:b.x1, y0:b.y0, y1:b.y1, cx:(b.x0+b.x1)/2, cy:(L.ocy!=null? L.ocy : L.cy), h:L.h, w:b.x1-b.x0, probe:true}); }, function(){}); };
+      if(!r) return tb(); var t=r.t.replace(/\s+/g,""), m=t.match(/^[^0-9]*?(-?\d+(?:\.\d+)?)(psi|in|s|%|rpm|h|°?f|min)?[^0-9]*$/i); if(!m) return tb();
+      if(window.__ppDbg) (window.__ppStrip=window.__ppStrip||[]).push([L.t, r.t]);
+      T.push({t:m[1], c:Math.min(r.c, 0.7), x0:b.x0, x1:b.x1, y0:b.y0, y1:b.y1, cx:(b.x0+b.x1)/2, cy:(L.ocy!=null? L.ocy : L.cy), h:L.h, w:b.x1-b.x0, probe:true}); }); };
+  return Ls.reduce(function(pr, L){ return pr.then(function(){ var key=Math.round(L.cx)+":"+Math.round(L.cy); if(seen[key]) return; seen[key]=1;
+    var th=L.h/2.4, Ly=L.ocy!=null? L.ocy : L.cy, xa=Math.round(Math.min(W-2, L.x1+th*0.2)), xb=Math.round(Math.min(W, L.x1+W*0.45)), ya=Math.round(Math.max(0, Ly-th*0.45)), yb=Math.round(Math.min(H, Ly+th*0.45));
+    if(window.__ppDbg) (window.__ppStrip=window.__ppStrip||[]).push(["want", L.t]); if(xb-xa<th*2 || yb<=ya) return; var d=g.getImageData(xa, ya, xb-xa, yb-ya).data, w=xb-xa, h=yb-ya, col=new Float32Array(w);
+    for(var x=0;x<w;x++){ var s2=0; for(var y=0;y<h;y++){ var j=(y*w+x)*4; s2+=d[j]*0.3+d[j+1]*0.59+d[j+2]*0.11; } col[x]=s2/h; }
+    var kk=Math.max(2,Math.round(th*0.5)), cm=new Float32Array(w); for(x=0;x<w;x++){ var mx2=0; for(var z=Math.max(0,x-kk);z<=Math.min(w-1,x+kk);z++) if(col[z]>mx2) mx2=col[z]; cm[x]=mx2; } col=cm;   // dark digit strokes do not split the box
+    var sorted=Array.prototype.slice.call(col).sort(function(a,b){ return a-b; }), panel=sorted[Math.floor(w*0.3)], seg=null, st=-1;
+    for(x=0;x<=w;x++){ var on=x<w && col[x]>panel+10; if(on && st<0) st=x; if(!on && st>=0){ if(x-st>=th*1.2){ seg=[st,x]; break; } st=-1; } }
+    if(!seg) return strip(L); var bx0=xa+seg[0], bx1=Math.min(W, xa+seg[1]+th*0.6), bxA=xa+seg[1];   // right-aligned digits sit against the box edge
+    var rowB=function(y){ if(y<0 || y>=H) return 0; var dd=g.getImageData(bx0, y, bx1-bx0, 1).data, s3=0; for(var i=0;i<dd.length;i+=4) s3+=dd[i]*0.3+dd[i+1]*0.59+dd[i+2]*0.11; return s3/(dd.length/4); };
+    var y0=Math.round(Ly), y1=Math.round(Ly); while(y0>Ly-th*1.5 && rowB(y0-1)>panel+6) y0--; while(y1<Ly+th*1.5 && rowB(y1+1)>panel+6) y1++;
+    if(y1-y0<th*0.8) { y0=Math.round(Ly-th*0.7); y1=Math.round(Ly+th*0.7); }
+    var ins=Math.max(1,(y1-y0)*0.08); return ppRec(E, src, {x0:bx0+ins, y0:y0+ins, x1:bxA-ins, y1:y1-ins}).then(function(r){ return r && ppNumOf(r.t)? r : ppRec(E, src, {x0:bx0+ins, y0:y0+ins, x1:bx1-ins, y1:y1-ins}); }).then(function(r){ if(window.__ppDbg) (window.__ppStrip=window.__ppStrip||[]).push(["box", L.t, r && r.t, [bx0,y0,bx1,y1]]); if(!r || !ppNumOf(r.t)) return ppTessBox(src, {x0:bx0+ins, y0:y0+ins, x1:bx1-ins, y1:y1-ins}).then(function(tr){ if(window.__ppDbg) (window.__ppStrip=window.__ppStrip||[]).push(["tess", L.t, tr && tr.t]);
+        if(tr){ T.push({t:tr.t, c:tr.c, x0:bx0, x1:bx1, y0:y0, y1:y1, cx:(bx0+bx1)/2, cy:(L.ocy!=null? L.ocy : L.cy), h:L.h, w:bx1-bx0, probe:true}); return; } return strip(L); }, function(){ return strip(L); }); r.c=Math.min(r.c, 0.8); r.probe=true;
+      r.x0=bx0; r.x1=bx1; r.y0=y0; r.y1=y1; r.cx=(bx0+bx1)/2; r.cy=(L.ocy!=null? L.ocy : L.cy); r.h=L.h; r.w=bx1-bx0; T.push(r); }); }); }, Promise.resolve()).then(function(){ return T; }); }); }
+// ---- label-driven layout reading ----
+function ppL(t){ return String(t||"").toLowerCase().replace(/[^a-z]/g,""); }
+function ppLev(a, b){ var m=a.length, n=b.length, d=[], i, j; for(i=0;i<=m;i++){ d[i]=[i]; } for(j=1;j<=n;j++) d[0][j]=j;
+  for(i=1;i<=m;i++) for(j=1;j<=n;j++) d[i][j]=Math.min(d[i-1][j]+1, d[i][j-1]+1, d[i-1][j-1]+(a[i-1]===b[j-1]? 0 : 1)); return d[m][n]; }
+function ppScore(t, p){ var a=ppL(t); if(!a) return 0; if(a===p) return 3; if(a.length>=5 && p.length>=6 && Math.abs(a.length-p.length)<=2 && ppLev(a,p)<=Math.max(1, Math.floor(p.length*0.2))) return 2;
+  if(a.length>=6 && p.indexOf(a)===0 && a.length>=p.length*0.55) return 1; return 0; }   // glare / "…" cut the end of a long label off
+function ppFind(T, p){ var best=0, out=[]; T.forEach(function(t){ var s=ppScore(t.t, p); if(!s) return; if(s>best){ best=s; out=[]; } if(s===best) out.push(t); }); out.sort(function(a,b){ return a.cy-b.cy; }); return out; }
+function ppNumOf(s){ s=String(s).replace(/[\[\]{}()|'"`!]/g,"").replace(/\s+/g,"").replace(/,/g,".");
+  var m=s.match(/^(-?\d+(?:\.\d+)?)(psi|ps|pst|psl|in|jn|n|m|s|%|rpm|us|h|°f|f|min|mm|ton)?\.?$/i); return m? {v:m[1], junk:!!m[2] && !/^(psi|in|s|%|rpm|h|min|°f)$/i.test(m[2])} : null; }
+// numbers on the screen, one per value box (two boxes read as one text are split again)
+function ppNums(T){ var out=[];
+  T.forEach(function(t){ var raw=t.t.replace(/\s+/g," ").trim(), parts=raw.split(" "), nums=parts.map(ppNumOf);
+    if(parts.length>1 && nums.every(Boolean)){ var x=t.x0, tot=raw.length; parts.forEach(function(pt, i){ var w=t.w*pt.length/tot; out.push({v:nums[i].v, c:t.c, junk:nums[i].junk, x0:x, x1:x+w, cx:x+w/2, cy:t.cy, y0:t.y0, y1:t.y1, h:t.h, w:w, tok:t}); x+=w+t.w/tot; }); return; }
+    var n=ppNumOf(raw); if(n){ out.push({v:n.v, c:t.c, junk:n.junk, x0:t.x0, x1:t.x1, cx:t.cx, cy:t.cy, y0:t.y0, y1:t.y1, h:t.h, w:t.w, tok:t}); return; }
+    var s=raw.replace(/\s+/g,""), d=[2,1].map(function(k){ var re=new RegExp("\\d+\\.\\d{"+k+"}","g"), m=s.match(re); return m && m.join("")===s && m.length>1? m : null; }).filter(Boolean)[0];
+    if(d){ var x2=t.x0; d.forEach(function(v){ var w=t.w*v.length/s.length; out.push({v:v, c:Math.min(t.c,0.55), x0:x2, x1:x2+w, cx:x2+w/2, cy:t.cy, y0:t.y0, y1:t.y1, h:t.h, w:w, tok:t}); x2+=w; }); } });
+  return out; }
+function ppSameLine(a, b){ return Math.abs(a.cy-b.cy) < Math.max(a.h, b.h)*0.55; }
+// label → the values to its right on the same line
+function ppKV(T, N, p, n, pick, W){ var Ls=ppFind(T, p); if(!Ls.length) return null; var L=pick==="last"? Ls[Ls.length-1] : Ls[0];
+  var r=N.filter(function(q){ return !q.used && ppSameLine(L,q) && q.x0>L.x1-L.h*0.4 && q.x0-L.x1<W*(n>2? 0.7 : 0.5); }).sort(function(a,b){ return a.cx-b.cx; }).slice(0,n);
+  return {L:L, vals:r}; }
+var YZP_ROWS={"1":"1","2":"2","3":"3","4":"4","5":"5","end":"E","protect":"pr","highpres":"hp"};
+var YZP={
+ "yz-mold":{sig:["moldclose","moldopen","moldprotecttime","protectfromto","actualclampforce","highpres"], grids:[{k:"cl", title:"moldclose", dec:[null,0,2]},{k:"op", title:"moldopen", dec:[null,0,2]}],
+   kvs:[["prot","moldprotecttime",2],["protFT","protectfromto",2],["force","actualclampforce",2]]},
+ "yz-eject":{sig:["ejectorforward","ejectorbackward","ejectormode","shakecounter"], grids:[{k:"ef", title:"ejectorforward", dec:[null,0,2]},{k:"eb", title:"ejectorbackward", dec:[null,0,2]}],
+   kvs:[["shake","shakecounter",1],["efd","fwddelay",2],["ebd","bwddelay",2]], texts:[["mode","ejectormode"]]},
+ "yz-inject":{sig:["plasticizestroke","allowableinjectpressure","cutoff","cutoffactivationposition","useinjectiondoholdoutput","inject","maxvelocity"], grids:[{k:"in", title:"inject", dec:[null,0,2]}],
+   kvs:[["injP","injectpressure",1,"first"],["stroke","plasticizestroke",1],["allow","allowableinjectpressure",1],["coPos","screwposition",2],["coTime","injecttime",2],["coPress","injectpressure",2,"last"],["coAct","cutoffactivationposition",1],["maxV","maxvelocity",1]]},
+ "yz-hold":{sig:["hold","cushion","coolingtime"], grids:[{k:"ho", title:"hold", dec:[null,0,2]}],
+   kvs:[["hoP","injectpressure",1],["hoPos","screwposition",1],["hoCush","cushion",1],["hoCool","coolingtime",2]]},
+ "yz-plast":{sig:["plasticizeandbackpressure","delayplast","screwrevolution","decompression","decompressionbeforeplasticize","decompressionafterplasticize","actbackpressure"], grids:[{k:"pl", title:"plasticizeandbackpressure", dec:[null,0,2]}],
+   kvs:[["plPos","screwposition",1],["plRev","screwrevolution",1],["plBP","actbackpressure",1],["plP","pressure",1],["dly","delayplast",2],["decB","decompressionbeforeplasticize",4,null,"decB.mode"],["decA","decompressionafterplasticize",4,null,"decA.mode"]],
+   texts:[["decB.mode","decompressionbeforeplasticize"],["decA.mode","decompressionafterplasticize"]]},
+ "yz-nozzle":{sig:["beforelimitswitch","afterlimitswitch","contactforce","forcebuilduptime","nozzlebackward","nozzlebackmode","nozzleforward"], grids:[],
+   kvs:[["bf","beforelimitswitch",2],["af","afterlimitswitch",4],["cf","contactforce",4],["bu","forcebuilduptime",2],["bk","backward",4,null,"bkMode"]], texts:[["bkMode","nozzlebackmode"]]},
+ "yz-heat":{sig:["heatingzones","tolhigh","tollow","standbytemperature","coolpreventtime","autoheating","keepwarm","optimizenozzleheating"], grids:[],
+   kvs:[["set","set",8],["tolH","tolhigh",8,null,null,"set"],["tolL","tollow",8,null,null,"set"],["outp","output",8,null,null,"set"],["stby","standbytemperature",1],["oil","oil",1],["cpt","coolpreventtime",2]], above:["act","set"]},
+ "yz-overview":{sig:["prodinfo","molddata","cycletimemach","moldclosetime","moldopentime","plasticizetime","plastend","decomptime"], grids:[],
+   kvs:[["prod","prodcounter",2],["cdly","cycledelaytime",2],["cyc","cycletime",2],["cool","coolingtime",2],["mct","moldclosetime",2],["mot","moldopentime",2],["ijt","injectiontime",2],["plt","plasticizetime",2],["dct","decomptime",2],["cush","cushion",1],["pend","plastend",1]]},
+ "yz-prod":{sig:["productionsettings","numberofcavities","prodcounterlimit","cyclestartmode","powerontime","fullautotime","totalshotcounter","totalproductiontime","useproductioncounter"], grids:[],
+   kvs:[["cav","numberofcavities",1,null,null,null,0],["pcl","prodcounterlimit",1,null,null,null,0],["pc","prodcounter",1,null,null,null,0],["pon","powerontime",1,null,null,null,1],["fat","fullautotime",1,null,null,null,1],["tsc","totalshotcounter",1,null,null,null,0],["tpt","totalproductiontime",1,null,null,null,2],["pt","prodtime",1,null,null,null,2],["cdly","cycledelaytime",2,null,null,null,2],["mxc","maxcycletime",2,null,null,null,2]], texts:[["mold","molddata","any"]]}
+};
+// screens only this reader knows (the older reader has no layout for them)
+var YZ_XDEFS=[
+ {id:"yz-hold", title:"Yizumi Injection › Hold", fields:{hold_press:["ho1.0","ho2.0","ho3.0","hoE.0"], hold_speed:["ho1.1","ho2.1","ho3.1","hoE.1"], hold_time:["ho1.2","ho2.2","ho3.2","hoE.2"], cooling:["hoCool.1"], cushion:["hoCush.0"]},
+  notes:[["Hold stages",["hoStages"]],["Inject pressure psi (live)",["hoP.0"]],["Screw position in (live)",["hoPos.0"]],["Cushion in (live)",["hoCush.0"]],["Cooling time s actual / set",["hoCool.0","hoCool.1"]]]},
+ {id:"yz-prod", title:"Yizumi Production settings", fields:{cavities:["cav.0"], cycle_int:["cdly.1"], cycle:["mxc.0"]},
+  notes:[["Mold data",["mold"]],["Number of cavities",["cav.0"]],["Prod. counter / limit",["pc.0","pcl.0"]],["Cycle delay time s actual / set",["cdly.0","cdly.1"]],["Max. cycle time s actual / set",["mxc.0","mxc.1"]],["Power on time h",["pon.0"]],["Full auto time h",["fat.0"]],["Total shot counter",["tsc.0"]],["Total production time h",["tpt.0"]],["Prod. time h",["pt.0"]]]}];
+function yzDefById(id){ return YZ_DEFS.filter(function(d){ return d.id===id; })[0] || YZ_XDEFS.filter(function(d){ return d.id===id; })[0] || null; }
+function ppConf(q){ var c=q.c>=0.9? 0.9 : q.c*0.95; if(q.junk) c=Math.min(c,0.55); return c; }
+function ppDecOk(v, d){ if(d==null) return true; var p=String(v).split("."); return (p[1]? p[1].length : 0)===d; }
+// tokens → {screen, vals}
+function yzParsePP(T, W, H){
+  var lh=T.length? T.map(function(t){ return t.h; }).sort(function(a,b){ return a-b; })[T.length>>1] : 30;
+  // a photo a little rotated: lines of text slope — measure it from neighbouring words on one line and level them
+  T.forEach(function(t){ if(t.ocy==null) t.ocy=t.cy; t.cy=t.ocy; }); var sl=[];
+  T.forEach(function(a){ T.forEach(function(b){ var dx=b.cx-a.cx, dy=b.cy-a.cy; if(dx>lh*2 && dx<lh*15 && Math.abs(dy)<lh*0.45 && Math.abs(a.h-b.h)<lh*0.4) sl.push(dy/dx); }); });
+  sl.sort(function(a,b){ return a-b; }); var k=sl.length>=6? sl[sl.length>>1] : 0; if(Math.abs(k)>0.08) k=0;
+  T.forEach(function(t){ t.cy=t.ocy-k*(t.cx-W/2); });
+  // the status bar at the top (date, user, live readings) is not part of the screen's settings
+  var top=T.filter(function(t){ return /administrator|^\d{1,2}\/\d{1,2}\/?\d{2}/i.test(t.t.replace(/\s+/g,"")) && t.cy<H*0.3; }), topY=top.length? Math.max.apply(null, top.map(function(t){ return t.y1; }))+lh*0.3 : 0;
+  var TT=T.filter(function(t){ return t.cy>topY; }), N=ppNums(TT);
+  var best=null; Object.keys(YZP).forEach(function(id){ var sp=YZP[id], hits=sp.sig.filter(function(p){ return TT.some(function(t){ return ppScore(t.t,p)>=2; }); }).length;
+    if(!best || hits>best.hits) best={id:id, hits:hits}; });
+  if(!best || best.hits<2) return {unknown:true, lh:lh};
+  var sp=YZP[best.id], vals={}, wants=[], put=function(k, q, d, cap){ if(!q) return; var c=ppConf(q), v=q.v; if(!ppDecOk(v, d)){ c=Math.min(c,0.45); v=yzFixDec(v, d).v; } if(cap!=null) c=Math.min(c,cap); vals[k]={v:v, c:+c.toFixed(2), x0:q.x0, x1:q.x1, y0:q.y0, y1:q.y1, state:"read"}; q.used=true; };
+  // stage tables: the Velocity / Charge column header anchors each table; values sit under Pressure|Force / Velocity / To|Time
+  var anchors=TT.filter(function(t){ return ppScore(t.t,"velocity")>=2 || ppScore(t.t,"charge")>=2; }).sort(function(a,b){ return a.cy-b.cy; }), used={};
+  anchors.forEach(function(A, ai){ if(!sp.grids.length) return;
+    var c0=TT.filter(function(t){ return t!==A && ppSameLine(t,A) && t.cx<A.cx && ["pressure","force","backpressure","backpre"].some(function(p){ return ppScore(t.t,p)>=1; }); }).sort(function(a,b){ return b.cx-a.cx; })[0];
+    var c2=TT.filter(function(t){ return t!==A && ppSameLine(t,A) && t.cx>A.cx && /^(to|time|position)$/.test(ppL(t.t)); }).sort(function(a,b){ return a.cx-b.cx; })[0];
+    if(!c0) return; var pitch=A.cx-c0.cx; if(pitch<lh*1.5) return; if(c2 && /^position$/.test(ppL(c2.t))) return;   // decompression rows (Mode | Pressure | Velocity | Position | Time) are read by their labels
+    var cols=[c0.cx, A.cx, c2? c2.cx : A.cx+pitch];
+    // which table: the nearest table title above the header
+    var g=null, gd=1e9; sp.grids.forEach(function(gr){ if(used[gr.k]) return; ppFind(TT, gr.title).forEach(function(t){ var dy=A.cy-t.cy; if(dy>-lh*0.5 && dy<lh*8 && dy<gd){ gd=dy; g=gr; } }); });
+    if(!g) g=sp.grids.filter(function(gr){ return !used[gr.k]; })[0]; if(!g) return; used[g.k]=1;
+    var nextA=anchors[ai+1], yEnd=nextA? nextA.cy-lh*1.2 : A.cy+lh*12, x0=cols[0]-pitch*0.7, x1=cols[2]+pitch*0.7;
+    var un=TT.filter(function(t){ return /^(psi|ps|bar|in|rpm|s|mm)$/.test(ppL(t.t)) && t.cy>A.cy && t.cy<A.cy+lh*2.5 && Math.abs(t.cx-cols[0])<pitch*0.6; })[0], yStart=un? un.cy+lh*0.45 : A.cy+lh*0.6;   // the units line (psi | % | in) — "%" reads as "96"
+    N.forEach(function(q){ if(un && Math.abs(q.cy-un.cy)<lh*0.45 && q.cx>x0 && q.cx<x1) q.used=true; });
+    var inG=N.filter(function(q){ return !q.used && q.cy>yStart && q.cy<yEnd && q.cx>x0 && q.cx<x1; }).sort(function(a,b){ return a.cy-b.cy; }), rows=[];
+    inG.forEach(function(q){ var r=rows.filter(function(r){ return Math.abs(r.cy-q.cy)<lh*0.6; })[0]; if(r) r.q.push(q); else rows.push({cy:q.cy, q:[q]}); });
+    var seq=["1","2","3","4","5","E"], taken={};
+    rows.forEach(function(r, ri){ var qs=r.q.slice().sort(function(a,b){ return a.cx-b.cx; }), f0=qs[0], fl=qs[qs.length-1], sr=qs.length>1 && fl.cx-f0.cx>pitch*0.8? (fl.cy-f0.cy)/(fl.cx-f0.cx) : 0;   // the row's own slope (perspective) carried to its label
+      var lab=TT.filter(function(t){ return Math.abs(t.cy-(f0.cy+sr*(t.cx-f0.cx)))<lh*0.55 && t.x1<x0+pitch*0.25 && t.cx>cols[0]-pitch*4; }).sort(function(a,b){ return b.cx-a.cx; })[0], key=null;
+      if(lab){ var lt=ppL(lab.t), dg=lab.t.replace(/[^0-9]/g,""); if(!lt && dg.length===1) key=YZP_ROWS[dg]; else Object.keys(YZP_ROWS).forEach(function(k){ if(!key && /[a-z]/.test(k) && ppScore(lab.t,k)>=1) key=YZP_ROWS[k]; }); }
+      if(window.__ppDbg) (window.__ppRows=window.__ppRows||[]).push([g.k, Math.round(r.cy), lab? lab.t : null, key, Math.round(lh), Math.round(x0), Math.round(cols[0]), Math.round(pitch), k]);
+      var cap=null; if(!key || taken[key]){ key=seq.filter(function(s){ return !taken[s]; })[0]; cap=0.55; } if(!key) return; taken[key]=1;
+      r.q.forEach(function(q){ var ci=0, bd=1e9; cols.forEach(function(cx, i){ var dd=Math.abs(q.cx-cx); if(dd<bd){ bd=dd; ci=i; } }); if(bd>pitch*0.6) return; put(g.k+key+"."+ci, q, g.dec[ci], cap); }); });
+    // Stages box on the table's title line
+    var st=ppFind(TT,"stages").filter(function(t){ return t.cy<A.cy && t.cy>A.cy-lh*6; }).pop(); if(st){ var sv=N.filter(function(q){ return !q.used && ppSameLine(st,q) && q.x0>st.x1-lh*0.3; }).sort(function(a,b){ return a.cx-b.cx; })[0]; if(sv) put(g.k+"Stages", sv); else wants.push(st); } });
+  // label → values
+  (sp.kvs||[]).forEach(function(kd){ var r=ppKV(TT, N, kd[1], kd[2], kd[3], W); if(!r) return; if(!r.vals.length) wants.push(r.L);
+    if(kd[5] && vals[kd[5]+".0"]){ var ref=[]; for(var i=0;i<8;i++){ var s=vals[kd[5]+"."+i]; if(s) ref[i]=(s.x0+s.x1)/2; }
+      r.vals.forEach(function(q){ var bi=-1, bd=1e9; ref.forEach(function(cx, i){ if(cx==null) return; var dd=Math.abs(q.cx-cx); if(dd<bd){ bd=dd; bi=i; } }); if(bi>=0 && bd<lh*2.5) put(kd[0]+"."+bi, q); }); return; }
+    r.vals.forEach(function(q, i){ put(kd[0]+"."+i, q, kd[6]); }); });
+  // a row with no label just above a labelled one (Heating: actual zone temperatures over Set)
+  if(sp.above && vals[sp.above[1]+".0"]){ var sy=vals[sp.above[1]+".0"]; for(var i=0;i<8;i++){ var s=vals[sp.above[1]+"."+i]; if(!s) continue; var cx=(s.x0+s.x1)/2;
+      var q=N.filter(function(q){ return !q.used && Math.abs(q.cx-cx)<lh*1.6 && q.cy<sy.y0 && q.cy>sy.y0-lh*4; }).sort(function(a,b){ return b.cy-a.cy; })[0]; if(q) put(sp.above[0]+"."+i, q, null, 0.75); } }
+  // words next to a label (modes, mold data)
+  (sp.texts||[]).forEach(function(td){ var Ls=ppFind(TT, td[1]); if(!Ls.length) return; var L=Ls[0];
+    var w=TT.filter(function(t){ return t!==L && ppSameLine(L,t) && t.x0>L.x1-L.h*0.3 && t.x0-L.x1<W*0.45 && (td[2]==="any" || YZ_MODE.test(t.t.trim())); }).sort(function(a,b){ return a.cx-b.cx; })[0]; if(!w) return;
+    var v=td[2]==="any"? w.t.replace(/^(\d+)\s*(?=[A-Za-z])/,"$1 ").replace(/([a-z])(?=[A-Z])/g,"$1 ").trim() : yzModeName(w.t.trim());
+    vals[td[0]]={v:v, c:+Math.min(td[2]==="any"? 0.55 : 0.85, w.c).toFixed(2), x0:w.x0, x1:w.x1, y0:w.y0, y1:w.y1, state:"read", text:true}; });
+  // a mode of "No" greys its row out — those numbers are not the job's settings
+  (sp.kvs||[]).forEach(function(kd){ var m=kd[4] && vals[kd[4]] && vals[kd[4]].v; if(!m) return; for(var i=0;i<kd[2];i++){ var q=vals[kd[0]+"."+i]; if(!q) continue; if(m==="No" || (m==="Position" && i===3) || (m==="Time" && i===2)) q.inactive=true; } });
+  return {screen:best.id, hits:best.hits, vals:vals, lh:lh, wants:wants};
+}
+// slots → Machine Settings rows + notes (same rules as the older reader)
+function yzBuildRows(def, vals, srcC, out){
+  out.rows=[]; out.notesList=out.notesList||[];
+  function cropOf(ks){ var qs=ks.map(function(k){ return vals[k]; }).filter(function(q){ return q && q.x1>q.x0; }); if(!qs.length || !srcC) return ""; var pad=10, gap=16, H=Math.max.apply(null, qs.map(function(q){ return q.y1-q.y0; }))+pad*2;
+    var Wt=qs.reduce(function(a,q){ return a+(q.x1-q.x0)+pad*2; },0)+gap*(qs.length-1), c=document.createElement("canvas"); c.width=Math.round(Wt); c.height=Math.round(H);
+    var g=c.getContext("2d"); g.fillStyle="#fff"; g.fillRect(0,0,c.width,c.height); var x=0;
+    qs.forEach(function(q){ var w=q.x1-q.x0+pad*2, h=q.y1-q.y0+pad*2; g.drawImage(srcC, Math.max(0,q.x0-pad), Math.max(0,q.y0-pad), w, h, x, (H-h)/2, w, h); x+=w+gap; });
+    if(c.width>380){ var sc=380/c.width, d=document.createElement("canvas"); d.width=380; d.height=Math.round(c.height*sc); d.getContext("2d").drawImage(c,0,0,d.width,d.height); c=d; }
+    return c.toDataURL("image/jpeg", 0.85); }
+  var fds={}; Object.keys(def.fields||{}).forEach(function(id){ fds[id]=def.fields[id]; }); Object.keys(YZ_STRIP_FIELDS).forEach(function(id){ if(!fds[id]) fds[id]=YZ_STRIP_FIELDS[id]; });
+  Object.keys(fds).forEach(function(id){ var ks=fds[id], Pm=MS_P[id]; if(!Pm) return;
+    if(YZ_STRIP_FIELDS[id] && ks!==YZ_STRIP_FIELDS[id] && !ks.some(function(k){ return vals[k] && vals[k].v; })) ks=YZ_STRIP_FIELDS[id];
+    if(ks.length>3) ks=ks.filter(function(k){ return vals[k]; });
+    ks=ks.filter(function(k){ return !(vals[k] && vals[k].inactive); }); if(!ks.length) return;
+    var ss=ks.map(function(k){ return vals[k]; }), vs=ss.map(function(s){ return s && s.v? s.v : ""; }), any=vs.some(Boolean);
+    if(!any && !ss.some(Boolean)) return;
+    var row={id:id, mean:yzMeanOf(def.id, id, ks), vals:Pm.staged? vs.concat(["","",""]).slice(0,3) : [vs[0]], extra:Pm.staged? vs.slice(3).filter(Boolean).join(" ") : "", same:false, crop:cropOf(ks), typed:true, screen:true,
+      ocr:vs.join(" | "), state:any? "read" : "unread", conf:ss.filter(Boolean).length? +Math.min.apply(null, ss.filter(Boolean).map(function(s){ return s.v? s.c : 0.2; })).toFixed(2) : 0.2};
+    if(def.id==="yz-prod" && id==="cycle") row.conf=Math.min(row.conf, 0.55);   // "Max. cycle time" actual = the last cycle — Allen checks it
+    if(/^zone[6-8]$/.test(id) && !any && out.rows.some(function(r){ return r.id==="zone5" && r.state==="read"; })) return;
+    out.rows.push(row); });
+  out.notesList=out.notesList.filter(function(n){ return !n.pp; });
+  (def.notes||[]).forEach(function(n){ var vs=n[1].map(function(k){ var s=vals[k]; return s && s.v? s.v+(s.inactive? " (off)" : "")+(s.c<0.6? " (check)" : "") : "?"; }); if(vs.every(function(v){ return v==="?"; })) return;
+    out.notesList.push({label:n[0], text:vs.join(" / "), conf:Math.min.apply(null, n[1].map(function(k){ return vals[k]? vals[k].c : 0.3; })), pp:true}); });
+  out.notes = out.notesList.length? "Machine 3 "+(out.screen? out.screen.title : "screen")+": "+out.notesList.map(function(n){ return n.label+" "+n.text; }).join("; ") : "";
+  out.noteConf = out.notesList.length? Math.min.apply(null, out.notesList.map(function(n){ return n.conf; })) : 0;
+}
+// photo → result in the same shape as yzRead (null when the strong reader is not available)
+function yzReadPP(im, onProg){
+  var src=im; if(!(im instanceof HTMLCanvasElement && im._rect)){ try{ var rc=yzRectify(im); if(rc) src=rc; }catch(e){} }
+  if(!(src instanceof HTMLCanvasElement)){ var w0=src.naturalWidth||src.width, h0=src.naturalHeight||src.height, s=Math.min(1, 2400/w0), c=document.createElement("canvas"); c.width=Math.round(w0*s); c.height=Math.round(h0*s); c.getContext("2d").drawImage(src,0,0,c.width,c.height); src=c; }
+  if(onProg) onProg("Reading the screen text…", 30);
+  return ppOcr(src, function(i, n){ if(onProg) onProg("Reading the screen text — "+i+" of "+n, 30+Math.round(i/Math.max(1,n)*60)); }).then(function(T){
+    if(window.__ppDbg) window.__ppT=T.map(function(t){ return [t.t, +t.c.toFixed(2), Math.round(t.cx), Math.round(t.cy), Math.round(t.h)]; });
+    var r=yzParsePP(T, src.width, src.height);
+    return (r.wants && r.wants.length? ppProbeRight(src, r.wants, T).then(function(T2){ return yzParsePP(T2, src.width, src.height); }, function(){ return r; }) : Promise.resolve(r)).then(function(r){ return {r:r, T:T}; }); }).then(function(o){ var r=o.r, T=o.T, out={kind:"screen", rows:[], header:{}, notesList:[], pp:true, ppTokens:T.length};
+    if(r.unknown){ out.unknown=true; return out; }
+    var def=yzDefById(r.screen); out.screen={id:r.screen, title:def.title, kw:r.hits}; out.vals=r.vals; out._src=src;
+    out.slots={}; Object.keys(r.vals).forEach(function(k){ var q=r.vals[k]; out.slots[k]={v:q.v, c:q.c}; if(q.inactive) out.slots[k].inactive=true; });
+    var cells=Object.keys(r.vals).filter(function(k){ return !r.vals[k].text; }); out.found=cells.length; out.total=Math.max(cells.length, 1);
+    var md=r.vals.mold; if(md && md.v){ var mm=/^(\S*\d\S*)\s+(.+)$/.exec(md.v); out.header.mold={value:md.v, conf:Math.min(0.55, md.c), toolNumber:mm? mm[1] : "", partName:mm? mm[2] : "", crop:mscrCropUrl(src, md.x0, md.y0, md.x1, md.y1, 10)}; }
+    yzBuildRows(def, r.vals, src, out);
+    out.lines=[{text:T.map(function(t){ return t.t; }).join(" "), conf:0.6}];
+    return out; }); }
+// both readers → one answer. Same screen: per value, agreement is trusted, a disagreement is marked check; a value only one
+// reader found is kept with its own confidence. The older reader's answer stands when the strong reader is unavailable.
+function yzMerge(a, b){
+  var aOk=a && !a.unknown && a.screen, bOk=b && !b.unknown && b.screen;
+  if(!bOk) return a; if(!aOk) return b;
+  var good=function(r){ return Object.keys(r.slots||{}).filter(function(k){ return r.slots[k].v && r.slots[k].c>=0.6; }).length; };
+  if(a.screen.id!==b.screen.id) return good(b)>good(a)*1.5+2? b : a;
+  var def=yzDefById(a.screen.id), sl={}, vals={};
+  Object.keys(a.slots||{}).forEach(function(k){ sl[k]=1; }); Object.keys(b.slots||{}).forEach(function(k){ sl[k]=1; });
+  var num=function(v){ return /^-?\d+(\.\d+)?$/.test(String(v))? parseFloat(v) : null; };
+  Object.keys(sl).forEach(function(k){ var o=a.slots[k], p=b.slots[k], q=b.vals && b.vals[k], s;
+    var oV=o && o.v, pV=p && p.v;
+    if(oV && pV){ var same=String(oV)===String(pV) || (num(oV)!=null && num(oV)===num(pV) && String(oV).length===String(pV).length);
+      if(same) s={v:oV, c:Math.min(0.97, Math.max(o.c, p.c, 0.9))};
+      else { var pol=window.__ppPol||(a.screen.id==="yz-overview"? "keep" : "pp"); /* overview: many small boxes, the old grid reader is surer there */ var useP = pol==="pp"? !(o.c>=0.9 && p.c<0.6) : pol==="keep"? false : (p.c>o.c); s={v:useP? pV : oV, c:Math.min(useP? p.c : o.c, (useP && p.c>=0.85 && o.c<0.6 && a.screen.id!=="yz-overview")? 0.8 : 0.5)}; } }   // a clear PaddleOCR read beats a weak old guess (not on the crowded overview)
+    else if(pV) s={v:pV, c:p.c}; else if(o) s={v:o.v, c:o.c}; else s={v:"", c:0};
+    if((o && o.inactive) || (p && p.inactive)) s.inactive=true; if(o && o.nr!=null) s.nr=o.nr;
+    sl[k]=s; vals[k]={v:s.v, c:s.c, inactive:s.inactive, x0:q? q.x0 : 0, x1:q? q.x1 : 0, y0:q? q.y0 : 0, y1:q? q.y1 : 0}; });
+  var out=a; out.slots=sl; out.ppMerged=true;
+  // rows: the older reader's rows keep their crops where the strong reader has no box picture
+  var oldRows={}; (a.rows||[]).forEach(function(r){ oldRows[r.id]=r; });
+  var tmp={screen:a.screen, notesList:(a.notesList||[]).filter(function(n){ return !(def.notes||[]).some(function(d){ return d[0]===n.label; }); })};
+  yzBuildRows(def, vals, b._src, tmp);
+  tmp.rows.forEach(function(r){ if(!r.crop && oldRows[r.id]) r.crop=oldRows[r.id].crop; });
+  out.rows=tmp.rows; out.notesList=tmp.notesList; out.notes=tmp.notes; out.noteConf=tmp.noteConf;
+  if(b.header && b.header.mold) out.header.mold=b.header.mold;
+  return out;
+}
+function yzReadBest(im, onProg){
+  var a=null;
+  return yzRead(im, onProg).then(function(r){ a=r; }, function(e){ console.warn("yizumi read failed", e); }).then(function(){
+    if(onProg) onProg("Reading the screen again with the stronger reader…", 5);
+    return yzReadPP(im, onProg).then(function(b){ return yzMerge(a, b) || a || {kind:"screen", unknown:true, rows:[], header:{}, notesList:[]}; },
+      function(e){ console.warn("strong reader unavailable", e); if(!a) throw e; return a; }); });
+}
+/*PP-END*/
 // one image (file or canvas) → oriented, prepped, OCR'd page; a machine settings sheet is also read cell by cell
 function msScanImage(src, label, prog){
   var isBlob = !(src instanceof HTMLCanvasElement), base=null;
@@ -3390,7 +3687,7 @@ function msScanImage(src, label, prog){
       if(!yl) return im; screenSeen=true;
       // v2.6.0: Yizumi-HPM controller (light-grey screen, green highlighted tab)
       if(prog) prog("Machine screen photo (Yizumi) — reading it…");
-      return yzRead(yim, function(t, pc){ if(prog) prog(t, pc); }).then(function(res){ if(!res.unknown) screenRes=res; return im; }, function(e){ console.warn("yizumi read failed", e); return im; }); }
+      return yzReadBest(yim, function(t, pc){ if(prog) prog(t, pc); }).then(function(res){ if(!res.unknown) screenRes=res; return im; }, function(e){ console.warn("yizumi read failed", e); return im; }); }
     if(prog) prog("Machine screen photo — finding the value boxes…");
     return mscrRead(im, function(t, pc){ if(prog) prog(t, pc); }).then(function(res){ if(!res.unknown){ screenRes=res; } return im; }, function(e){ console.warn("screen read failed", e); return im; });
   }).then(function(im){
@@ -3414,7 +3711,7 @@ function msScanImage(src, label, prog){
     if(!msIsForm(textOf(r))){
       var tt=textOf(r); if(r.rot===0 && YZ_BRAND.filter(function(re){ return tt.split(/\s+/).some(function(x){ return re.test(x); }); }).length>=5){
         c._raw=null; delete r.words; if(prog) prog("Machine screen photo (Yizumi) — reading it…");
-        return yzRead(base, function(t, pc){ if(prog) prog(t, pc); }).then(function(res){ return res.unknown? r : {lines:res.lines||[], conf:0.6, label:label, kind:"screen", ms:res, rot:0}; }, function(){ return r; }); }
+        return yzReadBest(base, function(t, pc){ if(prog) prog(t, pc); }).then(function(res){ return res.unknown? r : {lines:res.lines||[], conf:0.6, label:label, kind:"screen", ms:res, rot:0}; }, function(){ return r; }); }
       c._raw=null; delete r.words; if(screenSeen) r.unknownScreen=true; return r; }
     if(prog) prog("Reading machine settings sheet…");
     return msExtract(c, c._raw, r.words, function(d, n){ if(prog) prog("Reading machine settings — cell "+d+" of "+n, Math.round(d/n*100)); }).then(function(res){
@@ -8623,7 +8920,7 @@ function init(){
   }, 8000);
 }
 window.__tessW=function(){ return tessWorker(); }; window.__yzPrep=function(i){ return yzPrep(i); };
-window.__tjl = {state:state, pfield:function(j,k){ return pfield(j,k); }, secByRole:function(j,r){ return secByRole(j,r); }, saveJobs:function(){ saveJobs(); }, render:function(){ render(); }, googleClientId:GOOGLE_CLIENT_ID, ms:{screenRead:function(i,p){return mscrRead(i,p);}, reviewModel:function(r,j){ return msReviewModel(r,j); }, sectionItems:function(j,M,it){ return msSectionItems(j,M,it); }, newJob:function(o){ return newJob(o); }, bestField:function(j,k){ return bestField(j,k); }, reviewHtml:function(M){ return msReviewHtml(M); }, screenLooks:function(i){return mscrLooksLikeScreen(i);}, boxes:function(i){ var m=mscrMask(mscrLocate(i),MSCR_W); return {img:m.c.toDataURL('image/jpeg',0.85),W:m.W,H:m.H,yellow:m.yellow,dark:m.dark,boxes:mscrBoxes(m).map(function(b){return [Math.round(b.cx),Math.round(b.cy),Math.round(b.w),Math.round(b.h)];})}; }, yzRead:function(i,p){return yzRead(i,p);}, yzLooks:function(i){return yzLooksLikeScreen(i);}, yzRectify:function(i){return yzRectify(i);}, yzPrep:function(i){return yzPrep(i);}, tess:function(){return tessWorker();}, yzDefs:YZ_DEFS, scan:msScanImage, extract:msExtract, orient:orientForOcr, normalize:msNormalize, defs:MS_DEFS, rowText:msRowText, isForm:msIsForm}, phone:{storeAlbumHandle:storeAlbumHandle, albumName:albumName, readPhoneSaved:readPhoneSaved},
+window.__tjl = {state:state, pfield:function(j,k){ return pfield(j,k); }, secByRole:function(j,r){ return secByRole(j,r); }, saveJobs:function(){ saveJobs(); }, render:function(){ render(); }, googleClientId:GOOGLE_CLIENT_ID, ms:{screenRead:function(i,p){return mscrRead(i,p);}, reviewModel:function(r,j){ return msReviewModel(r,j); }, sectionItems:function(j,M,it){ return msSectionItems(j,M,it); }, newJob:function(o){ return newJob(o); }, bestField:function(j,k){ return bestField(j,k); }, reviewHtml:function(M){ return msReviewHtml(M); }, screenLooks:function(i){return mscrLooksLikeScreen(i);}, boxes:function(i){ var m=mscrMask(mscrLocate(i),MSCR_W); return {img:m.c.toDataURL('image/jpeg',0.85),W:m.W,H:m.H,yellow:m.yellow,dark:m.dark,boxes:mscrBoxes(m).map(function(b){return [Math.round(b.cx),Math.round(b.cy),Math.round(b.w),Math.round(b.h)];})}; }, yzRead:function(i,p){return yzRead(i,p);}, yzReadPP:function(i,p){return yzReadPP(i,p);}, yzReadBest:function(i,p){return yzReadBest(i,p);}, yzMerge:function(a,b){return yzMerge(a,b);}, ppOcr:function(c){return ppOcr(c);}, yzLooks:function(i){return yzLooksLikeScreen(i);}, yzRectify:function(i){return yzRectify(i);}, yzPrep:function(i){return yzPrep(i);}, tess:function(){return tessWorker();}, yzDefs:YZ_DEFS, scan:msScanImage, extract:msExtract, orient:orientForOcr, normalize:msNormalize, defs:MS_DEFS, rowText:msRowText, isForm:msIsForm}, phone:{storeAlbumHandle:storeAlbumHandle, albumName:albumName, readPhoneSaved:readPhoneSaved},
   doc:{url:DOC_SCRIPT_URL, readQueue:readDocQueue, readUploaded:readDocUploaded, readSent:readDocSent, baseName:docBaseName, renameable:function(){ return renameableDocs().map(function(d){ return {sent:d.sentName, name:d.docName}; }); }, flush:flushDocQueue, docsForCtx:docsForCtx, buildDocPdf:buildDocPdf, buildDocParts:buildDocParts, exists:docExists, uploadAll:uploadAllDocs, limits:function(){ return {page:DOC_PAGE_MAX, part:DOC_PART_BYTES, asis:DOC_PDF_ASIS, side:DOC_MAX_SIDE}; }}, parseLines:parseLines, buildReview:buildReview, render:render, scan:{buildSynIndex:buildSynIndex, labelUnitHint:labelUnitHint, parseNumber:parseNumber, defForLabel:defForLabel, reconcileFields:reconcileFields},
   photo:{readQueue:readPhotoQueue, readUploaded:readPhotoUploaded, readOk:readPhotoOk, flush:flushPhotoQueue, name:photoDriveName, prep:photoUploadBlob, info:docServerInfo, items:function(){ return photoItemsFor(state.jobs, false).map(function(it){ return {job:it.job.id, id:it.photo.id, name:it.photo.driveName||""}; }); }, terms:jobSearchTerms, find:findDocs, missing:jobMissing},
   restore:{need:restoreNeed, run:runRestore, pick:restorePickFiles, stem:restoreStem, partOf:restorePartOf, fileId:driveFileId, getFile:getDriveFile, pages:restorePagesOf, last:function(){ return state.restoreLast||null; }},
