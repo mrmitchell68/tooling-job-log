@@ -654,7 +654,7 @@ pre.raw{white-space:pre-wrap;font-size:12px;background:var(--surface-2);padding:
 <script>
 (function(){
 "use strict";
-var APP_VERSION = "2.9.1";
+var APP_VERSION = "2.9.2";
 // Public OAuth client id (not a secret). Web client, authorized JavaScript origins:
 //   https://mrmitchell68.github.io   and   http://localhost:8766
 // Leave empty until that client exists — Save-to-Drive is hidden and the button uses the Android share sheet.
@@ -3667,6 +3667,191 @@ function yzReadBest(im, onProg){
       function(e){ console.warn("strong reader unavailable", e); if(!a) throw e; return a; }); });
 }
 /*PP-END*/
+/*AI-START*/
+// v2.9.2: optional AI screen reader (Anthropic Claude Haiku). Off by default; Settings → Screen reading. The key and the switch live only in
+// this phone's localStorage (never in backups or exports). The photo goes straight from the phone to Anthropic; the answer is mapped onto the
+// same screen definitions as the phone reader, so the review list, Temperatures / Pressures & speeds fill and the check rules are unchanged.
+// Any failure (offline, bad key, no credit, 30 s timeout) → the phone reader runs instead.
+var AI_MODEL="claude-haiku-5-5", AI_URL="https://api.anthropic.com/v1/messages", AI_VER="2026-10-21", AI_TIMEOUT=30000, AI_MAXSIDE=1568;
+var AI_LS_KEY="tjl.aiKey", AI_LS_ON="tjl.aiReader";
+function aiKey(){ try{ return localStorage.getItem(AI_LS_KEY)||""; }catch(e){ return ""; } }
+function aiSetKey(k){ try{ if(k) localStorage.setItem(AI_LS_KEY, k); else localStorage.removeItem(AI_LS_KEY); return true; }catch(e){ return false; } }
+function aiOn(){ try{ return localStorage.getItem(AI_LS_ON)==="1"; }catch(e){ return false; } }
+function aiSetOn(on){ try{ if(on) localStorage.setItem(AI_LS_ON, "1"); else localStorage.removeItem(AI_LS_ON); }catch(e){} }
+function aiReady(){ return aiOn() && !!aiKey(); }
+function aiKeyHint(){ var k=aiKey(); return k? "…"+k.slice(-4) : ""; }
+var AI_YZ_TABLES={cl:"Mold close", op:"Mold open", ef:"Ejector forward", eb:"Ejector backward", "in":"Inject", ho:"Hold", pl:"Plasticize (and backpressure)"};
+var AI_TMC_IDS=["tmc-ejclamp","tmc-charge","tmc-inject","tmc-core","tmc-monitor","tmc-temp"], AI_TP=["H1","H2","H3","H4","H5","H6","Collar","Oil"], AI_TP_IDS=["nozzle","zone1","zone2","zone3","zone4","zone5","collar","oil_temp"];
+function aiYzDefs(){ return YZ_DEFS.concat(YZ_XDEFS); }
+function aiScreenIds(){ return aiYzDefs().map(function(d){ return d.id; }).concat(AI_TMC_IDS); }
+function aiIsGridKey(k){ return /^(cl|op|ef|eb|in|ho|pl)(\d|E)\.[0-2]$/.test(k); }
+// the key catalog: built from the same screen definitions the phone reader uses (so a new screen there shows up here too)
+var aiSysP=null;
+function aiSystem(){
+  if(aiSysP) return aiSysP;
+  var L=[];
+  L.push("You read photos of injection-molding machine controller screens (Yizumi-HPM touch screens and TMC 250E yellow-on-black LCDs) for a tooling technician. Return only the JSON asked for.");
+  L.push("RULES");
+  L.push("- Read only what the screen shows. Never guess or fill in a number. A box that is cut off, blurred, hidden by glare or a finger: leave it out, or give confidence 0.5 or lower.");
+  L.push("- value: the text exactly as displayed (keep the decimal point, leading zeros and every digit; no unit). unit: the unit shown next to it, or \"\".");
+  L.push("- kind: \"set\" = a setpoint the operator typed in (white / yellow input box); \"actual\" = a live or measured reading; \"mode\" = a mode word or checkbox; \"other\" = anything else.");
+  L.push("- inactive: true when that row or box is greyed out / switched off (for example its mode is No), else false.");
+  L.push("- confidence: 0.95 or more only when every character is sharp and certain; 0.7-0.9 when readable but slightly unclear; 0.5 or lower when unsure.");
+  L.push("- key: the catalog key below for the screen you identified. Use each key at most once. A value with no catalog key: key \"\" with a clear label (it goes to the notes). Skip the date/time, user name and empty boxes.");
+  L.push("- screen: the catalog screen id; \"other\" with machine_screen false when the photo is not one of these machine screens (paper sheet, label, part photo...). mold_data: the Mold data text when shown (e.g. \"093162 Filler Bar\"), else \"\".");
+  L.push("- Where the screen shows actual and set side by side, the catalog says which key is which (\"actual / set\" = first key actual, second key set).");
+  L.push("YIZUMI stage tables: key = <table><row>.<column>. Tables: "+Object.keys(AI_YZ_TABLES).map(function(k){ return k+" = "+AI_YZ_TABLES[k]; }).join(", ")+". Rows: 1,2,3,4,5 = numbered stage rows from the top, E = the End row. Columns: .0 = Pressure / Force / Backpress (psi), .1 = Velocity % (Charge rpm on Plasticize), .2 = To (in) or Time (s). <table>Stages (for example hoStages) = the Stages number shown for that table. Only list rows that are on the screen.");
+  L.push("Yizumi bottom cycle-monitor strip (on any Yizumi screen): bm.cool = Cooling time s (2nd row, 2nd box), bm.last = Last cycle time s (1st row, 2nd box), bm.cush = Cushion in (2nd row, 6th box).");
+  L.push("CATALOG (screen id: title, then keys)");
+  aiYzDefs().forEach(function(d){
+    var lines=[], seen={}, fills={};
+    Object.keys(d.fields||{}).forEach(function(id){ if(!MS_P[id]) return; d.fields[id].forEach(function(k){ if(!aiIsGridKey(k)) fills[k]=id; }); });
+    var fillTxt=function(ks){ var f=ks.filter(function(k){ return fills[k]; }); return f.length? " ["+f.map(function(k){ var mn=yzMeanOf(d.id, fills[k]); return k+" is the "+MS_P[fills[k]].label+(mn? ": "+mn : ""); }).join("; ")+"]" : ""; };
+    (d.notes||[]).forEach(function(n){ var ks=n[1].filter(function(k){ return !seen[k] && !aiIsGridKey(k); }); if(!ks.length) return; ks.forEach(function(k){ seen[k]=1; }); lines.push("  "+ks.join(", ")+" = "+n[0]+(ks.length>1? " (in this order)" : "")+fillTxt(ks)); });
+    Object.keys(fills).forEach(function(k){ if(seen[k]) return; seen[k]=1; var mn=yzMeanOf(d.id, fills[k]); lines.push("  "+k+" = "+MS_P[fills[k]].label+(mn? " ("+mn+")" : "")); });
+    var tabs=Object.keys(d.fields||{}).reduce(function(a,id){ d.fields[id].forEach(function(k){ var m=/^(cl|op|ef|eb|in|ho|pl)/.exec(k); if(m && aiIsGridKey(k) && a.indexOf(m[1])<0) a.push(m[1]); }); return a; }, []);
+    L.push(d.id+": "+d.title+(tabs.length? " — stage tables "+tabs.map(function(t){ return t+" ("+AI_YZ_TABLES[t]+")"; }).join(", ") : ""));
+    lines.forEach(function(x){ L.push(x); }); });
+  MSCR_DEFS.forEach(function(d){
+    var seen={}; L.push(d.id+": "+d.title);
+    Object.keys(d.fields||{}).forEach(function(id){ var ks=d.fields[id]; if(!MS_P[id]) return; ks.forEach(function(k){ seen[k]=1; });
+      L.push("  "+ks.join(", ")+" = "+MS_P[id].label+" stages 1, 2, 3 in this order"+(mscrMeanOf(d.id, id)? " ("+mscrMeanOf(d.id, id)+")" : "")); });
+    (d.texts||[]).forEach(function(t){ if(seen[t[0]]) return; seen[t[0]]=1; L.push("  "+t[0]+" = "+t[2]+(t[1] && mscrMeanOf(d.id, t[1])? " ("+mscrMeanOf(d.id, t[1])+")" : "")); });
+    (d.notes||[]).forEach(function(n){ var ks=n[1].filter(function(k){ return !seen[k]; }); if(!ks.length) return; ks.forEach(function(k){ seen[k]=1; }); L.push("  "+ks.join(", ")+" = "+n[0]+(ks.length>1? " (in this order)" : "")); }); });
+  L.push("tmc-monitor: TMC 250E · Machine monitor screen — every line has a STATUS number (actual) and a SETUP number (set). Key = \"mon:<label>.0\" for STATUS and \"mon:<label>.1\" for SETUP, labels:");
+  L.push("  "+MSCR_MON.map(function(d){ return d[2]; }).join("; "));
+  L.push("  also: mon:barrel.0 … mon:barrel.5 = heater strip actual temperatures (nozzle at the left → rear), \"mon:Collar actual\", \"mon:Screw R.P.M.\", \"mon:Clamp unit position\" (UNIT:), \"mon:Screw position\" (SCREW:).");
+  L.push("tmc-temp: TMC 250E · Temperature setting screen — columns "+AI_TP.join(", ")+". Keys \"tp:<column>.set\" = PRESET TEMP. row, \"tp:<column>.act\" = STATUS TEMP. (actual) row, \"tp:<column>.power\" = POWER switch (YES / NO), \"tp:<column>.hi\" = HIGH alarm (+) row, \"tp:<column>.lo\" = LOW alarm (-) row.");
+  aiSysP=L.join("\n");
+  return aiSysP;
+}
+function aiSchema(){
+  var F={type:"object", properties:{key:{type:"string"}, label:{type:"string"}, value:{type:"string"}, unit:{type:"string"}, kind:{type:"string", enum:["set","actual","mode","other"]}, inactive:{type:"boolean"}, confidence:{type:"number"}},
+    required:["key","label","value","unit","kind","inactive","confidence"], additionalProperties:false};
+  return {type:"object", properties:{machine_screen:{type:"boolean"}, machine:{type:"string", enum:["Yizumi","TMC","other"]}, screen:{type:"string", enum:aiScreenIds().concat(["other"])},
+    screen_title:{type:"string"}, mold_data:{type:"string"}, fields:{type:"array", items:F}},
+    required:["machine_screen","machine","screen","screen_title","mold_data","fields"], additionalProperties:false};
+}
+function aiJpeg(im){
+  var w0=im.naturalWidth||im.width, h0=im.naturalHeight||im.height, s=Math.min(1, AI_MAXSIDE/Math.max(w0,h0)), c=document.createElement("canvas");
+  c.width=Math.max(1,Math.round(w0*s)); c.height=Math.max(1,Math.round(h0*s)); c.getContext("2d").drawImage(im,0,0,c.width,c.height);
+  return c.toDataURL("image/jpeg", 0.85).split(",")[1];
+}
+function aiErr(kind, msg){ var e=new Error(msg); e.aiKind=kind; return e; }
+// one Messages API call; resolves the parsed JSON body or rejects with a short reason
+function aiPost(body, key, ms){
+  if(typeof navigator!=="undefined" && navigator.onLine===false) return Promise.reject(aiErr("offline", "no internet"));
+  var ac=typeof AbortController!=="undefined"? new AbortController() : null, to=setTimeout(function(){ if(ac) ac.abort(); }, ms||AI_TIMEOUT);
+  return fetch(AI_URL, {method:"POST", signal:ac? ac.signal : undefined, headers:{"content-type":"application/json", "x-api-key":key, "anthropic-version":AI_VER, "anthropic-dangerous-direct-browser-access":"true"}, body:JSON.stringify(body)})
+  .then(function(r){ return r.text().then(function(t){ var j=null; try{ j=JSON.parse(t); }catch(e){}
+    if(r.ok && j) return j;
+    var m=(j && j.error && j.error.message)||("HTTP "+r.status);
+    if(r.status===401 || r.status===403) throw aiErr("key", "the API key was not accepted");
+    if(/credit|billing|balance/i.test(m)) throw aiErr("credit", "no API credit left");
+    if(r.status===429) throw aiErr("quota", "rate limit or quota reached");
+    if(r.status===529 || r.status>=500) throw aiErr("busy", "Anthropic is busy");
+    throw aiErr("api", m); }); },
+  function(e){ if(e && e.aiKind) throw e; if(e && e.name==="AbortError") throw aiErr("timeout", "no answer in 30 s"); throw aiErr("offline", "no internet"); })
+  .then(function(j){ clearTimeout(to); return j; }, function(e){ clearTimeout(to); throw e; });
+}
+function aiTestKey(key){
+  return aiPost({model:AI_MODEL, max_tokens:64, output_config:{effort:"low"}, messages:[{role:"user", content:"Reply with the word OK."}]}, key, 20000);
+}
+// photo → raw AI answer (JSON object)
+function aiReadRaw(im){
+  var key=aiKey(); if(!key) return Promise.reject(aiErr("key", "no API key"));
+  var b64; try{ b64=aiJpeg(im); }catch(e){ return Promise.reject(aiErr("api", "could not prepare the photo")); }
+  return aiPost({model:AI_MODEL, max_tokens:8000, output_config:{effort:"low", format:{type:"json_schema", schema:aiSchema()}},
+    system:[{type:"text", text:aiSystem(), cache_control:{type:"ephemeral"}}],
+    messages:[{role:"user", content:[{type:"image", source:{type:"base64", media_type:"image/jpeg", data:b64}}, {type:"text", text:"Read every value on this machine screen photo using the catalog keys."}]}]}, key)
+  .then(function(j){
+    if(j.stop_reason==="max_tokens") throw aiErr("api", "answer was cut off");
+    if(j.stop_reason==="refusal") throw aiErr("api", "the AI declined to read it");
+    var t=(j.content||[]).filter(function(b){ return b.type==="text"; }).map(function(b){ return b.text; }).join("");
+    var o; try{ o=JSON.parse(t); }catch(e){ throw aiErr("api", "unreadable answer"); }
+    if(!o || !Array.isArray(o.fields)) throw aiErr("api", "unreadable answer");
+    o._usage=j.usage||null; return o; });
+}
+// AI confidence → the app's: sure (≥0.85) stays as given (max 0.95); anything less is "check" (below 0.6 → unchecked)
+function aiConf(c){ c=+c; if(!(c>=0)) c=0.3; return c>=0.85? +Math.min(0.95, c).toFixed(2) : +Math.min(0.5, c).toFixed(2); }
+function aiVal(f){ return String(f.value==null? "" : f.value).trim(); }
+// raw AI answer → result in the same shape as the phone readers (null = not a machine screen this app knows)
+function aiToResult(o, srcC){
+  if(!o || !o.machine_screen || !o.screen || o.screen==="other") return null;
+  var sid=o.screen, out={kind:"screen", rows:[], header:{}, notesList:[], ai:true, aiUsage:o._usage||null}, extra=[], used={};
+  var F=(o.fields||[]).filter(function(f){ return f && aiVal(f); });
+  function addExtra(f){ extra.push({label:String(f.label||f.key||"Value").trim(), text:aiVal(f)+(f.unit? " "+String(f.unit).trim() : "")+(f.kind==="actual"? " (actual)" : "")+(aiConf(f.confidence)<0.6? " (check)" : ""), conf:aiConf(f.confidence)}); }
+  var yd=yzDefById(sid);
+  if(yd){
+    var vals={};
+    F.forEach(function(f){ var k=String(f.key||"").trim(); if(!k || used[k] || !/^[A-Za-z]+[\w.]*$/.test(k)){ addExtra(f); return; } used[k]=1;
+      vals[k]={v:aiVal(f), c:aiConf(f.confidence), state:"read"}; if(f.inactive) vals[k].inactive=true; });
+    var known={}; Object.keys(yd.fields||{}).forEach(function(id){ yd.fields[id].forEach(function(k){ known[k]=1; }); }); (yd.notes||[]).forEach(function(n){ n[1].forEach(function(k){ known[k]=1; }); });
+    Object.keys(YZ_STRIP_FIELDS).forEach(function(id){ YZ_STRIP_FIELDS[id].forEach(function(k){ known[k]=1; }); });
+    F.forEach(function(f){ var k=String(f.key||"").trim(); if(k && vals[k] && !known[k] && !/Stages$/.test(k) && k!=="mold") addExtra(f); });
+    out.screen={id:sid, title:yd.title+" (AI reader)", kw:0};
+    out.slots={}; Object.keys(vals).forEach(function(k){ out.slots[k]={v:vals[k].v, c:vals[k].c}; if(vals[k].inactive) out.slots[k].inactive=true; });
+    var md=vals.mold || (o.mold_data? {v:String(o.mold_data).trim(), c:0.5} : null);
+    if(md && md.v){ var mm=/^(\S*\d\S*)\s+(.+)$/.exec(md.v); out.header.mold={value:md.v, conf:Math.min(0.55, md.c), toolNumber:mm? mm[1] : "", partName:mm? mm[2] : "", crop:""}; }
+    yzBuildRows(yd, vals, null, out);
+  } else {
+    var td=MSCR_DEFS.filter(function(d){ return d.id===sid; })[0];
+    if(td){
+      var sv={}; F.forEach(function(f){ var k=String(f.key||"").trim(); if(!k || used[k]){ addExtra(f); return; } used[k]=1; sv[k]={v:aiVal(f), c:aiConf(f.confidence), inactive:!!f.inactive}; });
+      out.screen={id:sid, title:td.title+" (AI reader)", kw:0}; var inSlots={};
+      out.slots={}; Object.keys(sv).forEach(function(k){ out.slots[k]={v:sv[k].v, c:sv[k].c, state:"read", raw:sv[k].v}; });
+      (td.slots||[]).forEach(function(s){ inSlots[s[0]]=1; });
+      Object.keys(td.fields||{}).forEach(function(id){ var ks=td.fields[id], P=MS_P[id]; if(!P) return;
+        var ss=ks.map(function(k){ return sv[k] && !sv[k].inactive? sv[k] : null; }), vs=ss.map(function(s){ return s? s.v : ""; }); if(!ss.some(Boolean)) return;
+        var row={id:id, mean:mscrMeanOf(sid, id), vals:P.staged? vs.concat(["","",""]).slice(0,3) : [vs[0]], extra:"", same:false, crop:"", typed:true, ocr:vs.join(" | "), state:"read", screen:true,
+          conf:+Math.min.apply(null, ss.map(function(s){ return s? s.c : 0.4; })).toFixed(2)};
+        out.rows.push(row); });
+      (td.texts||[]).forEach(function(t){ var x=sv[t[0]]; if(!x) return; var v=String(x.v).replace(/[^0-9.]/g,"");
+        if(t[1] && MS_P[t[1]] && v && !out.rows.some(function(r){ return r.id===t[1]; })){ var P=MS_P[t[1]];
+          out.rows.push({id:t[1], mean:mscrMeanOf(sid, t[1]), vals:P.staged? [v,"",""] : [v], extra:"", same:false, crop:"", typed:true, ocr:x.v, state:"read", conf:Math.min(x.c, 0.9), screen:true}); }
+        out.notesList.push({label:t[2], text:x.v, conf:x.c}); });
+      var nk={}; (td.texts||[]).forEach(function(t){ nk[t[0]]=1; });
+      (td.notes||[]).forEach(function(n){ var vs=n[1].map(function(k){ nk[k]=1; return sv[k]? sv[k].v+(sv[k].c<0.6? " (check)" : "") : "?"; }); if(vs.every(function(v){ return v==="?"; })) return;
+        out.notesList.push({label:n[0], text:vs.join(" / "), conf:Math.min.apply(null, n[1].map(function(k){ return sv[k]? sv[k].c : 0.3; }))}); });
+      Object.keys(td.fields||{}).forEach(function(id){ td.fields[id].forEach(function(k){ nk[k]=1; }); });
+      F.forEach(function(f){ var k=String(f.key||"").trim(); if(k && sv[k] && !nk[k]) addExtra(f); });
+    } else if(sid==="tmc-monitor"){
+      out.screen={id:sid, title:"TMC 250E · Machine monitor screen (AI reader)", kw:0};
+      var mv={}, bar=[], mx={"Collar actual":1,"Screw R.P.M.":1,"Clamp unit position":1,"Screw position":1};
+      F.forEach(function(f){ var k=String(f.key||"").trim(), b=/^mon:barrel\.(\d)$/.exec(k); if(b){ bar[+b[1]]={v:aiVal(f), c:aiConf(f.confidence)}; return; }
+        if(mx[k.slice(4)] && /^mon:/.test(k)){ out.notesList.push({label:k.slice(4), text:aiVal(f), conf:aiConf(f.confidence)}); return; } });
+      F=F.filter(function(f){ var k=String(f.key||"").trim(); return !/^mon:barrel\./.test(k) && !mx[k.slice(4)]; });
+      if(bar.some(Boolean)) out.notesList.push({label:"Barrel temps actual (nozzle → rear)", text:bar.map(function(r){ return r? r.v : "?"; }).join(" / "), conf:Math.min.apply(null, bar.filter(Boolean).map(function(r){ return r.c; }))});
+      F.forEach(function(f){ var m=/^mon:(.+)\.([01])$/.exec(String(f.key||"").trim()); if(!m){ addExtra(f); return; } (mv[m[1]]=mv[m[1]]||[])[+m[2]]={v:aiVal(f), c:aiConf(f.confidence)}; });
+      MSCR_MON.forEach(function(d){ var p=mv[d[2]]; if(!p) return; var st=p[0], set=p[1];
+        if(set && d[1] && MS_P[d[1]]){ var P=MS_P[d[1]];
+          out.rows.push({id:d[1], mean:mscrMeanOf(sid, d[1]), vals:P.staged? [set.v,"",""] : [set.v], extra:"", same:false, crop:"", typed:true, ocr:"setup "+set.v+(st? " (status "+st.v+")" : ""), state:"read", conf:Math.min(0.9, set.c), screen:true}); }
+        out.notesList.push({label:d[2], text:(st? st.v+" / " : "")+(set? set.v : "?"), conf:Math.min(st? st.c : 1, set? set.c : 1)}); });
+    } else if(sid==="tmc-temp"){
+      out.screen={id:sid, title:"TMC 250E · Temperature setting screen (AI reader)", kw:0};
+      var tv={}; F.forEach(function(f){ var m=/^tp:([A-Za-z0-9]+)\.(set|act|power|hi|lo)$/.exec(String(f.key||"").trim()); if(!m){ addExtra(f); return; } tv[m[1]+"."+m[2]]={v:aiVal(f), c:aiConf(f.confidence)}; });
+      AI_TP.forEach(function(n, i){ var s=tv[n+".set"], a=tv[n+".act"], p=tv[n+".power"]; if(!s) return; var off=!!(p && /^no$/i.test(p.v));   // heater switched off → shown, but left for Allen to check
+        out.rows.push({id:AI_TP_IDS[i], mean:mscrMeanOf(sid, AI_TP_IDS[i]), vals:[s.v], extra:"", same:false, crop:"", typed:true, ocr:"preset temp "+n+" "+s.v+(a? " (actual "+a.v+")" : "")+(off? " (power switch NO)" : ""), state:"read", conf:off? Math.min(0.5, s.c) : Math.min(0.9, s.c), screen:true}); });
+      [["Preset temp","set"],["Status temp (actual)","act"],["Power switch","power"],["High alarm (+)","hi"],["Low alarm (−)","lo"]].forEach(function(x){ var arr=AI_TP.map(function(n){ return tv[n+"."+x[1]]; });
+        if(arr.some(Boolean)) out.notesList.push({label:x[0], text:AI_TP.map(function(n,i){ return n+" "+(arr[i]? arr[i].v : "?"); }).join(", "), conf:Math.min.apply(null, arr.filter(Boolean).map(function(r){ return r.c; }))}); });
+    } else return null;
+    out.notes = out.notesList.length? (out.screen.title)+": "+out.notesList.map(function(n){ return n.label+" "+n.text; }).join("; ") : "";
+    out.noteConf = out.notesList.length? Math.min.apply(null, out.notesList.map(function(n){ return n.conf; })) : 0;
+  }
+  if(extra.length){ out.notesList=out.notesList.concat(extra);
+    out.notes = (yd? "Machine 3 " : "")+out.screen.title+": "+out.notesList.map(function(n){ return n.label+" "+n.text; }).join("; ");
+    out.noteConf = Math.min.apply(null, out.notesList.map(function(n){ return n.conf; })); }
+  out.rows.forEach(function(r){ r.ai=true; if(!r.mean) r.mean=yd? yzMeanOf(sid, r.id) : mscrMeanOf(sid, r.id); });
+  var n=F.length; out.found=n; out.total=Math.max(n,1);
+  out.lines=[{text:F.map(function(f){ return (f.label||"")+" "+aiVal(f); }).join(" "), conf:0.6}];
+  return out;
+}
+// photo → result, or null (not a machine screen); rejects with a short reason when the AI can't be used
+function aiReadScreen(im, prog){
+  if(prog) prog("Reading the screen with the AI reader…", 20);
+  return aiReadRaw(im).then(function(o){ return aiToResult(o, null); });
+}
+/*AI-END*/
 // one image (file or canvas) → oriented, prepped, OCR'd page; a machine settings sheet is also read cell by cell
 function msScanImage(src, label, prog){
   var isBlob = !(src instanceof HTMLCanvasElement), base=null;
@@ -3680,6 +3865,12 @@ function msScanImage(src, label, prog){
   var screenRes=null, screenSeen=false;
   return (isBlob? loadImage(src) : Promise.resolve(src)).then(function(im){
     base=im;
+    // v2.9.2: AI reader (Settings → Screen reading) gets the photo first; a failure or "not a machine screen" → the phone reader below
+    if(!isBlob || !aiReady()) return im;
+    return aiReadScreen(im, prog).then(function(res){ if(res && !res.unknown){ screenRes=res; screenSeen=true; } return im; },
+      function(e){ console.warn("AI reader failed", e); showToast("AI reader not available ("+((e && e.message)||"error")+") — used the phone reader", {err:true, ms:8000}); return im; });
+  }).then(function(im){
+    if(screenRes) return im;
     // v2.5.0: a photo of the press controller's screen (dark LCD, yellow boxes) is read box by box, not as a paper sheet
     var looks=false, yl=false; try{ looks=mscrLooksLikeScreen(im); }catch(e){} if(looks) screenSeen=true;
     if(!looks){ var yim=im; try{ yl=yzLooksLikeScreen(im); }catch(e){}
@@ -5331,6 +5522,14 @@ function viewSettings(){
   h += '<div class="card"><div class="sec-hd"><h2>Offline</h2></div><div class="card-bd"><p class="muted" style="margin-top:0">The app works without signal once installed. Scanning needs the OCR engine (~7 MB) downloaded once.</p><p id="ocrStatus" class="faint">Checking…</p><button class="btn ghost block" data-act="warmOcr">⬇️ Download scanning engine for offline</button>';
   h += '<p id="bgStatus" class="faint" style="margin-top:14px">Checking background remover…</p><div id="bgStatusBtn"></div>';
   h += '<p class="faint" style="margin-bottom:0">Install: Chrome menu ⋮ → <b>Add to Home screen</b> / <b>Install app</b>.</p></div></div>';
+  // v2.9.2: optional AI screen reader — switch + key are kept only in this phone's localStorage (never in backups)
+  var aiK=aiKey(), aiO=aiOn();
+  h += '<div class="card" id="aiCard"><div class="sec-hd"><h2>Screen reading</h2></div><div class="card-bd">'+
+    '<label class="prefrow" style="border-top:0;margin-top:0;padding-top:0"><input type="checkbox" id="prefAiReader" data-ai-toggle="1"'+(aiO?' checked':'')+'><span>Use the AI reader for machine screen photos<small>Off = the phone reader (as in v2.9.1). Turn off any time.</small></span></label>'+
+    '<label class="fl" for="aiKeyInp">Anthropic API key</label><input id="aiKeyInp" class="inp" type="password" autocomplete="off" autocapitalize="off" spellcheck="false" data-ai-key="1" value="" placeholder="'+(aiK? 'Saved ('+esc(aiKeyHint())+') — paste to replace' : 'Paste the key (sk-ant-…)')+'">'+
+    '<p class="faint" id="aiStatus" style="margin:6px 2px">'+(aiO? (aiK? 'AI reader is on.' : 'AI reader is on, but there is no key yet — the phone reader is used.') : 'AI reader is off — the phone reader is used.')+'</p>'+
+    '<div class="btnrow"><button class="btn ghost" data-act="aiTestKey" id="aiTestBtn"'+(aiK?'':' disabled')+'>Test key</button><button class="btn ghost" data-act="aiRemoveKey" id="aiRemoveBtn"'+(aiK?'':' disabled')+'>Remove key</button></div>'+
+    '<p class="faint" style="margin-bottom:0">Photos are sent to Anthropic · needs internet · about $0.002 per scan. The key stays on this phone (not in backups).</p></div></div>';
   h += '<div class="card"><div class="sec-hd"><h2>Preferences</h2></div><div class="card-bd"><span class="fl">Default units for new jobs</span><div class="seg" style="grid-template-columns:1fr 1fr"><button class="active'+(state.meta.units!=="metric"?' sel':'')+'" data-act="setUnits" data-v="us">°F · psi</button><button class="active'+(state.meta.units==="metric"?' sel':'')+'" data-act="setUnits" data-v="metric">°C · bar</button></div><div class="sp"></div>';
   h += '<label class="fl" for="opName">Your name (default operator in run log)</label><input id="opName" class="inp" data-meta="operator" value="'+esc(state.meta.operator||"")+'" placeholder="e.g. Allen H.">';
   h += '<label class="prefrow"><input type="checkbox" id="prefOfferClean" data-meta-bool="offerCleanup"'+(state.meta.offerCleanup===false?'':' checked')+'><span>Offer cleanup after adding photos<small>Shows “✨ Clean up?” after you take or pick photos</small></span></label></div></div>';
@@ -6928,6 +7127,9 @@ ACT.pickAlbum=function(){
     });
   }).catch(function(e){ if(e && e.name==="AbortError") return; showToast("Couldn't open that folder. Try Pictures → "+PHONE_ALBUM+".", {err:true, ms:6000}); });
 };
+ACT.aiTestKey=function(){ var k=aiKey(); if(!k){ showToast("Paste a key first", {err:true}); return; }
+  setBusy("Testing the key…"); aiTestKey(k).then(function(){ setBusy(null); showToast("Key works ✓ (model "+AI_MODEL+")"); }, function(e){ setBusy(null); showToast("Key test failed: "+((e && e.message)||"error"), {err:true}); }); };
+ACT.aiRemoveKey=function(){ if(!confirm("Remove the Anthropic API key from this phone?")) return; aiSetKey(""); showToast("Key removed. The phone reader is used."); render(); };
 ACT.forgetAlbum=function(){ storeAlbumHandle(null).then(function(){ showToast("Folder forgotten. Scans will not be saved to it."); render(); }); };
 
 /* ---------- Upload scans to Google Drive as PDF (DCT / Building Material) via Allen's Apps Script ---------- */
@@ -8834,6 +9036,10 @@ document.addEventListener("change", function(e){
   if(t.hasAttribute("data-rvchk")){ var ri=state.modal.items[+t.getAttribute("data-rvchk")]; ri.selected=t.checked; if(ri.loose && t.checked && !ri.target){ retargetItem(scanJob(), ri, ri.label? "other" : ""); if(!ri.target){ t.checked=false; ri.selected=false; showToast("Pick a field for this line first"); } else rvRerender(); } return; }
   if(t.hasAttribute("data-rvtarget")){ var rt=state.modal.items[+t.getAttribute("data-rvtarget")]; retargetItem(scanJob(), rt, t.value); rvRerender(); return; }
   if(t.hasAttribute("data-ce")){ ceInput(t, true); return; }
+  if(t.hasAttribute && t.hasAttribute("data-ai-toggle")){ aiSetOn(t.checked); showToast(t.checked? (aiKey()? "AI reader on — screen photos go to Anthropic" : "AI reader on — paste your API key to use it") : "AI reader off — the phone reader is used"); render(); return; }
+  if(t.hasAttribute && t.hasAttribute("data-ai-key")){ var nk=String(t.value||"").replace(/\s+/g,""); t.value=""; if(!nk) return;
+    if(!/^sk-ant-/.test(nk)){ showToast("That doesn’t look like an Anthropic key (it starts with sk-ant-)", {err:true}); return; }
+    showToast(aiSetKey(nk)? "Key saved on this phone" : "Couldn't save the key", {err:!aiKey()}); render(); return; }
   if(t.hasAttribute("data-meta-bool")){ var mk=t.getAttribute("data-meta-bool"); state.meta[mk]=t.checked; saveMeta();
     if(mk==="docAuto") showToast(t.checked? "Every scan will be uploaded to Drive: "+DOC_DEST+" as a PDF" : "Scans won’t upload by themselves. Use Upload PDF to Drive.");
     else if(mk==="phoneCopy") showToast(t.checked? "Each scan will be saved to "+(albumName()||PHONE_ALBUM) : "Scans won’t be saved to the folder by themselves");
@@ -8920,7 +9126,7 @@ function init(){
   }, 8000);
 }
 window.__tessW=function(){ return tessWorker(); }; window.__yzPrep=function(i){ return yzPrep(i); };
-window.__tjl = {state:state, pfield:function(j,k){ return pfield(j,k); }, secByRole:function(j,r){ return secByRole(j,r); }, saveJobs:function(){ saveJobs(); }, render:function(){ render(); }, googleClientId:GOOGLE_CLIENT_ID, ms:{screenRead:function(i,p){return mscrRead(i,p);}, reviewModel:function(r,j){ return msReviewModel(r,j); }, sectionItems:function(j,M,it){ return msSectionItems(j,M,it); }, newJob:function(o){ return newJob(o); }, bestField:function(j,k){ return bestField(j,k); }, reviewHtml:function(M){ return msReviewHtml(M); }, screenLooks:function(i){return mscrLooksLikeScreen(i);}, boxes:function(i){ var m=mscrMask(mscrLocate(i),MSCR_W); return {img:m.c.toDataURL('image/jpeg',0.85),W:m.W,H:m.H,yellow:m.yellow,dark:m.dark,boxes:mscrBoxes(m).map(function(b){return [Math.round(b.cx),Math.round(b.cy),Math.round(b.w),Math.round(b.h)];})}; }, yzRead:function(i,p){return yzRead(i,p);}, yzReadPP:function(i,p){return yzReadPP(i,p);}, yzReadBest:function(i,p){return yzReadBest(i,p);}, yzMerge:function(a,b){return yzMerge(a,b);}, ppOcr:function(c){return ppOcr(c);}, yzLooks:function(i){return yzLooksLikeScreen(i);}, yzRectify:function(i){return yzRectify(i);}, yzPrep:function(i){return yzPrep(i);}, tess:function(){return tessWorker();}, yzDefs:YZ_DEFS, scan:msScanImage, extract:msExtract, orient:orientForOcr, normalize:msNormalize, defs:MS_DEFS, rowText:msRowText, isForm:msIsForm}, phone:{storeAlbumHandle:storeAlbumHandle, albumName:albumName, readPhoneSaved:readPhoneSaved},
+window.__tjl = {state:state, pfield:function(j,k){ return pfield(j,k); }, secByRole:function(j,r){ return secByRole(j,r); }, saveJobs:function(){ saveJobs(); }, render:function(){ render(); }, googleClientId:GOOGLE_CLIENT_ID, ms:{screenRead:function(i,p){return mscrRead(i,p);}, reviewModel:function(r,j){ return msReviewModel(r,j); }, sectionItems:function(j,M,it){ return msSectionItems(j,M,it); }, newJob:function(o){ return newJob(o); }, bestField:function(j,k){ return bestField(j,k); }, reviewHtml:function(M){ return msReviewHtml(M); }, screenLooks:function(i){return mscrLooksLikeScreen(i);}, boxes:function(i){ var m=mscrMask(mscrLocate(i),MSCR_W); return {img:m.c.toDataURL('image/jpeg',0.85),W:m.W,H:m.H,yellow:m.yellow,dark:m.dark,boxes:mscrBoxes(m).map(function(b){return [Math.round(b.cx),Math.round(b.cy),Math.round(b.w),Math.round(b.h)];})}; }, yzRead:function(i,p){return yzRead(i,p);}, aiToResult:function(o){return aiToResult(o,null);}, aiSystem:function(){return aiSystem();}, aiSchema:function(){return aiSchema();}, aiReady:function(){return aiReady();}, yzReadPP:function(i,p){return yzReadPP(i,p);}, yzReadBest:function(i,p){return yzReadBest(i,p);}, yzMerge:function(a,b){return yzMerge(a,b);}, ppOcr:function(c){return ppOcr(c);}, yzLooks:function(i){return yzLooksLikeScreen(i);}, yzRectify:function(i){return yzRectify(i);}, yzPrep:function(i){return yzPrep(i);}, tess:function(){return tessWorker();}, yzDefs:YZ_DEFS, scan:msScanImage, extract:msExtract, orient:orientForOcr, normalize:msNormalize, defs:MS_DEFS, rowText:msRowText, isForm:msIsForm}, phone:{storeAlbumHandle:storeAlbumHandle, albumName:albumName, readPhoneSaved:readPhoneSaved},
   doc:{url:DOC_SCRIPT_URL, readQueue:readDocQueue, readUploaded:readDocUploaded, readSent:readDocSent, baseName:docBaseName, renameable:function(){ return renameableDocs().map(function(d){ return {sent:d.sentName, name:d.docName}; }); }, flush:flushDocQueue, docsForCtx:docsForCtx, buildDocPdf:buildDocPdf, buildDocParts:buildDocParts, exists:docExists, uploadAll:uploadAllDocs, limits:function(){ return {page:DOC_PAGE_MAX, part:DOC_PART_BYTES, asis:DOC_PDF_ASIS, side:DOC_MAX_SIDE}; }}, parseLines:parseLines, buildReview:buildReview, render:render, scan:{buildSynIndex:buildSynIndex, labelUnitHint:labelUnitHint, parseNumber:parseNumber, defForLabel:defForLabel, reconcileFields:reconcileFields},
   photo:{readQueue:readPhotoQueue, readUploaded:readPhotoUploaded, readOk:readPhotoOk, flush:flushPhotoQueue, name:photoDriveName, prep:photoUploadBlob, info:docServerInfo, items:function(){ return photoItemsFor(state.jobs, false).map(function(it){ return {job:it.job.id, id:it.photo.id, name:it.photo.driveName||""}; }); }, terms:jobSearchTerms, find:findDocs, missing:jobMissing},
   restore:{need:restoreNeed, run:runRestore, pick:restorePickFiles, stem:restoreStem, partOf:restorePartOf, fileId:driveFileId, getFile:getDriveFile, pages:restorePagesOf, last:function(){ return state.restoreLast||null; }},
