@@ -1,5 +1,5 @@
 /* Tooling Job Log v2 service worker — offline app shell + CDN libraries. */
-const VERSION = "tjl-v2.9.2";
+const VERSION = "tjl-v2.9.3";
 // v2.9.1: the screen reader (onnxruntime-web + PaddleOCR models, ~27 MB from cdn.jsdelivr.net) is cached in LIB_CACHE on first scan.
 const SHELL_CACHE = VERSION + "-shell";
 const LIB_CACHE = "tjl-libs-v1";           // CDN libs are version-pinned, so this cache survives app updates

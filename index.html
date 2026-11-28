@@ -654,7 +654,7 @@ pre.raw{white-space:pre-wrap;font-size:12px;background:var(--surface-2);padding:
 <script>
 (function(){
 "use strict";
-var APP_VERSION = "2.9.2";
+var APP_VERSION = "2.9.3";
 // Public OAuth client id (not a secret). Web client, authorized JavaScript origins:
 //   https://mrmitchell68.github.io   and   http://localhost:8766
 // Leave empty until that client exists — Save-to-Drive is hidden and the button uses the Android share sheet.
@@ -6089,12 +6089,14 @@ ACT.arrReplacePick = function(t){
 function arrReplaceFile(f){
   var pid=state.arrReplacePid, j=curJob(); state.arrReplacePid=null;
   if(!j || !pid || arrIdx(j,pid)<0) return;
-  if(!(/^image\//.test(f.type) || /\.(jpe?g|png|webp|gif)$/i.test(f.name||""))){ showToast("That isn’t a picture — choose a JPG/PNG photo", {err:true}); return; }
-  setBusy("Replacing picture…");
-  compressPhoto(f).then(function(r){ var id=uid(); return putPhoto(id, r.blob).then(function(){
-    setBusy(null);
-    arrApply("Picture replaced", function(j){ var i=arrIdx(j,pid); if(i<0) return false; var o=j.photos[i]; j.photos[i]={id:id, label:o.label, addedAt:o.addedAt||nowIso(), replacedAt:nowIso(), bytes:r.blob.size, w:r.w, h:r.h}; }, id);
-  }); }).catch(function(e){ setBusy(null); showToast("Replace failed: "+(e.message||e), {err:true}); });
+  classifyFile(f).then(function(r){
+    if(r.kind!=="image"){ showToast("That isn’t a picture — choose a JPG/PNG photo", {err:true}); return; }
+    setBusy("Replacing picture…");
+    return compressPhoto(r.file).then(function(c){ var id=uid(); return putPhoto(id, c.blob).then(function(){
+      setBusy(null);
+      arrApply("Picture replaced", function(j){ var i=arrIdx(j,pid); if(i<0) return false; var o=j.photos[i]; j.photos[i]={id:id, label:o.label, addedAt:o.addedAt||nowIso(), replacedAt:nowIso(), bytes:c.blob.size, w:c.w, h:c.h}; }, id);
+    }); });
+  }).catch(function(e){ setBusy(null); showToast("Replace failed: "+(e.message||e), {err:true}); });
 }
 function rotateBlob(blob){
   return loadImage(blob).then(function(im){
@@ -6486,10 +6488,9 @@ ACT.rescanNotes = function(){ var j=curJob(); if(!j) return; var txt=rescanText(
 ACT.cancelScan = function(){ state.scanCancelled=true; setBusy(null); if(tessWorkerP){ tessWorkerP.then(function(w){ w.terminate(); }).catch(function(){}); tessWorkerP=null; } showToast("Scan stopped"); };
 function checkCancel(){ if(state.scanCancelled) throw {cancelled:true}; }
 function runScanFiles(files){
-  var list = Array.prototype.slice.call(files); if(!list.length) return;
+  var raw = Array.prototype.slice.call(files); if(!raw.length) return;
   state.scanCancelled=false; var pages=[], total=0;
   setBusy("Preparing…", {cancel:true, pct:2});
-  var storeP = rememberScanFiles(list);
   ocrProgressCb = function(m){
     if(!state.busy) return;
     var map={"loading tesseract core":"Loading OCR engine…","loading language traineddata":"Loading English data…","initializing api":"Starting OCR…","recognizing text":"Reading text"};
@@ -6499,9 +6500,17 @@ function runScanFiles(files){
     renderBusy();
   };
   var scanProg = function(txt, pct){ if(!state.busy) return; if(txt) state.busy.text=txt; else state.busy.text="Starting OCR…"; if(pct!=null) state.busy.pct=pct; renderBusy(); };
-  var seq = Promise.resolve();
-  list.forEach(function(file){
-    seq = seq.then(function(){ checkCancel();
+  var storeP = classifyFiles(raw).then(function(rows){
+    var list=rows.filter(function(r){ return r.kind==="image"||r.kind==="pdf"; }).map(function(r){ return r.file; });
+    var skipped=rows.length-list.length;
+    if(!list.length){ var e=new Error(skipped? "Skipped "+skipped+" file"+(skipped>1?"s":"")+" that aren’t pictures or PDFs." : "No pictures or PDFs in that selection."); e.empty=true; showToast(e.message, {err:true}); throw e; }
+    if(skipped) showToast("Skipped "+skipped+" file"+(skipped>1?"s":"")+" that aren’t pictures or PDFs.");
+    return rememberScanFiles(list).then(function(metas){ return {metas:metas, list:list}; });
+  });
+  var seq = storeP.then(function(pack){
+    var list=pack.list, chain=Promise.resolve();
+    list.forEach(function(file){
+      chain = chain.then(function(){ checkCancel();
       if(file.type==="application/pdf" || /\.pdf$/i.test(file.name||"")){
         return file.arrayBuffer().then(function(buf){ return pdfLib().then(function(lib){ return lib.getDocument({data:new Uint8Array(buf)}).promise; }); }).then(function(doc){
           var n=Math.min(doc.numPages, 15); var ps=Promise.resolve();
@@ -6522,20 +6531,23 @@ function runScanFiles(files){
       if(state.busy){ state.busy.page=(state.busy.page||0)+1; state.busy.pages=list.length; }
       return msScanImage(file, file.name, scanProg).then(function(r){ checkCancel(); pages.push(r); });
     });
+    });
+    return chain;
   });
   seq.then(function(){ checkCancel();
     var kinds = pages.map(function(p){ return p.kind; });
     var ocrP = pages.filter(function(p){ return p.kind==="ocr"; });
     var avg = ocrP.length? Math.round(ocrP.reduce(function(a,p){ return a+p.conf; },0)/ocrP.length*100) : null;
     var summary = pages.length+" page"+(pages.length>1?"s":"")+" · "+(kinds.indexOf("pdf-text")>=0? "PDF text layer" + (ocrP.length?" + OCR":"") : "OCR")+(avg!=null? " · avg OCR confidence "+avg+"%" : "");
-    return storeP.then(function(metas){
+    return storeP.then(function(pack){
+      var metas=pack && pack.metas;
       if(state.scanCancelled){ dropScanMetas(metas); return; }
       finishScan(pages, summary, metas);
     });
   }).catch(function(e){
     setBusy(null); ocrProgressCb=null;
-    storeP.then(function(metas){ if(!metas._handed) dropScanMetas(metas); }).catch(function(){});
-    if(e && e.cancelled) return;
+    storeP.then(function(pack){ var metas=pack && pack.metas; if(metas && !metas._handed) dropScanMetas(metas); }).catch(function(){});
+    if(e && (e.cancelled || e.empty)) return;
     console.warn(e); showToast((e && e.message) || "Scan failed — try Paste text", {err:true, ms:6000});
   });
 }
@@ -7737,14 +7749,74 @@ function photoDriveName(job, p){
   if(state.jobs.indexOf(job)>=0) saveJobsSoon();
   return name;
 }
-function sniffImage(blob){
-  return blob.slice(0,12).arrayBuffer().then(function(buf){
-    var b=new Uint8Array(buf);
-    if(b[0]===0xFF && b[1]===0xD8 && b[2]===0xFF) return "image/jpeg";
-    if(b[0]===0x89 && b[1]===0x50 && b[2]===0x4E && b[3]===0x47) return "image/png";
-    if(b[0]===0x52 && b[1]===0x49 && b[2]===0x46 && b[3]===0x46 && b[8]===0x57 && b[9]===0x45 && b[10]===0x42 && b[11]===0x50) return "image/webp";
+// Real type from the first bytes. Android Drive / chat shares often arrive with no MIME type and no .jpg,
+// so a name/type check would skip a real photo. Used at every file intake (Photos, Scan, Replace).
+function sniffFileType(blob){
+  return blob.slice(0,64).arrayBuffer().then(function(buf){
+    var b=new Uint8Array(buf), n=b.length, u=function(i){ return i<n? b[i] : 0; };
+    if(u(0)===0xFF && u(1)===0xD8 && u(2)===0xFF) return "image/jpeg";
+    if(u(0)===0x89 && u(1)===0x50 && u(2)===0x4E && u(3)===0x47) return "image/png";
+    if(u(0)===0x47 && u(1)===0x49 && u(2)===0x46 && u(3)===0x38) return "image/gif";
+    if(u(0)===0x52 && u(1)===0x49 && u(2)===0x46 && u(3)===0x46 && u(8)===0x57 && u(9)===0x45 && u(10)===0x42 && u(11)===0x50) return "image/webp";
+    if(u(0)===0x25 && u(1)===0x50 && u(2)===0x44 && u(3)===0x46) return "application/pdf";
+    if(n>=12 && u(4)===0x66 && u(5)===0x74 && u(6)===0x79 && u(7)===0x70){
+      var brands="";
+      for(var i=8;i+3<n;i+=4) brands += String.fromCharCode(u(i),u(i+1),u(i+2),u(i+3))+" ";
+      if(/avif|avis/i.test(brands)) return "image/avif";
+      if(/heic|heix|heim|heis|hevc|hevx/i.test(brands)) return "image/heic";
+      if(/heif|mif1|msf1/i.test(brands)) return "image/heif";
+    }
     return "";
   }).catch(function(){ return ""; });
+}
+function sniffImage(blob){
+  return sniffFileType(blob).then(function(t){ return t.indexOf("image/")===0? t : ""; });
+}
+var SNIFF_EXT = {"image/jpeg":".jpg","image/png":".png","image/gif":".gif","image/webp":".webp","image/heic":".heic","image/heif":".heif","image/avif":".avif","application/pdf":".pdf"};
+function typedFile(file, mime){
+  var ext=SNIFF_EXT[mime]||"";
+  var name=String(file.name||"").replace(/^\s+|\s+$/g,"") || (mime==="application/pdf"? "document" : "photo");
+  if(ext && !/\.[A-Za-z0-9]{2,8}$/.test(name)) name += ext;
+  if((file.type||"")===mime && name===(file.name||"")) return file;
+  try{ return new File([file], name, {type:mime, lastModified:file.lastModified||Date.now()}); }
+  catch(err){
+    var b=new Blob([file], {type:mime});
+    try{ Object.defineProperty(b,"name",{value:name, configurable:true}); }catch(e2){ b.name=name; }
+    try{ Object.defineProperty(b,"lastModified",{value:file.lastModified||Date.now(), configurable:true}); }catch(e3){}
+    return b;
+  }
+}
+function classifyFile(file){
+  var hint=String(file.type||"").toLowerCase(), nm=String(file.name||"").toLowerCase();
+  return sniffFileType(file).then(function(sig){
+    var mime=sig;
+    if(!mime){
+      if(/^image\//.test(hint)) mime=hint;
+      else if(hint==="application/pdf" || /\.pdf$/.test(nm)) mime="application/pdf";
+      else if(/\.jpe?g$/.test(nm)) mime="image/jpeg";
+      else if(/\.png$/.test(nm)) mime="image/png";
+      else if(/\.gif$/.test(nm)) mime="image/gif";
+      else if(/\.webp$/.test(nm)) mime="image/webp";
+      else if(/\.(heic|heif)$/.test(nm)) mime="image/heic";
+      else if(/\.avif$/.test(nm)) mime="image/avif";
+    }
+    if(!mime) return {kind:"other", file:file, mime:""};
+    return {kind: mime==="application/pdf"? "pdf" : "image", file:typedFile(file, mime), mime:mime};
+  });
+}
+function classifyFiles(files){
+  var list=Array.prototype.slice.call(files||[]);
+  return list.reduce(function(p,f){ return p.then(function(acc){ return classifyFile(f).then(function(r){ acc.push(r); return acc; }); }); }, Promise.resolve([]));
+}
+function takeImageFiles(files){
+  var all=Array.prototype.slice.call(files||[]);
+  if(!all.length) return Promise.resolve([]);
+  return classifyFiles(all).then(function(rows){
+    var imgs=rows.filter(function(r){ return r.kind==="image"; }).map(function(r){ return r.file; });
+    var skipped=rows.length-imgs.length, pdfn=rows.filter(function(r){ return r.kind==="pdf"; }).length;
+    if(skipped) showToast("Skipped "+skipped+" non-image file(s)."+(pdfn? " Use Scan for PDFs." : ""));
+    return imgs;
+  });
 }
 // stored photo -> JPEG at most PHOTO_MAX_SIDE px (a cleaned-up PNG goes on white). A JPEG already that small goes as is.
 function photoUploadBlob(blob){
@@ -8086,17 +8158,19 @@ function getDriveFile(id, onPart){
 function restoreCanvasPage(c){ var w=c.width, h=c.height; return canvasJpeg(c, RESTORE_JPEG_Q).then(function(b){ c.width=c.height=1; return {blob:b, w:w, h:h}; }); }
 // downloaded file -> [{blob (JPEG), w, h}] one per page (a picture file is one page)
 function restorePagesOf(file){
-  var mime=String(file.mime || (file.blob && file.blob.type) || "").toLowerCase();
-  if(mime.indexOf("image/")===0){
-    return decodeScanImage(file.blob).then(function(img){
+  var blob=file.blob, declared=String(file.mime || (blob && blob.type) || "").toLowerCase();
+  return sniffFileType(blob||new Blob()).then(function(sig){
+    var mime=sig || declared;
+    if(mime.indexOf("image/")===0){
+    return decodeScanImage(blob).then(function(img){
       var w=img.naturalWidth||img.width, h=img.naturalHeight||img.height; if(!w || !h) throw new Error("Couldn't read the picture from Drive.");
       var s=Math.min(1, RESTORE_MAX_SIDE/Math.max(w,h)), c=mkCanvas(w*s, h*s), g=c.getContext("2d");
       g.fillStyle="#ffffff"; g.fillRect(0,0,c.width,c.height); g.imageSmoothingQuality="high"; g.drawImage(img,0,0,c.width,c.height);
       if(img.close) try{ img.close(); }catch(e){}
       return restoreCanvasPage(c).then(function(p){ return [p]; });
     });
-  }
-  return pdfLib().then(function(lib){
+    }
+    return pdfLib().then(function(lib){
     return file.blob.arrayBuffer().then(function(buf){ return lib.getDocument({data:new Uint8Array(buf)}).promise; }).then(function(pdf){
       var n=Math.min(pdf.numPages, RESTORE_MAX_PAGES), pages=[], seq=Promise.resolve();
       for(var i=1;i<=n;i++) (function(i){ seq=seq.then(function(){
@@ -8109,6 +8183,7 @@ function restorePagesOf(file){
       }); })(i);
       return seq.then(function(){ try{ pdf.destroy(); }catch(e){} return pages; }, function(e){ try{ pdf.destroy(); }catch(x){} throw e; });
     });
+  });
   });
 }
 // "X 2026-10-05 part 2 of 3.pdf" -> {base:"X 2026-10-05.pdf", k:2, n:3}
@@ -8126,7 +8201,7 @@ function jobDocNames(j){
 }
 // which of the found files are this job's: names this phone sent for it, else "<term> <date>.pdf", else the best match (with its other parts)
 function restorePickFiles(j, files, term){
-  var cand=(files||[]).filter(function(f){ return f && driveFileId(f) && (/pdf/i.test(f.mime||"") || /\.pdf$/i.test(f.name||"") || /^image\/(jpeg|png|webp)$/i.test(f.mime||"")); });
+  var cand=(files||[]).filter(function(f){ var m=String(f && f.mime||""), n=String(f && f.name||""); return f && driveFileId(f) && (/pdf/i.test(m) || /\.pdf$/i.test(n) || /^image\//i.test(m) || /\.(jpe?g|png|webp|gif|heic|heif|avif)$/i.test(n)); });
   if(!cand.length) return [];
   var known=jobDocNames(j), pick=cand.filter(function(f){ return known[restorePartOf(f.name).base.toLowerCase()]; });
   if(!pick.length){ var t=normKey(term); pick=cand.filter(function(f){ return restoreStem(f.name)===t; }); }
@@ -9060,9 +9135,9 @@ document.addEventListener("change", function(e){
   if(t.hasAttribute("data-hdr") || t.hasAttribute("data-flabel") || t.hasAttribute("data-funit") || t.hasAttribute("data-sectitle")) saveJobs();
   if((t.hasAttribute("data-hdr") || t.hasAttribute("data-fval")) && photoAutoOn() && jobHasName(j) && (j.photos||[]).some(function(p){ return p && readPhotoQueue().indexOf(p.id)>=0; })) setTimeout(function(){ flushPhotoQueue(true, true).then(photoLineRefresh); }, 300);
 });
-$("inPhotoCam").addEventListener("change", function(){ addPhotos(this.files); this.value=""; });
-$("inPhotoLib").addEventListener("change", function(){ addPhotos(this.files); this.value=""; });
-$("inPhotoFiles").addEventListener("change", function(){ var all=Array.prototype.slice.call(this.files); this.value=""; var imgs=all.filter(function(f){ return /^image\//.test(f.type) || /\.(jpe?g|png|webp|gif)$/i.test(f.name||""); }); if(imgs.length<all.length) showToast("Skipped "+(all.length-imgs.length)+" non-image file(s). Use Scan for PDFs."); addPhotos(imgs); });
+$("inPhotoCam").addEventListener("change", function(){ var f=Array.prototype.slice.call(this.files); this.value=""; takeImageFiles(f).then(addPhotos); });
+$("inPhotoLib").addEventListener("change", function(){ var f=Array.prototype.slice.call(this.files); this.value=""; takeImageFiles(f).then(addPhotos); });
+$("inPhotoFiles").addEventListener("change", function(){ var f=Array.prototype.slice.call(this.files); this.value=""; takeImageFiles(f).then(addPhotos); });
 ["inScanCam","inScanImg","inScanPdf","inScanFiles"].forEach(function(id){ $(id).addEventListener("change", function(){ var f=Array.prototype.slice.call(this.files); this.value=""; runScanFiles(f); }); });
 $("inReplace").addEventListener("change", function(){ var f=this.files[0]; this.value=""; if(f) arrReplaceFile(f); });
 $("inCleanBg").addEventListener("change", function(){ var f=this.files[0]; this.value=""; if(f) ceBgPhoto(f); });
@@ -9130,7 +9205,7 @@ window.__tjl = {state:state, pfield:function(j,k){ return pfield(j,k); }, secByR
   doc:{url:DOC_SCRIPT_URL, readQueue:readDocQueue, readUploaded:readDocUploaded, readSent:readDocSent, baseName:docBaseName, renameable:function(){ return renameableDocs().map(function(d){ return {sent:d.sentName, name:d.docName}; }); }, flush:flushDocQueue, docsForCtx:docsForCtx, buildDocPdf:buildDocPdf, buildDocParts:buildDocParts, exists:docExists, uploadAll:uploadAllDocs, limits:function(){ return {page:DOC_PAGE_MAX, part:DOC_PART_BYTES, asis:DOC_PDF_ASIS, side:DOC_MAX_SIDE}; }}, parseLines:parseLines, buildReview:buildReview, render:render, scan:{buildSynIndex:buildSynIndex, labelUnitHint:labelUnitHint, parseNumber:parseNumber, defForLabel:defForLabel, reconcileFields:reconcileFields},
   photo:{readQueue:readPhotoQueue, readUploaded:readPhotoUploaded, readOk:readPhotoOk, flush:flushPhotoQueue, name:photoDriveName, prep:photoUploadBlob, info:docServerInfo, items:function(){ return photoItemsFor(state.jobs, false).map(function(it){ return {job:it.job.id, id:it.photo.id, name:it.photo.driveName||""}; }); }, terms:jobSearchTerms, find:findDocs, missing:jobMissing},
   restore:{need:restoreNeed, run:runRestore, pick:restorePickFiles, stem:restoreStem, partOf:restorePartOf, fileId:driveFileId, getFile:getDriveFile, pages:restorePagesOf, last:function(){ return state.restoreLast||null; }},
-  ce:function(){ return CE; }, ceTestMask:function(o){ ceTestMask=o||null; }, getPhoto:getPhoto}; // test hooks (ceTestMask: fake segmentation when no model is available)
+  ce:function(){ return CE; }, ceTestMask:function(o){ ceTestMask=o||null; }, getPhoto:getPhoto, sniffFile:sniffFileType, classifyFile:classifyFile, takeImageFiles:takeImageFiles}; // test hooks (ceTestMask: fake segmentation when no model is available)
 init();
 })();
 </script>
